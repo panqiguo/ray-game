@@ -210,9 +210,20 @@ def node_button(font: Font | None, rect: Rectangle, title: str, subtitle: str = 
         border = Color(62, 66, 74, 180)
     clicked = False if disabled else clickable(rect)
     draw_frame(rect, fill, border)
-    draw_text(font, title, int(rect.x) + 14, int(rect.y) + 12, 24, Color(235, 235, 235, 255) if not disabled else Color(120, 120, 120, 255))
+
+    title_size = 22 if subtitle else 24
+    title_width = measure_text_ex(font, title, float(title_size), 1.0).x if font is not None else float(measure_text(title, title_size))
+    max_title_width = rect.width - 28
+    while title_size > 16 and title_width > max_title_width:
+        title_size -= 1
+        title_width = measure_text_ex(font, title, float(title_size), 1.0).x if font is not None else float(measure_text(title, title_size))
+
+    title_y = int(rect.y) + 10 if subtitle else int(rect.y + (rect.height - title_size) * 0.5)
+    draw_text(font, title, int(rect.x) + 14, title_y, title_size, Color(235, 235, 235, 255) if not disabled else Color(120, 120, 120, 255))
     if subtitle:
-        draw_text(font, subtitle, int(rect.x) + 14, int(rect.y) + 42, 17, Color(185, 185, 185, 255) if not disabled else Color(100, 100, 100, 255))
+        subtitle_size = 15
+        subtitle_y = int(rect.y) + rect.height - subtitle_size - 10
+        draw_text(font, subtitle, int(rect.x) + 14, subtitle_y, subtitle_size, Color(185, 185, 185, 255) if not disabled else Color(100, 100, 100, 255))
     return clicked
 
 
@@ -429,43 +440,44 @@ def draw_profile_modal(font: Font | None, state: GameState, growth_defs) -> None
     if not modal_is_open(state, "profile"):
         return
     begin_layer("profile_modal", interactive=True)
-    page = layout()
-    rect = Rectangle(page.hud.x + page.hud.width - 470, page.hud.y + page.hud.height + 12, 470, 420)
-    shell = draw_modal_shell(font, "个人档案", rect, scope=screen_rect())
-    draw_text(font, f"成长点数: {state.growth_points}", int(rect.x) + 20, int(rect.y) + 58, 20, Color(208, 182, 108, 255))
-    draw_text(font, f"已解锁: {len(state.unlocked_growths)}", int(rect.x) + 190, int(rect.y) + 58, 20, LIGHTGRAY)
-    if shell.close_requested:
-        close_modal(state)
+    try:
+        page = layout()
+        rect = Rectangle(page.hud.x + page.hud.width - 470, page.hud.y + page.hud.height + 12, 470, 420)
+        shell = draw_modal_shell(font, "个人档案", rect, scope=screen_rect())
+        draw_text(font, f"成长点数: {state.growth_points}", int(rect.x) + 20, int(rect.y) + 58, 20, Color(208, 182, 108, 255))
+        draw_text(font, f"已解锁: {len(state.unlocked_growths)}", int(rect.x) + 190, int(rect.y) + 58, 20, LIGHTGRAY)
+        if shell.close_requested:
+            close_modal(state)
+            return
+
+        y = int(rect.y) + 102
+        draw_text(font, "成长", int(rect.x) + 20, y, 18, Color(202, 180, 124, 255))
+        y += 28
+        for growth_id in state.pending_growth_choices:
+            growth = growth_defs[growth_id]
+            locked = state.growth_points <= 0
+            button_rect = Rectangle(rect.x + 20, y, 188, 32)
+            if locked:
+                draw_frame(button_rect, Color(22, 24, 30, 255), Color(70, 72, 78, 180))
+                _draw_centered_text(font, growth.title, button_rect, 18, Color(118, 118, 118, 255))
+            else:
+                if pill(font, button_rect, growth.title, False):
+                    from raygame.rules import claim_growth
+
+                    claim_growth(state, growth_id)
+                    return
+            draw_text(font, growth.description, int(rect.x) + 20, y + 40, 17, LIGHTGRAY)
+            y += 82
+
+        if state.unlocked_growths:
+            draw_text(font, "已拥有", int(rect.x) + 236, int(rect.y) + 130, 18, Color(202, 180, 124, 255))
+            yy = int(rect.y) + 160
+            for growth_id in sorted(state.unlocked_growths):
+                title = growth_defs[growth_id].title
+                draw_text(font, f"· {title}", int(rect.x) + 236, yy, 18, LIGHTGRAY)
+                yy += 26
+    finally:
         end_layer("profile_modal")
-        return
-
-    y = int(rect.y) + 102
-    draw_text(font, "成长", int(rect.x) + 20, y, 18, Color(202, 180, 124, 255))
-    y += 28
-    for growth_id in state.pending_growth_choices:
-        growth = growth_defs[growth_id]
-        locked = state.growth_points <= 0
-        button_rect = Rectangle(rect.x + 20, y, 188, 32)
-        if locked:
-            draw_frame(button_rect, Color(22, 24, 30, 255), Color(70, 72, 78, 180))
-            _draw_centered_text(font, growth.title, button_rect, 18, Color(118, 118, 118, 255))
-        else:
-            if pill(font, button_rect, growth.title, False):
-                from raygame.rules import claim_growth
-
-                claim_growth(state, growth_id)
-                return
-        draw_text(font, growth.description, int(rect.x) + 20, y + 40, 17, LIGHTGRAY)
-        y += 82
-
-    if state.unlocked_growths:
-        draw_text(font, "已拥有", int(rect.x) + 236, int(rect.y) + 130, 18, Color(202, 180, 124, 255))
-        yy = int(rect.y) + 160
-        for growth_id in sorted(state.unlocked_growths):
-            title = growth_defs[growth_id].title
-            draw_text(font, f"· {title}", int(rect.x) + 236, yy, 18, LIGHTGRAY)
-            yy += 26
-    end_layer("profile_modal")
 
 
 def draw_message_feed(font: Font | None, rect: Rectangle, state: GameState) -> None:

@@ -37,17 +37,27 @@ def configure_gui_theme() -> None:
 
 
 def _build_codepoints() -> list[int]:
-    codepoints = list(range(32, 127))
-    for start, end in [
-        (0x3000, 0x303F),
-        (0x3040, 0x30FF),
-        (0x3400, 0x4DBF),
-        (0x4E00, 0x9FFF),
-        (0xF900, 0xFAFF),
-        (0xFF00, 0xFFEF),
-    ]:
-        codepoints.extend(range(start, end + 1))
-    return codepoints
+    ranges = [
+        (0x0020, 0x007E),  # Basic Latin: English letters, digits, punctuation
+        (0x00A0, 0x00FF),  # Latin-1 Supplement: ·, accents, common Western symbols
+        (0x2000, 0x206F),  # General Punctuation: … — • “ ” and similar marks
+        (0x20A0, 0x20CF),  # Currency Symbols: €, ¥ and related signs
+        (0x2100, 0x214F),  # Letterlike Symbols: ™, №, ℡ and related signs
+        (0x2190, 0x21FF),  # Arrows: useful for UI and logs
+        (0x2200, 0x22FF),  # Mathematical Operators: ∞, ≈, ± and similar signs
+        (0x25A0, 0x25FF),  # Geometric Shapes: UI glyphs and bullets
+        (0x3000, 0x303F),  # CJK Symbols and Punctuation
+        (0x3040, 0x30FF),  # Hiragana + Katakana for future content
+        (0x31F0, 0x31FF),  # Katakana Phonetic Extensions
+        (0x3400, 0x4DBF),  # CJK Unified Ideographs Extension A
+        (0x4E00, 0x9FFF),  # CJK Unified Ideographs
+        (0xF900, 0xFAFF),  # CJK Compatibility Ideographs
+        (0xFF00, 0xFFEF),  # Halfwidth and Fullwidth Forms
+    ]
+    codepoints: set[int] = set()
+    for start, end in ranges:
+        codepoints.update(range(start, end + 1))
+    return sorted(codepoints)
 
 
 def load_ui_font() -> Font | None:

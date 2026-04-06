@@ -236,11 +236,10 @@ def draw_hud(font: Font | None, state: GameState) -> None:
     draw_frame(hud, Color(20, 22, 29, 245))
     _hud_block(font, Rectangle(hud.x + 18, hud.y + 10, 140, 32), "生命", f"{state.resources.health}/{state.resources.max_health}", Color(214, 112, 112, 255))
     _hud_block(font, Rectangle(hud.x + 170, hud.y + 10, 140, 32), "压力", f"{state.resources.stress}/{state.resources.max_stress}", Color(208, 182, 108, 255))
-    _hud_block(font, Rectangle(hud.x + 322, hud.y + 10, 100, 32), "金钱", f"{state.resources.money}", Color(120, 204, 128, 255))
-    _clock_block(font, Rectangle(hud.x + 446, hud.y + 10, 250, 36), "Heat", state.clocks.heat, state.clocks.heat_max)
-    _clock_block(font, Rectangle(hud.x + 714, hud.y + 10, 250, 36), "乌鸦", state.clocks.crow_time, state.clocks.crow_time_max)
+    _clock_block(font, Rectangle(hud.x + 322, hud.y + 10, 250, 36), "Heat", state.clocks.heat, state.clocks.heat_max)
+    _clock_block(font, Rectangle(hud.x + 590, hud.y + 10, 250, 36), "乌鸦", state.clocks.crow_time, state.clocks.crow_time_max)
     if state.screen.value == "mission":
-        _clock_block(font, Rectangle(hud.x + 982, hud.y + 10, 220, 36), "警报", state.clocks.alarm, state.clocks.alarm_max)
+        _clock_block(font, Rectangle(hud.x + 858, hud.y + 10, 220, 36), "警报", state.clocks.alarm, state.clocks.alarm_max)
         mode = "任务"
     elif state.screen.value == "ending":
         mode = "结局"
@@ -495,8 +494,10 @@ def _cost_label(cost: ActionCostDef) -> str:
 def draw_inventory_panel(font: Font | None, rect: Rectangle, state: GameState, action: ActionPointDef | None) -> None:
     draw_frame(rect, Color(16, 18, 24, 255), Color(76, 82, 96, 220))
     draw_text(font, "物品", int(rect.x) + 14, int(rect.y) + 10, 22, RAYWHITE)
-    cell_w = (rect.width - 38) * 0.5
-    cell_h = 64
+    cell_w = (rect.width - 32) * 0.5
+    cell_h = 54
+    row_gap = 6
+    grid_top = 40
     slots = [
         ("money", "金币", getattr(state.resources, "money")),
         ("cigarettes", "烟卷", getattr(state.resources, "cigarettes")),
@@ -506,7 +507,7 @@ def draw_inventory_panel(font: Font | None, rect: Rectangle, state: GameState, a
     for index, (key, label, amount) in enumerate(slots):
         col = index % 2
         row = index // 2
-        cell = Rectangle(rect.x + 14 + col * (cell_w + 10), rect.y + 42 + row * (cell_h + 10), cell_w, cell_h)
+        cell = Rectangle(rect.x + 12 + col * (cell_w + 8), rect.y + grid_top + row * (cell_h + row_gap), cell_w, cell_h)
         cost = _find_slot_cost(action, key)
         selected = cost is not None and cost_is_prepared(state, cost)
         available = amount > 0 or cost is None or cost.kind == "resource"
@@ -520,11 +521,15 @@ def draw_inventory_panel(font: Font | None, rect: Rectangle, state: GameState, a
         if not disabled and clickable(cell):
             assert cost is not None
             toggle_prepared_cost(state, action, cost)
-        draw_text(font, label, int(cell.x) + 10, int(cell.y) + 10, 18, RAYWHITE if not disabled else Color(110, 110, 110, 255))
-        draw_text(font, str(amount), int(cell.x) + 10, int(cell.y) + 34, 20, Color(212, 196, 132, 255) if not disabled else Color(100, 100, 100, 255))
+
+        label_color = RAYWHITE if not disabled else Color(110, 110, 110, 255)
+        value_color = Color(212, 196, 132, 255) if not disabled else Color(100, 100, 100, 255)
+
+        draw_text(font, label, int(cell.x) + 10, int(cell.y) + 8, 16, label_color)
+        draw_text(font, str(amount), int(cell.x) + 10, int(cell.y) + 30, 19, value_color)
         if cost is not None:
             need = f"x{cost.amount}"
-            draw_text(font, need, int(cell.x + cell.width - 34), int(cell.y) + 34, 16, LIGHTGRAY if not disabled else Color(96, 96, 96, 255))
+            draw_text(font, need, int(cell.x + cell.width - measure_text_ex(font, need, 15, 1.0).x - 10), int(cell.y) + 30, 15, LIGHTGRAY if not disabled else Color(96, 96, 96, 255))
 
 
 def _find_slot_cost(action: ActionPointDef | None, key: str) -> ActionCostDef | None:

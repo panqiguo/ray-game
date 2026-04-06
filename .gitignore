@@ -1,0 +1,27 @@
+.venv/
+.python-version
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+# build/
+dist/
+site/
+.eggs/
+*.egg-info/
+
+# macOS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# local app metadata
+.codex/
+
+# web / runtime outputs
+.pygbag/
+web-build/

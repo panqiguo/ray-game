@@ -170,13 +170,18 @@ def pill(font: Font | None, rect: Rectangle, label: str, selected: bool = False,
 
 
 def draw_slot_chip(font: Font | None, rect: Rectangle, label: str, *, filled: bool = False, receptive: bool = False, disabled: bool = False) -> bool:
-    fill = Color(84, 68, 46, 255) if filled else Color(26, 30, 38, 255)
-    border = Color(190, 162, 96, 255) if (filled or receptive) else Color(82, 88, 102, 220)
+    fill = Color(84, 68, 46, 255) if filled else Color(18, 21, 27, 255)
+    border = Color(190, 162, 96, 255) if filled else Color(64, 70, 82, 220)
+    inner = Rectangle(rect.x + 3, rect.y + 3, rect.width - 6, rect.height - 6)
     if disabled:
         fill = Color(20, 22, 28, 255)
         border = Color(60, 64, 74, 180)
     clicked = False if disabled else clickable(rect)
     draw_frame(rect, fill, border)
+    if not filled:
+        draw_frame(inner, Color(12, 14, 18, 210), Color(34, 38, 46, 160))
+    elif receptive:
+        draw_frame(inner, Color(56, 46, 30, 150), Color(118, 100, 62, 160))
     draw_centered_text(font, label, rect, 15, RAYWHITE if not disabled else Color(110, 110, 110, 255))
     return clicked
 

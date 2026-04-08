@@ -28,8 +28,6 @@ def draw_hud(font: Font | None, state: GameState) -> None:
     draw_frame(hud, Color(20, 22, 29, 245))
     _hud_block(font, Rectangle(hud.x + 18, hud.y + 10, 140, 32), "生命", f"{state.attributes.health}/{state.attributes.max_health}", Color(214, 112, 112, 255))
     _hud_block(font, Rectangle(hud.x + 170, hud.y + 10, 140, 32), "压力", f"{state.attributes.stress}/{state.attributes.max_stress}", Color(208, 182, 108, 255))
-    _hud_block(font, Rectangle(hud.x + 322, hud.y + 10, 120, 32), "金钱", str(state.resources.money), Color(120, 204, 128, 255))
-    _hud_block(font, Rectangle(hud.x + 456, hud.y + 10, 120, 32), "烟卷", str(state.resources.cigarettes), Color(190, 162, 96, 255))
     if text_button(font, Rectangle(hud.x + hud.width - 148, hud.y + 10, 120, 34), f"档案 {state.growth_points}", 18, disabled=(state.modal.kind not in {"", "profile"})):
         if state.modal.kind == "profile":
             close_modal(state)

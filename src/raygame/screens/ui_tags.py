@@ -102,7 +102,7 @@ def condition_labels(conditions) -> tuple[str, ...]:
     labels: list[str] = []
     for item in conditions:
         if item.kind == "has_item" and isinstance(item.value, str):
-            labels.append(f"需 {ITEM_LABELS.get(item.value, item.value)}")
+            labels.append(f"需要 {ITEM_LABELS.get(item.value, item.value)}")
     return tuple(labels)
 
 
@@ -110,7 +110,7 @@ def requirement_labels(requirements: tuple[InputRequirement, ...]) -> tuple[str,
     labels: list[str] = []
     for requirement in requirements:
         if requirement.kind == "item" and not requirement.consume:
-            labels.append(f"需 {requirement.label or ITEM_LABELS.get(requirement.key, requirement.key)}")
+            labels.append(f"需要 {requirement.label or ITEM_LABELS.get(requirement.key, requirement.key)}")
     return tuple(labels)
 
 

@@ -191,14 +191,14 @@ def _draw_action_card(font: Font | None, state: GameState, presented: PresentedA
     for slot in presented.slots:
         if draw_slot_chip(
             font,
-            Rectangle(slot_x, slot_y, rect.width - 28, 28),
+            Rectangle(slot_x, slot_y, rect.width - 28, 34),
             slot.label,
             filled=slot.filled,
             receptive=slot.receptive,
             disabled=slot.disabled,
         ):
             _toggle_presented_slot(state, action, slot)
-        slot_y += 34
+        slot_y += 40
 
     if presented.attachment is not None:
         preview_rect = Rectangle(rect.x + 14, rect.y + rect.height - 90, rect.width - 28, 68)

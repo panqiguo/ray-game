@@ -17,7 +17,7 @@ from raygame.model.state import (
     SelectedInputState,
     WorldState,
 )
-from raygame.rules.deck import draw_cards, make_starting_deck, remove_negative_cards, reshuffle, start_city_day
+from raygame.rules.deck import draw_cards, make_starting_deck, reshuffle, start_city_day
 from raygame.rules.judgment import compute_action_value, roll_result
 from raygame.rules.rng import RandomSource
 
@@ -579,12 +579,9 @@ def sync_trauma_cards_with_health(state: GameState) -> None:
     current = _count_card(state, TRAUMA_CARD_ID)
     if current < missing:
         for _ in range(missing - current):
-            state.deck.discard_pile.append(TRAUMA_CARD_ID)
+            state.deck.draw_pile.append(TRAUMA_CARD_ID)
     elif current > missing:
-        remove_negative_cards(state.deck, current - missing, "physical")
-        remaining = _count_card(state, TRAUMA_CARD_ID)
-        if remaining > missing:
-            _remove_specific_cards(state, TRAUMA_CARD_ID, remaining - missing)
+        _remove_specific_cards(state, TRAUMA_CARD_ID, current - missing)
 
 
 def _count_card(state: GameState, card_id: str) -> int:
@@ -593,7 +590,7 @@ def _count_card(state: GameState, card_id: str) -> int:
 
 def _remove_specific_cards(state: GameState, card_id: str, amount: int) -> None:
     remaining = amount
-    for pile in (state.deck.hand, state.deck.discard_pile, state.deck.draw_pile):
+    for pile in (state.deck.draw_pile, state.deck.discard_pile, state.deck.hand):
         keep: list[str] = []
         for existing in pile:
             if remaining > 0 and existing == card_id:
@@ -603,6 +600,7 @@ def _remove_specific_cards(state: GameState, card_id: str, amount: int) -> None:
         pile[:] = keep
         if remaining == 0:
             return
+    assert remaining == 0, f"failed to remove enough {card_id}: {remaining}"
 
 
 def _check_endings(state: GameState) -> None:

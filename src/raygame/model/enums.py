@@ -27,14 +27,7 @@ class ResultType(str, Enum):
 
 class ScreenName(str, Enum):
     CITY = "city"
-    MISSION = "mission"
     ENDING = "ending"
-
-
-class AreaName(str, Enum):
-    PERIMETER = "perimeter"
-    CORRIDOR = "corridor"
-    FREEZER = "freezer"
 
 
 SUIT_LABELS = {
@@ -52,4 +45,3 @@ RISK_LABELS = {
     Risk.MID: "中风险",
     Risk.HIGH: "高风险",
 }
-

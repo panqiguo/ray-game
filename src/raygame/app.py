@@ -8,7 +8,7 @@ from pyray import *  # type: ignore
 from raygame.constants import TARGET_FPS, WINDOW_HEIGHT, WINDOW_WIDTH
 from raygame.content.validate import validate_content
 from raygame.rendering import configure_gui_theme, draw_text, load_ui_font
-from raygame.rules.progression import start_new_run
+from raygame.rules.progression import advance_pending_resolution, start_new_run
 from raygame.screens import draw_current_screen
 from raygame.screens.debug_panel import draw_debug_panel
 from raygame.screens.widgets import begin_ui_frame, draw_hud, finish_ui_frame
@@ -35,6 +35,7 @@ class GameApp:
             self.state.debug_open = not self.state.debug_open
         if is_key_pressed(KEY_F5):
             self.reset_run()
+        advance_pending_resolution(self.state, self.rng, get_frame_time())
 
     def draw(self) -> None:
         begin_drawing()

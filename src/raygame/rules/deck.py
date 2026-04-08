@@ -38,11 +38,6 @@ def start_city_day(deck: DeckState, rng: RandomSource, hand_size: int = HAND_SIZ
     draw_cards(deck, rng, hand_size)
 
 
-def start_mission_hand(deck: DeckState, rng: RandomSource) -> None:
-    deck.hand.clear()
-    draw_cards(deck, rng, HAND_SIZE)
-
-
 def discard_card(deck: DeckState, card_id: str) -> None:
     deck.hand.remove(card_id)
     deck.discard_pile.append(card_id)
@@ -88,4 +83,3 @@ def replace_first_base_card(deck: DeckState, old_prefix: str, new_card_id: str) 
                 pile[index] = new_card_id
                 return True
     return False
-

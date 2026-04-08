@@ -2,199 +2,310 @@ from __future__ import annotations
 
 from pyray import *  # type: ignore
 
-from raygame.content import CITY_ACTIONS, CITY_LOCATIONS, CITY_UTILITY_ACTIONS, GROWTH_DEFS
-from raygame.model.state import GameState
+from raygame.content import GROWTH_DEFS, SCENARIO
+from raygame.model.defs import ActionDef, LocationNode
+from raygame.model.state import GameState, PendingResolutionState
 from raygame.rendering import draw_text
-from raygame.rules import action_is_available, action_is_visible, action_ready_to_execute, method_is_available, perform_action, perform_free_action
+from raygame.rules.judgment import RESULT_TABLE, clamp_action_value
+from raygame.rules import (
+    clear_assembly,
+    clear_selected_input,
+    close_modal,
+    current_action,
+    dismiss_pending_resolution,
+    focus_action,
+    location_is_visible,
+    open_modal,
+    open_overlay,
+    perform_current_action,
+    toggle_action_check_slot,
+    toggle_action_requirement_slot,
+)
+from raygame.screens.city_presenters import (
+    ActionSlotModel,
+    PresentedActionCard,
+    PresentedLocationCard,
+    present_action_cards,
+    present_child_location_cards,
+    present_location_clock_ids,
+    present_world_location_cards,
+)
 from raygame.screens.widgets import (
     begin_layer,
-    centered_rect,
-    close_modal,
-    draw_action_modal,
-    draw_casebook_hint,
+    click_pressed,
+    consume_click,
+    draw_card_pile_modal,
+    draw_clock_row,
     draw_frame,
     draw_hand,
     draw_message_feed,
-    draw_modal_shell,
-    modal_blocks_world,
-    modal_is_open,
+    draw_note_block,
     draw_profile_modal,
+    draw_result_strip,
+    draw_scrim,
+    draw_slot_chip,
+    draw_table_card,
+    draw_table_shell,
     end_layer,
     layout,
-    node_button,
     pill,
-    open_modal,
+    wrap_text_lines,
 )
 
 
-LOCATION_LAYOUT = {
-    "office": ((96, 92), "办公桌 / 案卷"),
-    "red_light": ((420, 92), "暗巷 / 酒吧"),
-    "docks": ((744, 92), "集装箱区 / 走私商"),
-    "black_market": ((258, 312), "街边摊"),
-    "clinic": ((582, 312), "包扎"),
-    "slaughterhouse": ((906, 312), "潜入入口"),
-}
-
-SIDEBAR_WIDTH = 304
-
-
 def draw_city_screen(font: Font | None, state: GameState, rng) -> None:
-    if is_key_pressed(KEY_ESCAPE):
-        if state.selected_action_id is not None:
-            state.selected_action_id = None
-            state.selected_method_id = None
-            state.prepared_costs.clear()
-            if modal_is_open(state, "utility"):
-                close_modal(state)
-        else:
-            close_modal(state)
+    if state.pending_resolution is not None and state.pending_resolution.settled and click_pressed():
+        dismiss_pending_resolution(state)
+        consume_click()
+    resolving = state.pending_resolution is not None and not state.pending_resolution.settled
+    if is_key_pressed(KEY_ESCAPE) and not resolving:
+        close_modal(state)
     page = layout()
-    content_rect = Rectangle(page.stage.x + 20, page.stage.y + 76, page.stage.width - SIDEBAR_WIDTH - 52, page.stage.height - 96)
-    side_rect = Rectangle(page.stage.x + page.stage.width - SIDEBAR_WIDTH - 20, page.stage.y + 76, SIDEBAR_WIDTH, page.stage.height - 96)
-    draw_frame(page.stage, Color(21, 24, 31, 245))
-    draw_text(font, f"第 {state.day} 天：城市整备", int(page.stage.x) + 22, int(page.stage.y) + 18, 30, RAYWHITE)
-    draw_text(font, "城区地图", int(page.stage.x) + 22, int(page.stage.y) + 56, 18, LIGHTGRAY)
-    begin_layer("city_world", interactive=not modal_is_open(state))
-    _draw_city_map(font, state, content_rect)
-    _draw_city_sidebar(font, state, side_rect)
-    end_layer("city_world")
-    if modal_is_open(state, "location"):
-        begin_layer("city_location_modal", interactive=state.selected_action_id is None)
-        _draw_location_modal(font, state)
-        end_layer("city_location_modal")
-        if state.selected_action_id is not None:
-            begin_layer("city_action_modal", interactive=True)
-            _draw_location_action_modal(font, state, rng)
-            end_layer("city_action_modal")
-    if modal_is_open(state, "utility"):
-        begin_layer("city_utility_modal", interactive=True)
-        _draw_utility_action_modal(font, state, rng)
-        end_layer("city_utility_modal")
-    begin_layer("city_hand", interactive=(not modal_blocks_world(state) or state.selected_action_id is not None))
-    draw_hand(font, state, _active_city_action(state))
-    end_layer("city_hand")
-    draw_casebook_hint(font, state)
+    message_rect = Rectangle(page.stage.x + page.stage.width - 266, page.stage.y + 8, 252, 126)
+    table_rect = Rectangle(page.stage.x + 2, page.stage.y + 2, page.stage.width - 4, page.stage.height - 4)
+    begin_layer("world", interactive=state.modal.kind == "")
+    _draw_world_table(font, state, table_rect)
+    end_layer("world")
+    if state.modal.kind == "location" and state.modal.primary_id is not None:
+        begin_layer("location_table", interactive=True)
+        _draw_location_table(font, state, rng)
+        end_layer("location_table")
+    draw_card_pile_modal(font, state)
+    begin_layer("hand", interactive=state.modal.kind in {"", "location"} and not resolving)
+    draw_hand(font, state, current_action(state))
+    end_layer("hand")
+    draw_message_feed(font, message_rect, state)
     draw_profile_modal(font, state, GROWTH_DEFS)
 
 
-def _draw_city_map(font: Font | None, state: GameState, rect: Rectangle) -> None:
-    draw_frame(rect, Color(18, 20, 26, 220))
-    map_origin_x = int(rect.x) + 28
-    map_origin_y = int(rect.y) + 26
-    line_color = Color(66, 70, 82, 255)
-
-    draw_line(map_origin_x + 140, map_origin_y + 76, map_origin_x + 360, map_origin_y + 76, line_color)
-    draw_line(map_origin_x + 466, map_origin_y + 76, map_origin_x + 682, map_origin_y + 76, line_color)
-    draw_line(map_origin_x + 358, map_origin_y + 146, map_origin_x + 358, map_origin_y + 254, line_color)
-    draw_line(map_origin_x + 682, map_origin_y + 254, map_origin_x + 842, map_origin_y + 254, line_color)
-
-    for location_id, location in CITY_LOCATIONS.items():
-        if location_id == "slaughterhouse" and "clue_a" not in state.clues and state.day < 3:
-            continue
-        offset, subtitle = LOCATION_LAYOUT[location_id]
-        rect = Rectangle(map_origin_x + offset[0], map_origin_y + offset[1], 224, 82)
-        active = modal_is_open(state, "location") and state.modal.primary_id == location_id
-        if node_button(font, rect, location.title, subtitle, active=active):
-            open_modal(state, "location", location_id)
-            state.selected_action_id = None
-            state.selected_method_id = None
-            state.prepared_costs.clear()
+def _draw_world_table(font: Font | None, state: GameState, rect: Rectangle) -> None:
+    sections, _ = draw_table_shell(
+        font,
+        rect,
+        title=SCENARIO.title,
+        subtitle=f"第 {state.day} 天 | 地点像散在桌面上的卡，你可以从这里一层层翻开它们。",
+    )
+    draw_clock_row(font, Rectangle(sections.header.x + 18, sections.header.y + 84, sections.header.width - 36, 26), SCENARIO.global_clock_ids, state)
+    _draw_world_cards(font, state, sections.content)
 
 
-def _draw_city_sidebar(font: Font | None, state: GameState, rect: Rectangle) -> None:
-    utility_rect = Rectangle(rect.x, rect.y, rect.width, 174)
-    message_rect = Rectangle(rect.x, rect.y + 188, rect.width, rect.height - 188)
-    draw_frame(utility_rect, Color(18, 20, 26, 245))
-    draw_text(font, "技能", int(utility_rect.x) + 16, int(utility_rect.y) + 14, 24, RAYWHITE)
-    y = int(utility_rect.y) + 50
-    for action in CITY_UTILITY_ACTIONS.values():
-        disabled = not action_is_available(action, state)
-        if node_button(font, Rectangle(utility_rect.x + 16, y, utility_rect.width - 32, 48), action.title, action.description, disabled=disabled):
-            open_modal(state, "utility", action.id)
-            state.selected_action_id = action.id
-            state.selected_method_id = None
-            state.prepared_costs.clear()
-        y += 58
-    draw_message_feed(font, message_rect, state)
-
-
-def _draw_location_modal(font: Font | None, state: GameState) -> None:
-    if state.modal.primary_id is None:
-        return
-    location = CITY_LOCATIONS[state.modal.primary_id]
-    modal = centered_rect(760, 320, -40)
-    shell = draw_modal_shell(font, location.title, modal, subtitle=location.description, scope=layout().stage)
-    if shell.close_requested:
-        close_modal(state)
-        return
-
-    x = int(shell.body.x)
-    y = int(shell.body.y)
-    visible_actions = [CITY_ACTIONS[action_id] for action_id in location.action_ids if action_is_visible(CITY_ACTIONS[action_id], state)]
-    for action in visible_actions:
-        rect = Rectangle(x, y, 220, 56)
-        active = state.selected_action_id == action.id
-        if node_button(font, rect, action.title, action.description, active=active, disabled=not action_is_available(action, state)):
-            state.selected_action_id = action.id
-            state.selected_method_id = None
-            state.prepared_costs.clear()
-            state.modal.primary_id = location.id
-        x += 236
-        if x + 220 > shell.rect.x + shell.rect.width - 20:
-            x = int(shell.body.x)
-            y += 72
-
-    if not visible_actions:
-        draw_text(font, "此处今天没有可用行动。", int(shell.body.x), int(shell.body.y), 18, LIGHTGRAY)
-
-
-def _draw_location_action_modal(font: Font | None, state: GameState, rng) -> None:
+def _draw_location_table(font: Font | None, state: GameState, rng) -> None:
     assert state.modal.primary_id is not None
-    assert state.selected_action_id is not None
-    action = CITY_ACTIONS[state.selected_action_id]
-    methods = [method for method in action.methods if method_is_available(method, state)]
-    shell = draw_action_modal(font, state, action, methods)
-    if shell.close_requested:
-        state.selected_action_id = None
-        state.selected_method_id = None
-        state.prepared_costs.clear()
-        return
-    if not action.methods:
-        if pill(font, Rectangle(shell.rect.x + 276, shell.rect.y + 376, 168, 34), "执行", False, disabled=not action_ready_to_execute(action, state)):
-            perform_free_action(state, rng, action)
-            close_modal(state)
-        if pill(font, Rectangle(shell.rect.x + 460, shell.rect.y + 376, 168, 34), "取消", False):
-            state.selected_action_id = None
-            state.selected_method_id = None
-            state.prepared_costs.clear()
-        return
-    if state.selected_card_id and state.selected_method_id and pill(font, Rectangle(shell.rect.x + 276, shell.rect.y + 376, 168, 34), "确认行动", False):
-        method = next(item for item in methods if item.id == state.selected_method_id)
-        perform_action(state, rng, action, method, state.selected_card_id)
-    if pill(font, Rectangle(shell.rect.x + 460, shell.rect.y + 376, 168, 34), "取消", False):
-        state.selected_action_id = None
-        state.selected_method_id = None
-        state.prepared_costs.clear()
-
-
-def _draw_utility_action_modal(font: Font | None, state: GameState, rng) -> None:
-    assert state.modal.primary_id is not None
-    action = CITY_UTILITY_ACTIONS[state.modal.primary_id]
-    shell = draw_action_modal(font, state, action, [])
-    if shell.close_requested:
+    location = SCENARIO.locations_by_id[state.modal.primary_id]
+    resolving = state.pending_resolution is not None and not state.pending_resolution.settled
+    rect = _floating_table_rect()
+    draw_scrim(layout().stage)
+    sections, closed = draw_table_shell(
+        font,
+        rect,
+        title=location.title,
+        subtitle=location.description,
+        close_label="关闭",
+    )
+    if closed and not resolving:
         close_modal(state)
         return
-    if pill(font, Rectangle(shell.rect.x + 276, shell.rect.y + 376, 168, 34), "执行", False, disabled=not action_ready_to_execute(action, state)):
-        perform_free_action(state, rng, action)
-        close_modal(state)
-    if pill(font, Rectangle(shell.rect.x + 460, shell.rect.y + 376, 168, 34), "取消", False):
-        close_modal(state)
+    location_clock_ids = present_location_clock_ids(location.id)
+    if location_clock_ids:
+        draw_clock_row(font, Rectangle(sections.header.x + 18, sections.header.y + 84, sections.header.width - 36, 26), location_clock_ids, state)
+
+    child_ids = tuple(child.id for child in location.children if location_is_visible(child.id, state))
+    if child_ids:
+        child_strip = Rectangle(sections.content.x, sections.content.y, sections.content.width, 114)
+        _draw_location_grid(font, state, child_strip, present_child_location_cards(state, child_ids), columns=max(1, min(3, len(child_ids))), nested=True)
+        action_top = child_strip.y + child_strip.height + 18
+    else:
+        action_top = sections.content.y
+
+    draw_text(font, "行动卡", int(sections.content.x), int(action_top) - 26, 18, LIGHTGRAY)
+    action_area = Rectangle(sections.content.x, action_top, sections.content.width, sections.content.y + sections.content.height - action_top)
+    _draw_action_grid(font, state, rng, present_action_cards(state, location), action_area)
 
 
-def _active_city_action(state: GameState):
-    if modal_is_open(state, "utility") and state.modal.primary_id is not None:
-        return CITY_UTILITY_ACTIONS[state.modal.primary_id]
-    if modal_is_open(state, "location") and state.selected_action_id is not None:
-        return CITY_ACTIONS[state.selected_action_id]
-    return None
+def _draw_location_grid(
+    font: Font | None,
+    state: GameState,
+    rect: Rectangle,
+    cards: tuple[PresentedLocationCard, ...],
+    *,
+    columns: int,
+    nested: bool = False,
+) -> None:
+    resolving = state.pending_resolution is not None and not state.pending_resolution.settled
+    card_h = 92
+    gap_x = 18
+    gap_y = 18
+    card_w = (rect.width - gap_x * (columns - 1)) / columns
+    for index, presented in enumerate(cards):
+        col = index % columns
+        row = index // columns
+        card = Rectangle(
+            rect.x + col * (card_w + gap_x),
+            rect.y + row * (card_h + gap_y),
+            card_w,
+            card_h,
+        )
+        model = presented.card
+        if draw_table_card(font, card, state, model):
+            clear_assembly(state)
+            clear_selected_input(state)
+            if nested:
+                open_overlay(state, "location", presented.location_id)
+            else:
+                open_modal(state, "location", presented.location_id)
+
+
+def _draw_world_cards(font: Font | None, state: GameState, rect: Rectangle) -> None:
+    for presented in present_world_location_cards(state):
+        assert presented.location.position is not None
+        card = Rectangle(rect.x + presented.location.position[0], rect.y + presented.location.position[1], presented.card.style.width, presented.card.style.height)
+        if draw_table_card(font, card, state, presented.card):
+            clear_assembly(state)
+            clear_selected_input(state)
+            open_modal(state, "location", presented.location_id)
+
+
+def _draw_action_grid(font: Font | None, state: GameState, rng, cards: tuple[PresentedActionCard, ...], rect: Rectangle) -> None:
+    if not cards:
+        draw_note_block(font, Rectangle(rect.x, rect.y, rect.width, 86), "这里暂时没有可做的事", "换个地方，或者先满足别的条件。")
+        return
+    card_w = 232.0
+    card_h = 224.0
+    gap_x = 18
+    gap_y = 96
+    columns = max(1, min(len(cards), int((rect.width + gap_x) // (card_w + gap_x))))
+    for index, presented in enumerate(cards):
+        col = index % columns
+        row = index // columns
+        card = Rectangle(rect.x + col * (card_w + gap_x), rect.y + row * (card_h + gap_y), card_w, card_h)
+        _draw_action_card(font, state, presented, card, rng)
+
+
+def _draw_action_card(font: Font | None, state: GameState, presented: PresentedActionCard, rect: Rectangle, rng) -> None:
+    action = presented.action
+    pending = state.pending_resolution if state.pending_resolution and state.pending_resolution.resolution.action_id == action.id else None
+    draw_table_card(font, rect, state, presented.card)
+
+    slot_y = rect.y + 124
+    slot_x = rect.x + 14
+    for slot in presented.slots:
+        if draw_slot_chip(font, Rectangle(slot_x, slot_y, rect.width - 28, 28), slot.label, filled=slot.filled, receptive=slot.receptive):
+            _toggle_presented_slot(state, action, slot)
+        slot_y += 34
+
+    if presented.attachment is not None:
+        preview_rect = Rectangle(rect.x + 14, rect.y + rect.height - 90, rect.width - 28, 68)
+        button_rect = Rectangle(rect.x + 18, rect.y + rect.height + 8, rect.width - 36, 24)
+        _draw_action_attachment(font, state, action, presented, preview_rect, button_rect, rng, pending)
+    elif presented.card.disabled:
+        draw_text(font, "条件未满足或当前资源不足。", int(rect.x) + 14, int(rect.y) + rect.height - 26, 14, Color(132, 132, 132, 255))
+
+
+def _draw_action_attachment(
+    font: Font | None,
+    state: GameState,
+    action: ActionDef,
+    presented: PresentedActionCard,
+    rect: Rectangle,
+    button_rect: Rectangle,
+    rng,
+    pending: PendingResolutionState | None,
+) -> None:
+    draw_frame(rect, Color(18, 20, 26, 255), Color(78, 84, 98, 220))
+    if pending is not None:
+        _draw_pending_attachment(font, state, rect, button_rect, pending)
+        return
+    assert presented.attachment is not None
+    draw_text(font, presented.attachment.title, int(rect.x) + 10, int(rect.y) + 6, 16, Color(224, 192, 112, 255) if presented.attachment.mode == "preview" and presented.attachment.row else LIGHTGRAY)
+    if presented.attachment.row:
+        draw_result_strip(font, Rectangle(rect.x + 10, rect.y + 28, rect.width - 20, 20), presented.attachment.row)
+    elif presented.attachment.hint:
+        draw_text(font, presented.attachment.hint, int(rect.x) + 10, int(rect.y) + 28, 14, LIGHTGRAY)
+    if pill(font, Rectangle(button_rect.x, button_rect.y, 78, 22), "收回", False):
+        clear_assembly(state)
+    if pill(font, Rectangle(button_rect.x + button_rect.width - 78, button_rect.y, 78, 22), "执行", False, disabled=not presented.attachment.can_execute):
+        perform_current_action(state, rng)
+
+
+def _floating_table_rect() -> Rectangle:
+    page = layout()
+    stage = page.stage
+    margin_x = 8.0
+    margin_top = 4.0
+    margin_bottom = 4.0
+    width = min(1040.0, stage.width - margin_x * 2)
+    height = min(590.0, stage.height - margin_top - margin_bottom)
+    x = stage.x + (stage.width - width) * 0.5
+    y = stage.y + margin_top + max(0.0, (stage.height - margin_top - margin_bottom - height) * 0.16)
+    return Rectangle(x, y, width, height)
+
+
+def _draw_pending_attachment(font: Font | None, state: GameState, rect: Rectangle, button_rect: Rectangle, pending: PendingResolutionState) -> None:
+    resolution = pending.resolution
+    if resolution.result is not None and resolution.value is not None:
+        draw_text(font, "判定中", int(rect.x) + 10, int(rect.y) + 6, 16, LIGHTGRAY)
+        _draw_inline_resolution_strip(font, Rectangle(rect.x + 10, rect.y + 26, rect.width - 20, 20), pending)
+    else:
+        draw_text(font, "执行中", int(rect.x) + 10, int(rect.y) + 6, 16, LIGHTGRAY)
+    if pending.settled:
+        result_rect = _pending_result_rect(font, rect, resolution)
+        draw_frame(result_rect, Color(16, 18, 24, 248), Color(78, 84, 98, 220))
+        text_width = result_rect.width - 20
+        text_y = int(result_rect.y) + 10
+        for line in wrap_text_lines(font, resolution.text, text_width, 14):
+            draw_text(font, line, int(result_rect.x) + 10, text_y, 14, RAYWHITE)
+            text_y += 16
+        if resolution.effect_lines:
+            for line in wrap_text_lines(font, " | ".join(resolution.effect_lines[:2]), text_width, 13):
+                draw_text(font, line, int(result_rect.x) + 10, text_y + 2, 13, Color(212, 196, 132, 255))
+                text_y += 15
+        continue_rect = Rectangle(result_rect.x + result_rect.width - 88, result_rect.y + result_rect.height + 8, 78, 22)
+        if pill(font, continue_rect, "继续", False):
+            dismiss_pending_resolution(state)
+    else:
+        draw_text(font, "结果会在这张卡下面落定。", int(rect.x) + 10, int(rect.y) + 44, 14, LIGHTGRAY)
+
+
+def _toggle_presented_slot(state: GameState, action: ActionDef, slot: ActionSlotModel) -> None:
+    if slot.slot_kind == "check":
+        toggle_action_check_slot(state, action)
+        return
+    if slot.slot_kind == "requirement":
+        assert slot.requirement is not None
+        toggle_action_requirement_slot(state, action, slot.requirement)
+        return
+    if state.assembly.action_id == action.id:
+        clear_assembly(state)
+    else:
+        focus_action(state, action.id)
+
+
+def _draw_inline_resolution_strip(font: Font | None, rect: Rectangle, pending: PendingResolutionState) -> None:
+    resolution = pending.resolution
+    assert resolution.value is not None
+    row = RESULT_TABLE[clamp_action_value(resolution.value)]
+    active_index = (resolution.die_roll - 1) if pending.settled and resolution.die_roll is not None else int(pending.progress * 24) % 6
+    cell_w = (rect.width - 20) / 6.0
+    x = rect.x
+    for index, result in enumerate(row):
+        if result.value == "fail":
+            fill, label = Color(124, 66, 66, 255), "失"
+        elif result.value == "cost":
+            fill, label = Color(144, 126, 70, 255), "代"
+        else:
+            fill, label = Color(74, 134, 92, 255), "成"
+        cell = Rectangle(x, rect.y, cell_w - 4, rect.height)
+        draw_frame(cell, fill, Color(22, 22, 22, 180))
+        if index == active_index:
+            draw_rectangle_rounded_lines_ex(cell, 0.035, 6, 3.0, Color(233, 216, 152, 255))
+        draw_text(font, label, int(cell.x + 10), int(cell.y + 4), 16, RAYWHITE)
+        x += cell_w
+
+
+def _pending_result_rect(font: Font | None, preview_rect: Rectangle, resolution) -> Rectangle:
+    text_width = preview_rect.width - 168
+    line_count = len(wrap_text_lines(font, resolution.text, text_width, 14))
+    if resolution.effect_lines:
+        line_count += len(wrap_text_lines(font, " | ".join(resolution.effect_lines[:2]), text_width, 13))
+    height = max(46.0, 20.0 + line_count * 16.0)
+    return Rectangle(preview_rect.x, preview_rect.y + preview_rect.height + 8, preview_rect.width, height)

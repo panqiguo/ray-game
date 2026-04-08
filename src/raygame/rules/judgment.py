@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from raygame.content.cards import CARD_DEFS
-from raygame.model.defs import ActionMethodDef
+from raygame.model.defs import CheckDef
 from raygame.model.enums import ResultType, Suit
 
 
@@ -15,26 +15,23 @@ RESULT_TABLE: dict[int, tuple[ResultType, ...]] = {
 }
 
 
-def compute_action_value(
-    card_id: str | None,
-    method: ActionMethodDef,
-    wildcard_suit: Suit | None = None,
-    extra_bonus: int = 0,
-) -> int:
+def clamp_action_value(action_value: int) -> int:
+    return max(1, min(6, action_value))
+
+
+def compute_action_value(card_id: str | None, check: CheckDef, wildcard_suit: Suit | None = None) -> int:
     if card_id is None:
         return 0
     card = CARD_DEFS[card_id]
     if card.is_negative:
         return 0
     suit = wildcard_suit or card.suit
-    # Current prototype follows the design mock: method difficulty provides the
-    # baseline action value shown in the panel, matching suit pushes it up by 1.
-    value = method.difficulty + card.points + extra_bonus + method.bonus
-    if suit in method.suits:
+    value = check.difficulty + card.points
+    if suit in check.suits:
         value += 1
-    return max(1, min(6, value))
+    return clamp_action_value(value)
 
 
 def roll_result(action_value: int, die_roll: int) -> ResultType:
-    clamped = max(1, min(6, action_value))
+    clamped = clamp_action_value(action_value)
     return RESULT_TABLE[clamped][die_roll - 1]

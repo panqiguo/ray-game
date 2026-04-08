@@ -1,18 +1,28 @@
 from __future__ import annotations
 
-from raygame.constants import HAND_SIZE, MAX_LOG_LINES, MISSION_PUSH_THROUGH_DRAW
-from raygame.content import CITY_ACTIONS, GROWTH_DEFS, MISSION_ACTIONS
+from raygame.constants import HAND_SIZE, MAX_LOG_LINES
+from raygame.content import GROWTH_DEFS, SCENARIO
 from raygame.content.cards import CARD_DEFS
-from raygame.model.defs import ActionCostDef, ActionMethodDef, ActionPointDef, OutcomeDef
-from raygame.model.enums import AreaName, ResultType, ScreenName, Suit
-from raygame.model.state import ActionResolution, GameState
+from raygame.model.defs import ActionDef, Effect, InputRequirement
+from raygame.model.enums import ResultType, ScreenName
+from raygame.model.state import (
+    ActionAssemblyState,
+    ActionResolution,
+    AttributeState,
+    DeckState,
+    GameState,
+    PendingResolutionState,
+    ProgressClockState,
+    ResourceState,
+    SelectedInputState,
+    WorldState,
+)
+from raygame.rules.deck import draw_cards, make_starting_deck, remove_negative_cards, reshuffle, start_city_day
+from raygame.rules.judgment import compute_action_value, roll_result
+from raygame.rules.rng import RandomSource
 
-from .conditions import all_met
-from .deck import discard_card, draw_cards, make_starting_deck, start_city_day, start_mission_hand
-from .effects import apply_effects
-from .ending_rules import determine_ending
-from .judgment import compute_action_value, roll_result
-from .rng import RandomSource
+
+TRAUMA_CARD_ID = "trauma"
 
 
 def _push_log(state: GameState, text: str) -> None:
@@ -20,343 +30,655 @@ def _push_log(state: GameState, text: str) -> None:
     del state.action_log[:-MAX_LOG_LINES]
 
 
-def action_is_available(action: ActionPointDef, state: GameState) -> bool:
-    if not action_is_visible(action, state):
-        return False
-    if not action_costs_affordable(action, state):
-        return False
-    if action.special == "push_through":
-        return not state.deck.hand and state.deck.push_through_count < 3
-    return True
-
-
-def action_is_visible(action: ActionPointDef, state: GameState) -> bool:
-    if not all_met(action.conditions, state):
-        return False
-    if state.screen == ScreenName.CITY and f"city_done:{action.id}:{state.day}" in state.flags:
-        return False
-    if state.screen == ScreenName.CITY:
-        if action.id == "buy_cigarettes" and state.resources.money < 10:
-            return False
-        if action.id == "bandage" and (
-            state.resources.money < 15 or not _has_negative_family(state, "physical")
-        ):
-            return False
-        if action.id == "clear_mind" and not _has_negative_family(state, "mental"):
-            return False
-        if action.id == "drink_out" and not _has_any_negative(state):
-            return False
-    if state.screen == ScreenName.MISSION and action.area is not None:
-        if action.area != state.mission.current_area:
-            return False
-    if action.id in state.mission.completed_actions:
-        return False
-    if action.id == "evidence" and not state.mission.evidence_unlocked:
-        return False
-    if action.id == "crow" and not (state.mission.boss_resolution or state.mission.freezer_shortcut):
-        return False
-    if action.special == "enter_mission" and not can_enter_mission(state):
-        return False
-    return True
-
-
-def action_costs_affordable(action: ActionPointDef, state: GameState) -> bool:
-    for cost in action.costs:
-        if cost.kind == "resource":
-            if getattr(state.resources, cost.key) < cost.amount:
-                return False
-        elif cost.kind == "item":
-            if cost.key not in state.items:
-                return False
-        else:
-            raise AssertionError(f"Unsupported cost kind {cost.kind}")
-    return True
-
-
-def cost_token(cost: ActionCostDef) -> str:
-    return f"{cost.kind}:{cost.key}"
-
-
-def cost_is_prepared(state: GameState, cost: ActionCostDef) -> bool:
-    return cost_token(cost) in state.prepared_costs
-
-
-def toggle_prepared_cost(state: GameState, action: ActionPointDef, cost: ActionCostDef) -> None:
-    token = cost_token(cost)
-    if token in state.prepared_costs:
-        state.prepared_costs.remove(token)
-        return
-    assert action_costs_affordable(action, state), f"Action cost is not affordable: {action.id}"
-    state.prepared_costs.add(token)
-
-
-def action_costs_ready(action: ActionPointDef, state: GameState) -> bool:
-    return all(cost_is_prepared(state, cost) for cost in action.costs)
-
-
-def action_selection_ready(action: ActionPointDef, state: GameState) -> bool:
-    if action.special != "mission_smoke":
-        return True
-    if state.selected_card_id is None or state.selected_card_id not in state.deck.hand:
-        return False
-    return CARD_DEFS[state.selected_card_id].is_negative
-
-
-def action_ready_to_execute(action: ActionPointDef, state: GameState) -> bool:
-    return action_is_visible(action, state) and action_costs_ready(action, state) and action_selection_ready(action, state)
-
-
-def method_is_available(method: ActionMethodDef, state: GameState) -> bool:
-    if not all_met(tuple(condition for condition in method.conditions if condition.kind != "if_clue_reduce"), state):
-        return False
-    return True
-
-
-def effective_difficulty(method: ActionMethodDef, state: GameState) -> int:
-    difficulty = method.difficulty
-    if method.id == "guard_instinct" and "clue_c" in state.clues:
-        difficulty -= 1
-    if state.screen == ScreenName.MISSION and state.mission.lights_off and state.mission.current_area == AreaName.FREEZER:
-        difficulty -= 1
-    return max(1, difficulty)
-
-
 def start_new_run(seed: int) -> tuple[GameState, RandomSource]:
     rng = RandomSource(seed)
     deck = make_starting_deck(rng)
-    state = GameState(deck=deck, seed=seed)
-    state.pending_growth_choices = ["calm_habit", "casebook", "paranoid_reason"]
-    state.growth_points = 1
+    world = WorldState(
+        visible_locations=set(SCENARIO.initial_visible_locations),
+        progress_clocks={
+            clock_id: ProgressClockState(
+                value=0,
+                visible=clock_id in SCENARIO.initial_visible_clocks or not spec.hidden,
+            )
+            for clock_id, spec in SCENARIO.clocks_by_id.items()
+        },
+        inventory=dict(SCENARIO.initial_inventory),
+    )
+    state = GameState(
+        deck=deck,
+        attributes=AttributeState(
+            health=SCENARIO.initial_health,
+            max_health=10,
+            stress=SCENARIO.initial_stress,
+            max_stress=8,
+        ),
+        resources=ResourceState(
+            money=SCENARIO.initial_money,
+            cigarettes=SCENARIO.initial_cigarettes,
+        ),
+        world=world,
+        screen=ScreenName.CITY,
+        pending_growth_choices=list(SCENARIO.initial_growth_choices),
+        growth_points=0,
+        seed=seed,
+    )
+    sync_trauma_cards_with_health(state)
     start_city_day(state.deck, rng, HAND_SIZE)
-    _push_log(state, f"雨夜开局。Seed={seed}")
+    _push_log(state, "你从一场暴打里活了下来，但还没真正脱身。")
     return state, rng
 
 
-def perform_free_action(state: GameState, rng: RandomSource, action: ActionPointDef) -> None:
-    assert action_ready_to_execute(action, state), f"Action is not ready: {action.id}"
-    _consume_action_costs(state, action)
-    if action.special:
-        _perform_special_action(state, rng, action)
-        _clear_selection(state)
-        _check_run_fail(state)
-        return
-    apply_effects(action.free_effects, state)
-    if state.screen == ScreenName.CITY and action.free_completes:
-        state.flags.add(f"city_done:{action.id}:{state.day}")
-    _push_log(state, f"{action.title}: {action.free_text}")
-    _clear_selection(state)
-    _check_run_fail(state)
+def get_action(action_id: str) -> ActionDef:
+    return SCENARIO.actions_by_id[action_id]
 
 
-def perform_action(state: GameState, rng: RandomSource, action: ActionPointDef, method: ActionMethodDef, card_id: str, wildcard: Suit | None = None) -> None:
-    discard_card(state.deck, card_id)
-    temp_method = ActionMethodDef(
-        id=method.id,
-        title=method.title,
-        suits=method.suits,
-        difficulty=effective_difficulty(method, state),
-        risk=method.risk,
-        success=method.success,
-        cost=method.cost,
-        fail=method.fail,
-        description=method.description,
-        conditions=method.conditions,
-        bonus=method.bonus,
-    )
-    value = compute_action_value(card_id, temp_method, wildcard_suit=wildcard)
-    die_roll = rng.d6()
-    result = roll_result(value, die_roll)
-    outcome: OutcomeDef
-    if result == ResultType.SUCCESS:
-        outcome = method.success
-    elif result == ResultType.COST:
-        outcome = method.cost
+def get_clock_value(state: GameState, clock_id: str) -> int:
+    return state.world.progress_clocks[clock_id].value
+
+
+def action_is_visible(action: ActionDef, state: GameState) -> bool:
+    if action.id in state.world.hidden_actions:
+        return False
+    location_id = location_for_action(action.id)
+    if not location_is_visible(location_id, state):
+        return False
+    return all_met(action.conditions, state)
+
+
+def action_is_available(action: ActionDef, state: GameState) -> bool:
+    return action_is_visible(action, state) and requirements_affordable(action.inputs, state)
+
+
+def location_is_visible(location_id: str, state: GameState) -> bool:
+    parent_id = SCENARIO.parent_by_id[location_id]
+    if parent_id is None:
+        if location_id not in state.world.visible_locations:
+            return False
     else:
-        outcome = method.fail
-    apply_effects(outcome.effects, state)
-    if outcome.completes and state.screen == ScreenName.MISSION:
-        state.mission.completed_actions.add(action.id)
-        _advance_area_if_ready(state)
-    if outcome.completes and state.screen == ScreenName.CITY:
-        state.flags.add(f"city_done:{action.id}:{state.day}")
-    text = outcome.available_text or outcome.text
-    state.last_resolution = ActionResolution(
-        action_id=action.id,
-        method_id=method.id,
-        card_id=card_id,
-        result=result,
-        die_roll=die_roll,
-        value=value,
-        text=text,
-    )
-    _push_log(state, f"{action.title}/{method.title}: {text}")
-    _clear_selection(state)
-    _check_run_fail(state)
+        if not location_is_visible(parent_id, state):
+            return False
+    location = SCENARIO.locations_by_id[location_id]
+    return all_met(location.conditions, state)
 
 
-def _advance_area_if_ready(state: GameState) -> None:
-    if state.mission.current_area == AreaName.PERIMETER:
-        if "fence" in state.mission.completed_actions and ("guard" in state.mission.completed_actions or state.mission.skipped_guard):
-            state.mission.current_area = AreaName.CORRIDOR
-            _push_log(state, "你穿过外围，走廊的冷气迎面压过来。")
-    elif state.mission.current_area == AreaName.CORRIDOR:
-        if "dog" in state.mission.completed_actions and "control_room" in state.mission.completed_actions:
-            state.mission.current_area = AreaName.FREEZER
-            _push_log(state, "走廊尽头的冷库门缓缓敞开。")
-    elif state.mission.current_area == AreaName.FREEZER:
-        if state.mission.crow_rescued and (state.mission.boss_resolution or state.mission.freezer_shortcut):
-            finish_run(state)
+def all_met(conditions, state: GameState) -> bool:
+    return all(evaluate_condition(condition, state) for condition in conditions)
 
 
-def _check_run_fail(state: GameState) -> None:
-    if state.resources.health <= 0 or "run_failed" in state.flags:
-        finish_run(state)
-    if state.clocks.alarm >= state.clocks.alarm_max:
-        state.flags.add("run_failed")
-        _push_log(state, "警报满了，冷库里的脚步从四面围了上来。")
-        finish_run(state)
+def evaluate_condition(item, state: GameState) -> bool:
+    value = item.value
+    if item.kind == "has_item":
+        assert isinstance(value, str)
+        return state.world.inventory.get(value, 0) > 0
+    if item.kind == "inventory_below":
+        assert isinstance(value, str)
+        item_id, raw = value.split(":")
+        return state.world.inventory.get(item_id, 0) < int(raw)
+    if item.kind == "clock_at_least":
+        assert isinstance(value, str)
+        clock_id, raw = value.split(":")
+        return get_clock_value(state, clock_id) >= int(raw)
+    if item.kind == "clock_hidden":
+        assert isinstance(value, str)
+        return not state.world.progress_clocks[value].visible
+    if item.kind == "location_visible":
+        assert isinstance(value, str)
+        return value in state.world.visible_locations
+    raise AssertionError(f"Unsupported condition kind: {item.kind}")
 
 
-def _clear_selection(state: GameState) -> None:
-    state.selected_action_id = None
-    state.selected_method_id = None
-    state.selected_card_id = None
-    state.prepared_costs.clear()
-    state.modal.kind = ""
-    state.modal.primary_id = None
-
-
-def _consume_action_costs(state: GameState, action: ActionPointDef) -> None:
-    for cost in action.costs:
-        token = cost_token(cost)
-        assert token in state.prepared_costs, f"Unprepared cost for action {action.id}: {token}"
-        if cost.kind == "resource":
-            current = getattr(state.resources, cost.key)
-            assert current >= cost.amount, f"Insufficient resource {cost.key}"
-            setattr(state.resources, cost.key, current - cost.amount)
-        elif cost.kind == "item":
-            assert cost.key in state.items, f"Missing item {cost.key}"
-            state.items.remove(cost.key)
+def requirements_affordable(inputs: tuple[InputRequirement, ...], state: GameState) -> bool:
+    for requirement in inputs:
+        if requirement.kind == "card":
+            if requirement.key == "any" and not state.deck.hand:
+                return False
+            if requirement.key == "negative" and not any(CARD_DEFS[card_id].is_negative for card_id in state.deck.hand):
+                return False
+        elif requirement.kind == "resource":
+            if getattr(state.resources, requirement.key) < requirement.amount:
+                return False
+        elif requirement.kind == "item":
+            if state.world.inventory.get(requirement.key, 0) < requirement.amount:
+                return False
         else:
-            raise AssertionError(f"Unsupported cost kind {cost.kind}")
+            raise AssertionError(f"Unsupported input kind: {requirement.kind}")
+    return True
 
 
-def _perform_special_action(state: GameState, rng: RandomSource, action: ActionPointDef) -> None:
-    if action.special == "city_smoke":
-        state.resources.stress = max(0, state.resources.stress - 2)
-        state.deck.discard_pile.append("fatigue")
-        _push_log(state, "烟卷压住了焦躁，但疲惫会在之后找上你。")
+def open_action(state: GameState, action_id: str, modal_kind: str = "action") -> None:
+    state.modal.return_kind = ""
+    state.modal.return_primary_id = None
+    state.assembly = ActionAssemblyState(action_id=action_id)
+    state.selected_input = SelectedInputState()
+    state.modal.kind = modal_kind
+    state.modal.primary_id = action_id
+
+
+def open_modal(state: GameState, kind: str, primary_id: str | None = None) -> None:
+    dismiss_pending_resolution(state)
+    state.modal.kind = kind
+    state.modal.primary_id = primary_id
+    state.modal.return_kind = ""
+    state.modal.return_primary_id = None
+    if kind == "location" and primary_id is not None:
+        state.world.fresh_locations.discard(primary_id)
+    if kind != "action":
+        clear_assembly(state)
+        clear_selected_input(state)
+
+
+def open_overlay(state: GameState, kind: str, primary_id: str | None = None) -> None:
+    dismiss_pending_resolution(state)
+    assert state.modal.kind, "overlay requires an active base modal"
+    state.modal.return_kind = state.modal.kind
+    state.modal.return_primary_id = state.modal.primary_id
+    state.modal.kind = kind
+    state.modal.primary_id = primary_id
+
+
+def clear_assembly(state: GameState) -> None:
+    state.assembly = ActionAssemblyState()
+
+
+def clear_selected_input(state: GameState) -> None:
+    state.selected_input = SelectedInputState()
+
+
+def close_modal(state: GameState) -> None:
+    dismiss_pending_resolution(state)
+    if state.modal.return_kind:
+        state.modal.kind = state.modal.return_kind
+        state.modal.primary_id = state.modal.return_primary_id
+        state.modal.return_kind = ""
+        state.modal.return_primary_id = None
         return
-    if action.special == "mission_smoke":
-        assert state.selected_card_id is not None
-        assert state.selected_card_id in state.deck.hand
-        assert CARD_DEFS[state.selected_card_id].is_negative
-        discard_card(state.deck, state.selected_card_id)
-        draw_cards(state.deck, rng, len(state.deck.hand) + 1)
-        state.resources.stress = min(state.resources.max_stress, state.resources.stress + 1)
-        _push_log(state, "烟雾散开，你把一张负面牌从手里扔掉了。")
-        return
-    if action.special == "end_day":
-        end_day(state, rng)
-        return
-    if action.special == "enter_mission":
-        enter_mission(state, rng)
-        return
-    if action.special == "push_through":
-        push_through(state, rng)
-        return
-    raise AssertionError(f"Unsupported special action {action.special}")
-
-
-def end_day(state: GameState, rng: RandomSource) -> None:
-    if "enable_casebook" in state.flags and state.selected_card_id in state.deck.hand:
-        from .deck import choose_casebook_card
-
-        choose_casebook_card(state.deck, state.selected_card_id)
-    while state.deck.hand:
-        state.deck.discard_pile.append(state.deck.hand.pop())
-    if state.clocks.freeze_crow_time_once:
-        state.clocks.freeze_crow_time_once = False
-        _push_log(state, "你替乌鸦多争到了一天。")
-    else:
-        state.clocks.crow_time = max(0, state.clocks.crow_time - 1)
-    if "hungover" in state.flags:
-        hand_size = HAND_SIZE - 1
-        state.flags.remove("hungover")
-    else:
-        hand_size = HAND_SIZE
-    if state.clocks.crow_time <= 0 and state.day >= 3:
-        _push_log(state, "乌鸦的时间已经归零。你只能赌自己还赶得上。")
-    state.day += 1
-    if state.day == 3 and not state.unlocked_growths:
-        state.pending_growth_choices = [gid for gid in state.pending_growth_choices if gid not in state.unlocked_growths]
-    start_city_day(state.deck, rng, hand_size)
-    _push_log(state, f"第 {state.day} 天开始。")
-    _clear_selection(state)
-
-
-def can_enter_mission(state: GameState) -> bool:
-    return "clue_a" in state.clues or state.day >= 3
-
-
-def enter_mission(state: GameState, rng: RandomSource) -> None:
-    assert can_enter_mission(state), "Mission is locked"
-    state.screen = ScreenName.MISSION
-    state.mission.current_area = AreaName.PERIMETER
-    state.mission.completed_actions.clear()
-    state.clocks.alarm = 0
-    start_mission_hand(state.deck, rng)
-    _push_log(state, "屠宰场的大门在雨里发黑。")
-    if state.clocks.heat >= 4:
-        state.clocks.alarm = 1
-        _push_log(state, "Heat 太高，外围已经有人提高了警觉。")
-
-
-def push_through(state: GameState, rng: RandomSource) -> None:
-    assert state.screen == ScreenName.MISSION
-    assert not state.deck.hand
-    assert state.deck.push_through_count < len(MISSION_PUSH_THROUGH_DRAW)
-    stress_cost = 2 + state.deck.push_through_count
-    draw_amount = MISSION_PUSH_THROUGH_DRAW[state.deck.push_through_count]
-    state.deck.push_through_count += 1
-    state.resources.stress = min(state.resources.max_stress, state.resources.stress + stress_cost)
-    if state.resources.stress >= state.resources.max_stress:
-        state.resources.stress = max(0, state.resources.max_stress - 2)
-        state.deck.discard_pile.append("panic")
-    draw_cards(state.deck, rng, draw_amount)
-    _push_log(state, f"你硬撑了一次，抽 {draw_amount} 张，Stress +{stress_cost}。")
-
-
-def claim_growth(state: GameState, growth_id: str) -> None:
-    assert state.growth_points > 0, "No growth points available"
-    growth = GROWTH_DEFS[growth_id]
-    apply_effects(growth.effects, state)
-    state.unlocked_growths.add(growth_id)
-    state.growth_points -= 1
-    state.pending_growth_choices = []
     state.modal.kind = ""
     state.modal.primary_id = None
-    _push_log(state, f"成长解锁：{growth.title}")
+    clear_assembly(state)
+    clear_selected_input(state)
 
 
-def finish_run(state: GameState) -> None:
-    ending_id, title, body = determine_ending(state)
-    state.ending_id = ending_id
-    state.ending_title = title
-    state.ending_body = body
-    state.screen = ScreenName.ENDING
+def select_card_input(state: GameState, card_id: str) -> None:
+    if state.selected_input.kind == "card" and state.selected_input.key == card_id:
+        clear_selected_input(state)
+        return
+    state.selected_input = SelectedInputState(kind="card", key=card_id)
 
 
-def _has_negative_family(state: GameState, family: str) -> bool:
-    from raygame.content.cards import CARD_DEFS
+def select_resource_input(state: GameState, key: str) -> None:
+    if state.selected_input.kind == "resource" and state.selected_input.key == key:
+        clear_selected_input(state)
+        return
+    state.selected_input = SelectedInputState(kind="resource", key=key)
 
-    for pile in (state.deck.hand, state.deck.draw_pile, state.deck.discard_pile):
-        for card_id in pile:
-            card = CARD_DEFS[card_id]
-            if card.is_negative and card.negative_family == family:
-                return True
+
+def select_item_input(state: GameState, key: str) -> None:
+    if state.selected_input.kind == "item" and state.selected_input.key == key:
+        clear_selected_input(state)
+        return
+    state.selected_input = SelectedInputState(kind="item", key=key)
+
+
+def focus_action(state: GameState, action_id: str) -> None:
+    if state.assembly.action_id == action_id:
+        return
+    state.assembly = ActionAssemblyState(action_id=action_id)
+
+
+def action_slot_ready(state: GameState, action: ActionDef, requirement: InputRequirement | None = None, *, check_slot: bool = False) -> bool:
+    if state.assembly.action_id != action.id:
+        return False
+    if check_slot:
+        return state.assembly.slotted_card_id is not None
+    assert requirement is not None
+    return requirement_is_slotted(state, requirement)
+
+
+def action_can_accept_selected_input(state: GameState, action: ActionDef, requirement: InputRequirement | None = None, *, check_slot: bool = False) -> bool:
+    selected = state.selected_input
+    if not selected.kind:
+        return False
+    if check_slot:
+        return selected.kind == "card" and selected.key in state.deck.hand
+    assert requirement is not None
+    if requirement.kind == "resource":
+        return selected.kind == "resource" and selected.key == requirement.key and getattr(state.resources, requirement.key) >= requirement.amount
+    if requirement.kind == "item":
+        return selected.kind == "item" and selected.key == requirement.key and state.world.inventory.get(requirement.key, 0) >= requirement.amount
+    if requirement.kind == "card":
+        if selected.kind != "card" or selected.key not in state.deck.hand:
+            return False
+        return requirement.key != "negative" or CARD_DEFS[selected.key].is_negative
     return False
 
 
-def _has_any_negative(state: GameState) -> bool:
-    return _has_negative_family(state, "physical") or _has_negative_family(state, "mental")
+def toggle_action_check_slot(state: GameState, action: ActionDef) -> None:
+    if state.assembly.action_id == action.id and state.assembly.slotted_card_id is not None:
+        state.assembly.slotted_card_id = None
+        if not state.assembly.slotted_items and not state.assembly.slotted_resources:
+            state.assembly.action_id = None
+        return
+    if not action_can_accept_selected_input(state, action, check_slot=True):
+        return
+    focus_action(state, action.id)
+    state.assembly.slotted_card_id = state.selected_input.key
+    clear_selected_input(state)
+
+
+def toggle_action_requirement_slot(state: GameState, action: ActionDef, requirement: InputRequirement) -> None:
+    if state.assembly.action_id == action.id and requirement_is_slotted(state, requirement):
+        if requirement.kind == "resource":
+            state.assembly.slotted_resources.pop(requirement.key, None)
+        elif requirement.kind == "item":
+            state.assembly.slotted_items.pop(requirement.key, None)
+        elif requirement.kind == "card":
+            state.assembly.slotted_card_id = None
+        if not state.assembly.slotted_items and not state.assembly.slotted_resources and state.assembly.slotted_card_id is None:
+            state.assembly.action_id = None
+        return
+    if not action_can_accept_selected_input(state, action, requirement):
+        return
+    focus_action(state, action.id)
+    if requirement.kind == "resource":
+        state.assembly.slotted_resources[requirement.key] = requirement.amount
+    elif requirement.kind == "item":
+        state.assembly.slotted_items[requirement.key] = requirement.amount
+    elif requirement.kind == "card":
+        state.assembly.slotted_card_id = state.selected_input.key
+    clear_selected_input(state)
+
+
+def slot_card(state: GameState, card_id: str) -> None:
+    action = current_action(state)
+    if action is None:
+        return
+    requirement = next((item for item in action.inputs if item.kind == "card"), None)
+    if requirement is None and action.check is None:
+        return
+    if requirement is not None and requirement.key == "negative" and not CARD_DEFS[card_id].is_negative:
+        return
+    state.assembly.slotted_card_id = None if state.assembly.slotted_card_id == card_id else card_id
+
+
+def toggle_requirement_input(state: GameState, requirement: InputRequirement) -> None:
+    action = current_action(state)
+    if action is None:
+        return
+    if requirement.kind == "resource":
+        if state.assembly.slotted_resources.get(requirement.key, 0) >= requirement.amount:
+            state.assembly.slotted_resources.pop(requirement.key, None)
+        elif getattr(state.resources, requirement.key) >= requirement.amount:
+            state.assembly.slotted_resources[requirement.key] = requirement.amount
+    elif requirement.kind == "item":
+        if state.assembly.slotted_items.get(requirement.key, 0) >= requirement.amount:
+            state.assembly.slotted_items.pop(requirement.key, None)
+        elif state.world.inventory.get(requirement.key, 0) >= requirement.amount:
+            state.assembly.slotted_items[requirement.key] = requirement.amount
+
+
+def requirement_is_slotted(state: GameState, requirement: InputRequirement) -> bool:
+    if requirement.kind == "card":
+        if requirement.key == "negative":
+            return state.assembly.slotted_card_id is not None and CARD_DEFS[state.assembly.slotted_card_id].is_negative
+        return state.assembly.slotted_card_id is not None
+    if requirement.kind == "resource":
+        return state.assembly.slotted_resources.get(requirement.key, 0) >= requirement.amount
+    if requirement.kind == "item":
+        return state.assembly.slotted_items.get(requirement.key, 0) >= requirement.amount
+    raise AssertionError(f"Unsupported requirement kind: {requirement.kind}")
+
+
+def action_ready_to_execute(action: ActionDef, state: GameState) -> bool:
+    if not action_is_available(action, state):
+        return False
+    for requirement in action.inputs:
+        if not requirement_is_slotted(state, requirement):
+            return False
+    if action.check is not None and state.assembly.slotted_card_id is None:
+        return False
+    return True
+
+
+def current_action(state: GameState) -> ActionDef | None:
+    return get_action(state.assembly.action_id) if state.assembly.action_id else None
+
+
+def perform_current_action(state: GameState, rng: RandomSource) -> None:
+    action = current_action(state)
+    assert action is not None
+    assert action_ready_to_execute(action, state), f"Action not ready: {action.id}"
+    location_id = location_for_action(action.id)
+    _consume_inputs(state, action)
+    if action.check is None:
+        resolution = ActionResolution(
+            action_id=action.id,
+            card_id=state.assembly.slotted_card_id,
+            result=None,
+            die_roll=None,
+            value=None,
+            text=action.description,
+            effect_lines=_describe_effects(action.effects, action.id),
+        )
+        state.pending_resolution = PendingResolutionState(
+            resolution=resolution,
+            effects=action.effects,
+            log_text=f"{action.title}: {action.description}",
+            location_id=location_id,
+        )
+    else:
+        card_id = state.assembly.slotted_card_id
+        assert card_id is not None
+        _consume_slotted_card(state)
+        value = compute_action_value(card_id, action.check)
+        die_roll = rng.d6()
+        result = roll_result(value, die_roll)
+        if result == ResultType.SUCCESS:
+            outcome = action.check.success
+        elif result == ResultType.COST:
+            outcome = action.check.cost
+        else:
+            outcome = action.check.fail
+        resolved_effects = action.effects + outcome.effects
+        resolution = ActionResolution(
+            action_id=action.id,
+            card_id=card_id,
+            result=result,
+            die_roll=die_roll,
+            value=value,
+            text=outcome.text,
+            effect_lines=_describe_effects(resolved_effects, action.id),
+        )
+        state.pending_resolution = PendingResolutionState(
+            resolution=resolution,
+            effects=resolved_effects,
+            log_text=f"{action.title}: {outcome.text}",
+            location_id=location_id,
+        )
+    clear_selected_input(state)
+
+
+def advance_pending_resolution(state: GameState, rng: RandomSource, dt: float) -> None:
+    pending = state.pending_resolution
+    if pending is None:
+        return
+    if not pending.settled:
+        pending.progress = min(1.0, pending.progress + dt / 0.7)
+        if pending.progress >= 1.0:
+            _apply_effects(pending.effects, state, rng)
+            _push_log(state, pending.log_text)
+            state.last_resolution = pending.resolution
+            _check_endings(state)
+            if state.modal.kind == "location" and state.modal.primary_id is not None and not location_is_visible(state.modal.primary_id, state):
+                close_modal(state)
+            pending.settled = True
+        return
+
+
+def dismiss_pending_resolution(state: GameState) -> None:
+    pending = state.pending_resolution
+    if pending is None:
+        return
+    if pending.settled and state.assembly.action_id == pending.resolution.action_id:
+        clear_assembly(state)
+    state.pending_resolution = None
+
+
+def _consume_inputs(state: GameState, action: ActionDef) -> None:
+    for requirement in action.inputs:
+        assert requirement_is_slotted(state, requirement), f"Requirement not slotted: {requirement}"
+        if requirement.kind == "resource":
+            setattr(state.resources, requirement.key, getattr(state.resources, requirement.key) - requirement.amount)
+        elif requirement.kind == "item" and requirement.consume:
+            state.world.inventory[requirement.key] -= requirement.amount
+            if state.world.inventory[requirement.key] <= 0:
+                state.world.inventory.pop(requirement.key, None)
+
+
+def _consume_slotted_card(state: GameState) -> None:
+    card_id = state.assembly.slotted_card_id
+    if card_id is None:
+        return
+    if card_id in state.deck.hand:
+        state.deck.hand.remove(card_id)
+        state.deck.discard_pile.append(card_id)
+
+
+def _apply_effects(effects: tuple[Effect, ...], state: GameState, rng: RandomSource) -> None:
+    for item in effects:
+        _apply_effect(item, state, rng)
+
+
+def _apply_effect(item: Effect, state: GameState, rng: RandomSource) -> None:
+    value = item.value
+    if item.kind == "change_health":
+        change_health(state, int(value))
+        return
+    if item.kind == "change_stress":
+        change_stress(state, int(value))
+        return
+    if item.kind == "change_resource":
+        assert isinstance(value, str)
+        key, raw = value.split(":")
+        setattr(state.resources, key, getattr(state.resources, key) + int(raw))
+        return
+    if item.kind == "give_item":
+        assert isinstance(value, str)
+        key, raw = value.split(":")
+        state.world.inventory[key] = state.world.inventory.get(key, 0) + int(raw)
+        return
+    if item.kind == "remove_item":
+        assert isinstance(value, str)
+        key, raw = value.split(":")
+        current = state.world.inventory.get(key, 0)
+        next_value = max(0, current - int(raw))
+        if next_value == 0:
+            state.world.inventory.pop(key, None)
+        else:
+            state.world.inventory[key] = next_value
+        return
+    if item.kind == "advance_clock":
+        assert isinstance(value, str)
+        key, raw = value.split(":")
+        advance_clock(state, key, int(raw))
+        return
+    if item.kind == "reveal_location":
+        assert isinstance(value, str)
+        if value not in state.world.visible_locations:
+            state.world.fresh_locations.add(value)
+            _push_log(state, f"发现了新的地点：{SCENARIO.locations_by_id[value].title}")
+        state.world.visible_locations.add(value)
+        return
+    if item.kind == "hide_location":
+        assert isinstance(value, str)
+        state.world.visible_locations.discard(value)
+        return
+    if item.kind == "hide_action":
+        assert isinstance(value, str)
+        state.world.hidden_actions.add(value)
+        return
+    if item.kind == "show_clock":
+        assert isinstance(value, str)
+        state.world.progress_clocks[value].visible = True
+        return
+    if item.kind == "hide_clock":
+        assert isinstance(value, str)
+        state.world.progress_clocks[value].visible = False
+        return
+    if item.kind == "reset_hand":
+        reset_hand(state, rng)
+        return
+    if item.kind == "advance_day":
+        state.day += 1
+        return
+    if item.kind == "end_run":
+        assert isinstance(value, str)
+        if value == "caught":
+            state.ending_id = value
+            state.ending_title = "被追上了"
+            state.ending_body = "你每晚都在争时间，但脚步声终究还是追上了你。"
+        else:
+            state.ending_id = value
+            state.ending_title = "离开这里"
+            state.ending_body = "钥匙终于发动了这辆车。你不知道前方是不是更好，但至少已经离开了这里。"
+        state.screen = ScreenName.ENDING
+        return
+    raise AssertionError(f"Unsupported effect kind: {item.kind}")
+
+
+def reset_hand(state: GameState, rng: RandomSource) -> None:
+    while state.deck.hand:
+        state.deck.discard_pile.append(state.deck.hand.pop())
+    draw_cards(state.deck, rng, HAND_SIZE)
+
+
+def advance_clock(state: GameState, clock_id: str, amount: int = 1) -> None:
+    spec = SCENARIO.clocks_by_id[clock_id]
+    clock_state = state.world.progress_clocks[clock_id]
+    before = clock_state.value
+    clock_state.value = min(spec.segments, clock_state.value + amount)
+    clock_state.visible = True
+    for threshold in spec.thresholds:
+        if before < threshold.at <= clock_state.value:
+            _apply_effects(threshold.effects, state, RandomSource(state.seed))
+
+
+def change_health(state: GameState, amount: int) -> None:
+    state.attributes.health = max(0, min(state.attributes.max_health, state.attributes.health + amount))
+    sync_trauma_cards_with_health(state)
+    if state.attributes.health <= 0:
+        state.ending_id = "collapse"
+        state.ending_title = "倒下了"
+        state.ending_body = "你最终还是没能撑住。"
+        state.screen = ScreenName.ENDING
+
+
+def change_stress(state: GameState, amount: int) -> None:
+    if amount <= 0:
+        state.attributes.stress = max(0, state.attributes.stress + amount)
+        return
+    before = state.attributes.stress
+    state.attributes.stress = min(state.attributes.max_stress, state.attributes.stress + amount)
+    if before >= state.attributes.max_stress or state.attributes.stress >= state.attributes.max_stress:
+        change_health(state, -1)
+        _push_log(state, "压力已经满了，身体替你付了代价。")
+
+
+def sync_trauma_cards_with_health(state: GameState) -> None:
+    missing = state.attributes.max_health - state.attributes.health
+    current = _count_card(state, TRAUMA_CARD_ID)
+    if current < missing:
+        for _ in range(missing - current):
+            state.deck.discard_pile.append(TRAUMA_CARD_ID)
+    elif current > missing:
+        remove_negative_cards(state.deck, current - missing, "physical")
+        remaining = _count_card(state, TRAUMA_CARD_ID)
+        if remaining > missing:
+            _remove_specific_cards(state, TRAUMA_CARD_ID, remaining - missing)
+
+
+def _count_card(state: GameState, card_id: str) -> int:
+    return sum(pile.count(card_id) for pile in (state.deck.hand, state.deck.draw_pile, state.deck.discard_pile))
+
+
+def _remove_specific_cards(state: GameState, card_id: str, amount: int) -> None:
+    remaining = amount
+    for pile in (state.deck.hand, state.deck.discard_pile, state.deck.draw_pile):
+        keep: list[str] = []
+        for existing in pile:
+            if remaining > 0 and existing == card_id:
+                remaining -= 1
+                continue
+            keep.append(existing)
+        pile[:] = keep
+        if remaining == 0:
+            return
+
+
+def _check_endings(state: GameState) -> None:
+    if state.screen == ScreenName.ENDING:
+        return
+    pursuit = state.world.progress_clocks["pursuit"]
+    if pursuit.value >= SCENARIO.clocks_by_id["pursuit"].segments:
+        state.ending_id = "caught"
+        state.ending_title = "被追上了"
+        state.ending_body = "你每晚都在争时间，但脚步声终究还是追上了你。"
+        state.screen = ScreenName.ENDING
+
+
+def _describe_effects(effects: tuple[Effect, ...], action_id: str) -> tuple[str, ...]:
+    lines: list[str] = []
+    for item in effects:
+        value = item.value
+        if item.kind == "change_health":
+            amount = int(value)
+            lines.append(f"生命 {'+' if amount >= 0 else ''}{amount}")
+        elif item.kind == "change_stress":
+            amount = int(value)
+            lines.append(f"压力 {'+' if amount >= 0 else ''}{amount}")
+        elif item.kind == "change_resource":
+            assert isinstance(value, str)
+            key, raw = value.split(":")
+            amount = int(raw)
+            label = "金钱" if key == "money" else "烟卷"
+            lines.append(f"{label} {'+' if amount >= 0 else ''}{amount}")
+        elif item.kind == "give_item":
+            assert isinstance(value, str)
+            key, raw = value.split(":")
+            label = _item_label(key)
+            lines.append(f"获得 {label}" if int(raw) == 1 else f"获得 {label} x{raw}")
+        elif item.kind == "remove_item":
+            assert isinstance(value, str)
+            key, raw = value.split(":")
+            label = _item_label(key)
+            lines.append(f"失去 {label}" if int(raw) == 1 else f"失去 {label} x{raw}")
+        elif item.kind == "advance_clock":
+            assert isinstance(value, str)
+            key, raw = value.split(":")
+            lines.append(f"{SCENARIO.clocks_by_id[key].title} +{raw}")
+        elif item.kind == "reveal_location":
+            assert isinstance(value, str)
+            lines.append(f"发现地点：{SCENARIO.locations_by_id[value].title}")
+        elif item.kind == "hide_location":
+            assert isinstance(value, str)
+            lines.append(f"地点关闭：{SCENARIO.locations_by_id[value].title}")
+        elif item.kind == "hide_action" and value == action_id:
+            lines.append("此行动结束")
+        elif item.kind == "reset_hand":
+            lines.append("重抽手牌")
+        elif item.kind == "advance_day":
+            lines.append("进入下一天")
+        elif item.kind == "end_run":
+            lines.append("达成结局")
+    deduped: list[str] = []
+    for line in lines:
+        if line not in deduped:
+            deduped.append(line)
+    return tuple(deduped[:4])
+
+
+def _item_label(item_id: str) -> str:
+    if item_id == "clothes":
+        return "华美衣服"
+    if item_id == "car_key":
+        return "车钥匙"
+    if item_id == "repair_case_item":
+        return "任务道具"
+    if item_id == "gun":
+        return "枪"
+    return item_id
+
+
+def claim_growth(state: GameState, growth_id: str) -> None:
+    growth = GROWTH_DEFS[growth_id]
+    _apply_effects(growth.effects, state, RandomSource(state.seed))
+    state.unlocked_growths.add(growth_id)
+    state.growth_points = max(0, state.growth_points - 1)
+    state.pending_growth_choices.clear()
+    close_modal(state)
+
+
+def location_for_action(action_id: str) -> str:
+    for location_id, action_ids in SCENARIO.actions_by_location.items():
+        if action_id in action_ids:
+            return location_id
+    raise AssertionError(f"Unknown action owner: {action_id}")

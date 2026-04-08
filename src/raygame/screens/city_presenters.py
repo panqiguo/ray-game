@@ -34,6 +34,7 @@ class ActionSlotModel:
     label: str
     filled: bool
     receptive: bool
+    disabled: bool
     slot_kind: str
     requirement: InputRequirement | None = None
 
@@ -148,6 +149,7 @@ def _present_action_card(state: GameState, action: ActionDef) -> PresentedAction
 
 def _present_action_slots(state: GameState, action: ActionDef, has_pending: bool) -> tuple[ActionSlotModel, ...]:
     locked = state.pending_resolution is not None and not has_pending
+    available = action_is_available(action, state)
     slots: list[ActionSlotModel] = []
     if action.check is not None:
         slots.append(
@@ -155,7 +157,8 @@ def _present_action_slots(state: GameState, action: ActionDef, has_pending: bool
                 key="check",
                 label="手牌槽",
                 filled=action_slot_ready(state, action, check_slot=True),
-                receptive=(not locked) and action_can_accept_selected_input(state, action, check_slot=True),
+                receptive=available and (not locked) and action_can_accept_selected_input(state, action, check_slot=True),
+                disabled=not available,
                 slot_kind="check",
             )
         )
@@ -165,7 +168,8 @@ def _present_action_slots(state: GameState, action: ActionDef, has_pending: bool
                 key=f"{requirement.kind}:{requirement.key}",
                 label=_slot_label(requirement),
                 filled=action_slot_ready(state, action, requirement),
-                receptive=(not locked) and action_can_accept_selected_input(state, action, requirement),
+                receptive=available and (not locked) and action_can_accept_selected_input(state, action, requirement),
+                disabled=not available,
                 slot_kind="requirement",
                 requirement=requirement,
             )
@@ -176,7 +180,8 @@ def _present_action_slots(state: GameState, action: ActionDef, has_pending: bool
                 key="auto",
                 label="自动就绪",
                 filled=state.assembly.action_id == action.id,
-                receptive=(not state.assembly.action_id == action.id) and (not locked),
+                receptive=available and (not state.assembly.action_id == action.id) and (not locked),
+                disabled=not available,
                 slot_kind="auto",
             )
         )

@@ -110,7 +110,7 @@ def draw_inventory_panel(font: Font | None, rect: Rectangle, state: GameState, a
         requirement = _find_requirement(action, kind, key)
         active = requirement is not None and requirement_is_slotted(state, requirement)
         selected = state.selected_input.kind == kind and state.selected_input.key == key
-        disabled = requirement is None or amount <= 0
+        disabled = amount <= 0
         fill = Color(84, 68, 46, 255) if active else Color(24, 27, 34, 255)
         border = Color(190, 162, 96, 255) if (active or selected) else Color(82, 88, 102, 220)
         if disabled:

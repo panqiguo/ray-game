@@ -404,7 +404,13 @@ def advance_pending_resolution(state: GameState, rng: RandomSource, dt: float) -
     if not pending.settled:
         pending.progress = min(1.0, pending.progress + dt / 0.7)
         if pending.progress >= 1.0:
-            _apply_effects(pending.effects, state, rng)
+            extra_lines = _apply_effects(pending.effects, state, rng)
+            if extra_lines:
+                merged = list(pending.resolution.effect_lines)
+                for line in extra_lines:
+                    if line not in merged:
+                        merged.append(line)
+                pending.resolution.effect_lines = tuple(merged[:6])
             _push_log(state, pending.log_text)
             state.last_resolution = pending.resolution
             _check_endings(state)
@@ -443,18 +449,20 @@ def _consume_slotted_card(state: GameState) -> None:
         state.deck.discard_pile.append(card_id)
 
 
-def _apply_effects(effects: tuple[Effect, ...], state: GameState, rng: RandomSource) -> None:
+def _apply_effects(effects: tuple[Effect, ...], state: GameState, rng: RandomSource, extra_lines: list[str] | None = None) -> tuple[str, ...]:
+    derived: list[str] = [] if extra_lines is None else extra_lines
     for item in effects:
-        _apply_effect(item, state, rng)
+        _apply_effect(item, state, rng, derived)
+    return tuple(derived)
 
 
-def _apply_effect(item: Effect, state: GameState, rng: RandomSource) -> None:
+def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines: list[str]) -> None:
     value = item.value
     if item.kind == "change_health":
-        change_health(state, int(value))
+        change_health(state, int(value), extra_lines)
         return
     if item.kind == "change_stress":
-        change_stress(state, int(value))
+        change_stress(state, int(value), extra_lines)
         return
     if item.kind == "change_resource":
         assert isinstance(value, str)
@@ -479,13 +487,14 @@ def _apply_effect(item: Effect, state: GameState, rng: RandomSource) -> None:
     if item.kind == "advance_clock":
         assert isinstance(value, str)
         key, raw = value.split(":")
-        advance_clock(state, key, int(raw))
+        advance_clock(state, key, int(raw), extra_lines)
         return
     if item.kind == "reveal_location":
         assert isinstance(value, str)
         if value not in state.world.visible_locations:
             state.world.fresh_locations.add(value)
             _push_log(state, f"发现了新的地点：{SCENARIO.locations_by_id[value].title}")
+            extra_lines.append(f"发现地点：{SCENARIO.locations_by_id[value].title}")
         state.world.visible_locations.add(value)
         return
     if item.kind == "hide_location":
@@ -531,7 +540,7 @@ def reset_hand(state: GameState, rng: RandomSource) -> None:
     draw_cards(state.deck, rng, HAND_SIZE)
 
 
-def advance_clock(state: GameState, clock_id: str, amount: int = 1) -> None:
+def advance_clock(state: GameState, clock_id: str, amount: int = 1, extra_lines: list[str] | None = None) -> None:
     spec = SCENARIO.clocks_by_id[clock_id]
     clock_state = state.world.progress_clocks[clock_id]
     before = clock_state.value
@@ -539,10 +548,10 @@ def advance_clock(state: GameState, clock_id: str, amount: int = 1) -> None:
     clock_state.visible = True
     for threshold in spec.thresholds:
         if before < threshold.at <= clock_state.value:
-            _apply_effects(threshold.effects, state, RandomSource(state.seed))
+            _apply_effects(threshold.effects, state, RandomSource(state.seed), extra_lines)
 
 
-def change_health(state: GameState, amount: int) -> None:
+def change_health(state: GameState, amount: int, extra_lines: list[str] | None = None) -> None:
     state.attributes.health = max(0, min(state.attributes.max_health, state.attributes.health + amount))
     sync_trauma_cards_with_health(state)
     if state.attributes.health <= 0:
@@ -552,14 +561,16 @@ def change_health(state: GameState, amount: int) -> None:
         state.screen = ScreenName.ENDING
 
 
-def change_stress(state: GameState, amount: int) -> None:
+def change_stress(state: GameState, amount: int, extra_lines: list[str] | None = None) -> None:
     if amount <= 0:
         state.attributes.stress = max(0, state.attributes.stress + amount)
         return
     before = state.attributes.stress
     state.attributes.stress = min(state.attributes.max_stress, state.attributes.stress + amount)
     if before >= state.attributes.max_stress or state.attributes.stress >= state.attributes.max_stress:
-        change_health(state, -1)
+        if extra_lines is not None:
+            extra_lines.append("压力已满，生命 -1")
+        change_health(state, -1, extra_lines)
         _push_log(state, "压力已经满了，身体替你付了代价。")
 
 

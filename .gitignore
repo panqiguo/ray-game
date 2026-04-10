@@ -18,6 +18,7 @@ site/
 .DS_Store
 .idea/
 .vscode/
+.VSCodeCounter
 
 # local app metadata
 .codex/

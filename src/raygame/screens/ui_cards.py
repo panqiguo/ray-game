@@ -37,7 +37,7 @@ TABLE_CARD = TableCardStyle(width=188.0, height=96.0, title_size=22, body_size=1
 ACTION_CARD = TableCardStyle(width=232.0, height=224.0, title_size=22, body_size=15)
 
 
-def draw_table_card(font: Font | None, rect: Rectangle, state: GameState, model: TableCardModel) -> bool:
+def draw_table_card(font: Font | None, rect: Rectangle, state: GameState, model: TableCardModel, scale: float = 1.0) -> bool:
     fill = Color(72, 57, 42, 255) if model.active else Color(28, 32, 40, 255)
     border = Color(191, 157, 96, 255) if model.active else Color(92, 96, 104, 220)
     if model.disabled:
@@ -48,26 +48,26 @@ def draw_table_card(font: Font | None, rect: Rectangle, state: GameState, model:
     draw_text(
         font,
         model.title,
-        int(rect.x) + 14,
-        int(rect.y) + 14,
-        model.style.title_size,
+        int(rect.x + 14 * scale),
+        int(rect.y + 14 * scale),
+        max(10, int(round(model.style.title_size * scale))),
         RAYWHITE if not model.disabled else Color(120, 120, 120, 255),
     )
     draw_text(
         font,
         model.body,
-        int(rect.x) + 14,
-        int(rect.y) + 42,
-        model.style.body_size,
+        int(rect.x + 14 * scale),
+        int(rect.y + 42 * scale),
+        max(9, int(round(model.style.body_size * scale))),
         LIGHTGRAY if not model.disabled else Color(98, 98, 98, 255),
     )
-    meta_y = int(rect.y) + 42 + model.style.body_size + 14
+    meta_y = int(rect.y + (42 + model.style.body_size + 14) * scale)
     for line in model.metadata:
-        draw_text(font, line, int(rect.x) + 14, meta_y, 14, Color(198, 198, 198, 255))
-        meta_y += 20
+        draw_text(font, line, int(rect.x + 14 * scale), meta_y, max(9, int(round(14 * scale))), Color(198, 198, 198, 255))
+        meta_y += int(round(20 * scale))
     if model.clock_ids:
-        draw_action_corner_clocks(rect, model.clock_ids, state, align="left")
-        draw_clock_badges(font, rect, model.clock_ids, state, outside=True)
+        draw_action_corner_clocks(rect, model.clock_ids, state, align="left", scale=scale)
+        draw_clock_badges(font, rect, model.clock_ids, state, outside=True, scale=scale)
     if model.labels:
-        draw_corner_labels(font, rect, model.labels, "right")
+        draw_corner_labels(font, rect, model.labels, "right", scale=scale)
     return clicked

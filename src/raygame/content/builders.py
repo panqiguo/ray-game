@@ -112,6 +112,7 @@ def action(
     title: str,
     description: str,
     screen: ScreenName,
+    position: tuple[int, int] | None = None,
     check: CheckDef | None = None,
     inputs: tuple[InputRequirement, ...] = (),
     effects: tuple[Effect, ...] = (),
@@ -123,6 +124,7 @@ def action(
         title=title,
         description=description,
         screen=screen,
+        position=position,
         check=check,
         inputs=inputs,
         effects=effects,
@@ -168,7 +170,7 @@ def scenario(
     id: str,
     title: str,
     screen: ScreenName,
-    roots: tuple[LocationNode, ...],
+    world_root: LocationNode,
     clocks: tuple[ProgressClockSpec, ...],
     initial_visible_locations: tuple[str, ...],
     initial_visible_clocks: tuple[str, ...],
@@ -183,7 +185,7 @@ def scenario(
         id=id,
         title=title,
         screen=screen,
-        roots=roots,
+        world_root=world_root,
         clocks=clocks,
         initial_visible_locations=initial_visible_locations,
         initial_visible_clocks=initial_visible_clocks,
@@ -202,6 +204,7 @@ def single_use_action(
     title: str,
     description: str,
     screen: ScreenName,
+    position: tuple[int, int] | None = None,
     check: CheckDef | None = None,
     inputs: tuple[InputRequirement, ...] = (),
     effects: tuple[Effect, ...] = (),
@@ -213,6 +216,7 @@ def single_use_action(
             title=title,
             description=description,
             screen=screen,
+            position=position,
             check=check,
             inputs=inputs,
             effects=effects + (effect("hide_action", id),),
@@ -227,6 +231,7 @@ def limited_use_action(
     title: str,
     description: str,
     screen: ScreenName,
+    position: tuple[int, int] | None = None,
     uses: int,
     check: CheckDef | None = None,
     inputs: tuple[InputRequirement, ...] = (),
@@ -240,6 +245,7 @@ def limited_use_action(
             title=title,
             description=description,
             screen=screen,
+            position=position,
             check=check,
             inputs=inputs,
             effects=effects + (effect("advance_clock", f"{clock_id}:1"),),
@@ -266,6 +272,7 @@ def explore_action(
     title: str,
     description: str,
     screen: ScreenName,
+    position: tuple[int, int] | None = None,
     clock_id: str,
     clock_title: str,
     segments: int,
@@ -279,6 +286,7 @@ def explore_action(
             title=title,
             description=description,
             screen=screen,
+            position=position,
             check=check,
             effects=(effect("advance_clock", f"{clock_id}:1"),),
             conditions=conditions,
@@ -303,6 +311,7 @@ def rest_action(
     title: str,
     description: str,
     screen: ScreenName,
+    position: tuple[int, int] | None = None,
     inputs: tuple[InputRequirement, ...] = (),
     effects: tuple[Effect, ...] = (),
     conditions: tuple[Condition, ...] = (),
@@ -312,6 +321,7 @@ def rest_action(
         title=title,
         description=description,
         screen=screen,
+        position=position,
         inputs=inputs,
         effects=effects + (
             effect("reset_hand", True),
@@ -329,6 +339,7 @@ def delivery_action(
     title: str,
     description: str,
     screen: ScreenName,
+    position: tuple[int, int] | None = None,
     inputs: tuple[InputRequirement, ...],
     effects: tuple[Effect, ...],
     conditions: tuple[Condition, ...] = (),
@@ -338,6 +349,7 @@ def delivery_action(
         title=title,
         description=description,
         screen=screen,
+        position=position,
         inputs=inputs,
         effects=effects,
         conditions=conditions,
@@ -350,6 +362,7 @@ def shop_purchase(
     title: str,
     description: str,
     screen: ScreenName,
+    position: tuple[int, int] | None = None,
     price: int,
     item_id: str,
     item_label: str,
@@ -360,6 +373,7 @@ def shop_purchase(
         title=title,
         description=description,
         screen=screen,
+        position=position,
         inputs=(resource("money", price, "金币"),),
         effects=(effect("give_item", f"{item_id}:1"),),
         conditions=(condition("inventory_below", f"{item_id}:1"),),
@@ -374,7 +388,7 @@ def compile_scenario(scenario: ScenarioDef) -> CompiledScenario:
     parent_by_id: dict[str, str | None] = {}
     actions_by_id: dict[str, ActionDef] = {}
     actions_by_location: dict[str, tuple[str, ...]] = {}
-    root_ids: list[str] = []
+    root_ids = [child.id for child in scenario.world_root.children]
 
     def walk(node: LocationNode, parent_id: str | None, depth: int) -> None:
         assert depth <= 2, f"Location nesting exceeds 2: {node.id}"
@@ -388,9 +402,7 @@ def compile_scenario(scenario: ScenarioDef) -> CompiledScenario:
         for child in node.children:
             walk(child, node.id, depth + 1)
 
-    for root in scenario.roots:
-        root_ids.append(root.id)
-        walk(root, None, 1)
+    walk(scenario.world_root, None, 0)
 
     clocks_by_id: dict[str, ProgressClockSpec] = {}
     for spec in scenario.clocks:
@@ -402,7 +414,7 @@ def compile_scenario(scenario: ScenarioDef) -> CompiledScenario:
     action_clock_ids: dict[str, list[str]] = {}
 
     for clock_id, spec in clocks_by_id.items():
-        scope, anchor_id = _infer_clock_display(spec, actions_by_id, actions_by_location, parent_by_id)
+        scope, anchor_id = _infer_clock_display(spec, actions_by_id, actions_by_location, parent_by_id, scenario.world_root.id)
         if scope == "global":
             global_clock_ids.append(clock_id)
         elif scope == "location":
@@ -418,6 +430,7 @@ def compile_scenario(scenario: ScenarioDef) -> CompiledScenario:
         id=scenario.id,
         title=scenario.title,
         screen=scenario.screen,
+        world_root_id=scenario.world_root.id,
         root_location_ids=tuple(root_ids),
         locations_by_id=locations_by_id,
         parent_by_id=parent_by_id,
@@ -443,6 +456,7 @@ def _infer_clock_display(
     actions_by_id: dict[str, ActionDef],
     actions_by_location: dict[str, tuple[str, ...]],
     parent_by_id: dict[str, str | None],
+    world_root_id: str,
 ) -> tuple[str, str | None]:
     if spec.display.scope != "auto":
         return spec.display.scope, spec.display.anchor_id
@@ -459,9 +473,13 @@ def _infer_clock_display(
             action_locations.append(location_id)
     unique_locations = sorted(set(action_locations))
     if len(unique_locations) == 1:
+        if unique_locations[0] == world_root_id:
+            return "global", None
         return "location", unique_locations[0]
 
     common = _lowest_common_location(unique_locations, parent_by_id)
+    if common == world_root_id:
+        return "global", None
     return ("location", common) if common is not None else ("global", None)
 
 

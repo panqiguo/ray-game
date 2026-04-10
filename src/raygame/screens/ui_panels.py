@@ -18,7 +18,7 @@ from raygame.rules import (
     select_resource_input,
 )
 
-from .ui_core import begin_layer, centered_rect, clickable, draw_frame, draw_scrim, end_layer, layout, text_button
+from .ui_core import begin_layer, centered_rect, clickable, draw_frame, draw_scrim, end_layer, layout, text_button, wrap_text_lines
 from .ui_tags import ITEM_LABELS, RESOURCE_LABELS
 
 
@@ -28,6 +28,7 @@ def draw_hud(font: Font | None, state: GameState) -> None:
     draw_frame(hud, Color(20, 22, 29, 245))
     _hud_block(font, Rectangle(hud.x + 18, hud.y + 10, 140, 32), "生命", f"{state.attributes.health}/{state.attributes.max_health}", Color(214, 112, 112, 255))
     _hud_block(font, Rectangle(hud.x + 170, hud.y + 10, 140, 32), "压力", f"{state.attributes.stress}/{state.attributes.max_stress}", Color(208, 182, 108, 255))
+    draw_text(font, f"第 {state.day} 天", int(hud.x + hud.width - 248), int(hud.y + 17), 18, Color(198, 198, 198, 255))
     if text_button(font, Rectangle(hud.x + hud.width - 148, hud.y + 10, 120, 34), f"档案 {state.growth_points}", 18, disabled=(state.modal.kind not in {"", "profile"})):
         if state.modal.kind == "profile":
             close_modal(state)
@@ -124,7 +125,7 @@ def draw_inventory_panel(font: Font | None, rect: Rectangle, state: GameState, a
         draw_text(font, str(amount), int(cell.x) + 10, int(cell.y) + 30, 18, Color(212, 196, 132, 255) if not disabled else Color(100, 100, 100, 255))
 
 
-def draw_result_strip(font: Font | None, rect: Rectangle, row: tuple[ResultType, ...]) -> None:
+def draw_result_strip(font: Font | None, rect: Rectangle, row: tuple[ResultType, ...], scale: float = 1.0) -> None:
     cell_w = (rect.width - 20) / 6.0
     x = rect.x
     for result in row:
@@ -136,26 +137,44 @@ def draw_result_strip(font: Font | None, rect: Rectangle, row: tuple[ResultType,
             fill, label = Color(74, 134, 92, 255), "成"
         cell = Rectangle(x, rect.y, cell_w - 4, rect.height)
         draw_frame(cell, fill, Color(22, 22, 22, 180))
-        draw_text(font, label, int(cell.x + 10), int(cell.y + 4), 16, RAYWHITE)
+        draw_text(font, label, int(cell.x + 10 * scale), int(cell.y + 4 * scale), max(10, int(round(16 * scale))), RAYWHITE)
         x += cell_w
 
 
 def draw_message_feed(font: Font | None, rect: Rectangle, state: GameState) -> None:
     draw_frame(rect, Color(16, 18, 24, 232), Color(78, 84, 96, 210))
     draw_text(font, "消息", int(rect.x) + 12, int(rect.y) + 10, 20, RAYWHITE)
-    y = int(rect.y) + 38
+    inner_x = int(rect.x) + 12
+    inner_w = int(rect.width) - 24
+    y = int(rect.y) + 40
     if state.last_resolution is not None:
-        line = state.last_resolution.text
+        draw_text(font, "最近判定", inner_x, y, 15, Color(212, 196, 132, 255))
+        y += 18
         meta = ""
         if state.last_resolution.value is not None:
             meta = f"值 {state.last_resolution.value}"
-        draw_text(font, meta, int(rect.x) + 12, y, 16, Color(225, 205, 130, 255))
-        y += 20
-        draw_text(font, line, int(rect.x) + 12, y, 16, LIGHTGRAY)
-        y += 28
-    for entry in reversed(state.action_log[-3:]):
-        draw_text(font, f"· {entry}", int(rect.x) + 12, y, 16, Color(196, 196, 196, 255))
-        y += 20
+        if meta:
+            draw_text(font, meta, inner_x, y, 14, Color(225, 205, 130, 255))
+            y += 18
+        for line in wrap_text_lines(font, state.last_resolution.text, inner_w, 14):
+            draw_text(font, line, inner_x, y, 14, LIGHTGRAY)
+            y += 16
+        y += 10
+        draw_rectangle_rec(Rectangle(rect.x + 12, y, rect.width - 24, 1), Color(70, 74, 84, 180))
+        y += 14
+    draw_text(font, "行动记录", inner_x, y, 15, Color(212, 196, 132, 255))
+    y += 20
+    entries = list(reversed(state.action_log[-6:]))
+    if not entries:
+        draw_text(font, "暂无记录。", inner_x, y, 14, Color(128, 128, 128, 255))
+        return
+    for entry in entries:
+        for line in wrap_text_lines(font, f"· {entry}", inner_w, 14):
+            draw_text(font, line, inner_x, y, 14, Color(196, 196, 196, 255))
+            y += 16
+        y += 4
+        if y > rect.y + rect.height - 24:
+            break
 
 
 def draw_profile_modal(font: Font | None, state: GameState, growth_defs=GROWTH_DEFS) -> None:

@@ -28,7 +28,8 @@ from raygame.screens.city_presenters import (
     present_action_cards,
     present_child_location_cards,
     present_location_clock_ids,
-    present_world_location_cards,
+    PresentedWorldObject,
+    present_world_objects,
 )
 from raygame.screens.widgets import (
     begin_layer,
@@ -52,6 +53,9 @@ from raygame.screens.widgets import (
     wrap_text_lines,
 )
 
+MESSAGE_SIDEBAR_GAP = 14.0
+MESSAGE_SIDEBAR_WIDTH = 300.0
+
 
 def draw_city_screen(font: Font | None, state: GameState, rng) -> None:
     if state.pending_resolution is not None and state.pending_resolution.settled and click_pressed():
@@ -61,32 +65,31 @@ def draw_city_screen(font: Font | None, state: GameState, rng) -> None:
     if is_key_pressed(KEY_ESCAPE) and not resolving:
         close_modal(state)
     page = layout()
-    message_rect = Rectangle(page.stage.x + page.stage.width - 266, page.stage.y + 8, 252, 126)
-    table_rect = Rectangle(page.stage.x + 2, page.stage.y + 2, page.stage.width - 4, page.stage.height - 4)
+    table_rect, message_rect = _split_desktop_area(page.stage)
     begin_layer("world", interactive=state.modal.kind == "")
-    _draw_world_table(font, state, table_rect)
+    _draw_world_table(font, state, table_rect, rng)
     end_layer("world")
-    if state.modal.kind == "location" and state.modal.primary_id is not None:
-        begin_layer("location_table", interactive=True)
-        _draw_location_table(font, state, rng)
-        end_layer("location_table")
     draw_card_pile_modal(font, state)
     begin_layer("hand", interactive=state.modal.kind in {"", "location"} and not resolving)
     draw_hand(font, state, current_action(state))
     end_layer("hand")
     draw_message_feed(font, message_rect, state)
+    if state.modal.kind == "location" and state.modal.primary_id is not None:
+        begin_layer("location_table", interactive=True)
+        _draw_location_table(font, state, rng)
+        end_layer("location_table")
     draw_profile_modal(font, state, GROWTH_DEFS)
 
 
-def _draw_world_table(font: Font | None, state: GameState, rect: Rectangle) -> None:
+def _draw_world_table(font: Font | None, state: GameState, rect: Rectangle, rng) -> None:
     sections, _ = draw_table_shell(
         font,
         rect,
         title=SCENARIO.title,
-        subtitle=f"第 {state.day} 天 | 地点像散在桌面上的卡，你可以从这里一层层翻开它们。",
+        subtitle="地点像散在桌面上的卡，你可以从这里一层层翻开它们。",
     )
     draw_clock_row(font, Rectangle(sections.header.x + 18, sections.header.y + 84, sections.header.width - 36, 26), SCENARIO.global_clock_ids, state)
-    _draw_world_cards(font, state, sections.content)
+    _draw_world_objects(font, state, rng, sections.content)
 
 
 def _draw_location_table(font: Font | None, state: GameState, rng) -> None:
@@ -117,7 +120,6 @@ def _draw_location_table(font: Font | None, state: GameState, rng) -> None:
     else:
         action_top = sections.content.y
 
-    draw_text(font, "行动卡", int(sections.content.x), int(action_top) - 26, 18, LIGHTGRAY)
     action_area = Rectangle(sections.content.x, action_top, sections.content.width, sections.content.y + sections.content.height - action_top)
     _draw_action_grid(font, state, rng, present_action_cards(state, location), action_area)
 
@@ -131,22 +133,10 @@ def _draw_location_grid(
     columns: int,
     nested: bool = False,
 ) -> None:
-    resolving = state.pending_resolution is not None and not state.pending_resolution.settled
-    card_h = 92
-    gap_x = 18
-    gap_y = 18
-    card_w = (rect.width - gap_x * (columns - 1)) / columns
-    for index, presented in enumerate(cards):
-        col = index % columns
-        row = index // columns
-        card = Rectangle(
-            rect.x + col * (card_w + gap_x),
-            rect.y + row * (card_h + gap_y),
-            card_w,
-            card_h,
-        )
+    laid_out = _layout_location_cards(rect, cards, columns)
+    for presented, (card, scale) in zip(cards, laid_out):
         model = presented.card
-        if draw_table_card(font, card, state, model):
+        if draw_table_card(font, card, state, model, scale=scale):
             clear_assembly(state)
             clear_selected_input(state)
             if nested:
@@ -155,57 +145,56 @@ def _draw_location_grid(
                 open_modal(state, "location", presented.location_id)
 
 
-def _draw_world_cards(font: Font | None, state: GameState, rect: Rectangle) -> None:
-    for presented in present_world_location_cards(state):
-        assert presented.location.position is not None
-        card = Rectangle(rect.x + presented.location.position[0], rect.y + presented.location.position[1], presented.card.style.width, presented.card.style.height)
-        if draw_table_card(font, card, state, presented.card):
-            clear_assembly(state)
-            clear_selected_input(state)
-            open_modal(state, "location", presented.location_id)
+def _draw_world_objects(font: Font | None, state: GameState, rng, rect: Rectangle) -> None:
+    laid_out = _layout_world_objects(rect, present_world_objects(state))
+    for presented, (card, scale) in laid_out:
+        if presented.kind == "location":
+            if draw_table_card(font, card, state, presented.card, scale=scale):
+                clear_assembly(state)
+                clear_selected_input(state)
+                assert presented.location_id is not None
+                open_modal(state, "location", presented.location_id)
+        else:
+            assert presented.action_card is not None
+            _draw_action_card(font, state, presented.action_card, card, rng, scale=scale)
 
 
 def _draw_action_grid(font: Font | None, state: GameState, rng, cards: tuple[PresentedActionCard, ...], rect: Rectangle) -> None:
     if not cards:
         draw_note_block(font, Rectangle(rect.x, rect.y, rect.width, 86), "这里暂时没有可做的事", "换个地方，或者先满足别的条件。")
         return
-    card_w = 232.0
-    card_h = 224.0
-    gap_x = 18
-    gap_y = 96
-    columns = max(1, min(len(cards), int((rect.width + gap_x) // (card_w + gap_x))))
-    for index, presented in enumerate(cards):
-        col = index % columns
-        row = index // columns
-        card = Rectangle(rect.x + col * (card_w + gap_x), rect.y + row * (card_h + gap_y), card_w, card_h)
-        _draw_action_card(font, state, presented, card, rng)
+    columns = max(1, min(len(cards), int((rect.width + 18.0) // (232.0 + 18.0))))
+    laid_out = _layout_action_cards(rect, cards, columns)
+    for presented, (card, scale) in zip(cards, laid_out):
+        _draw_action_card(font, state, presented, card, rng, scale=scale)
 
 
-def _draw_action_card(font: Font | None, state: GameState, presented: PresentedActionCard, rect: Rectangle, rng) -> None:
+def _draw_action_card(font: Font | None, state: GameState, presented: PresentedActionCard, rect: Rectangle, rng, scale: float = 1.0) -> None:
     action = presented.action
     pending = state.pending_resolution if state.pending_resolution and state.pending_resolution.resolution.action_id == action.id else None
-    draw_table_card(font, rect, state, presented.card)
+    draw_table_card(font, rect, state, presented.card, scale=scale)
 
-    slot_y = rect.y + 124
-    slot_x = rect.x + 14
+    slot_y = rect.y + 124.0 * scale
+    slot_x = rect.x + 14.0 * scale
     for slot in presented.slots:
         if draw_slot_chip(
             font,
-            Rectangle(slot_x, slot_y, rect.width - 28, 34),
+            Rectangle(slot_x, slot_y, rect.width - 28.0 * scale, 34.0 * scale),
             slot.label,
             filled=slot.filled,
             receptive=slot.receptive,
             disabled=slot.disabled,
+            scale=scale,
         ):
             _toggle_presented_slot(state, action, slot)
-        slot_y += 40
+        slot_y += 40.0 * scale
 
     if presented.attachment is not None:
-        preview_rect = Rectangle(rect.x + 14, rect.y + rect.height - 90, rect.width - 28, 68)
-        button_rect = Rectangle(rect.x + 18, rect.y + rect.height + 8, rect.width - 36, 24)
-        _draw_action_attachment(font, state, action, presented, preview_rect, button_rect, rng, pending)
+        preview_rect = Rectangle(rect.x + 14.0 * scale, rect.y + rect.height - 90.0 * scale, rect.width - 28.0 * scale, 68.0 * scale)
+        button_rect = Rectangle(rect.x + 18.0 * scale, rect.y + rect.height + 8.0 * scale, rect.width - 36.0 * scale, 24.0 * scale)
+        _draw_action_attachment(font, state, action, presented, preview_rect, button_rect, rng, pending, scale=scale)
     elif presented.card.disabled:
-        draw_text(font, "条件未满足或当前资源不足。", int(rect.x) + 14, int(rect.y) + rect.height - 26, 14, Color(132, 132, 132, 255))
+        draw_text(font, "条件未满足或当前资源不足。", int(rect.x + 14.0 * scale), int(rect.y + rect.height - 26.0 * scale), max(10, int(round(14 * scale))), Color(132, 132, 132, 255))
 
 
 def _draw_action_attachment(
@@ -217,26 +206,27 @@ def _draw_action_attachment(
     button_rect: Rectangle,
     rng,
     pending: PendingResolutionState | None,
+    scale: float = 1.0,
 ) -> None:
     draw_frame(rect, Color(18, 20, 26, 255), Color(78, 84, 98, 220))
     if pending is not None:
-        _draw_pending_attachment(font, state, rect, button_rect, pending)
+        _draw_pending_attachment(font, state, rect, button_rect, pending, scale=scale)
         return
     assert presented.attachment is not None
-    draw_text(font, presented.attachment.title, int(rect.x) + 10, int(rect.y) + 6, 16, Color(224, 192, 112, 255) if presented.attachment.mode == "preview" and presented.attachment.row else LIGHTGRAY)
+    draw_text(font, presented.attachment.title, int(rect.x + 10.0 * scale), int(rect.y + 6.0 * scale), max(10, int(round(16 * scale))), Color(224, 192, 112, 255) if presented.attachment.mode == "preview" and presented.attachment.row else LIGHTGRAY)
     if presented.attachment.row:
-        draw_result_strip(font, Rectangle(rect.x + 10, rect.y + 28, rect.width - 20, 20), presented.attachment.row)
+        draw_result_strip(font, Rectangle(rect.x + 10.0 * scale, rect.y + 28.0 * scale, rect.width - 20.0 * scale, 20.0 * scale), presented.attachment.row, scale=scale)
     elif presented.attachment.hint:
-        draw_text(font, presented.attachment.hint, int(rect.x) + 10, int(rect.y) + 28, 14, LIGHTGRAY)
-    if pill(font, Rectangle(button_rect.x, button_rect.y, 78, 22), "收回", False):
+        draw_text(font, presented.attachment.hint, int(rect.x + 10.0 * scale), int(rect.y + 28.0 * scale), max(9, int(round(14 * scale))), LIGHTGRAY)
+    if pill(font, Rectangle(button_rect.x, button_rect.y, 78.0 * scale, 22.0 * scale), "收回", False, scale=scale):
         clear_assembly(state)
-    if pill(font, Rectangle(button_rect.x + button_rect.width - 78, button_rect.y, 78, 22), "执行", False, disabled=not presented.attachment.can_execute):
+    if pill(font, Rectangle(button_rect.x + button_rect.width - 78.0 * scale, button_rect.y, 78.0 * scale, 22.0 * scale), "执行", False, disabled=not presented.attachment.can_execute, scale=scale):
         perform_current_action(state, rng)
 
 
 def _floating_table_rect() -> Rectangle:
     page = layout()
-    stage = page.stage
+    stage, _ = _split_desktop_area(page.stage)
     margin_x = 8.0
     margin_top = 4.0
     margin_bottom = 4.0
@@ -247,30 +237,38 @@ def _floating_table_rect() -> Rectangle:
     return Rectangle(x, y, width, height)
 
 
-def _draw_pending_attachment(font: Font | None, state: GameState, rect: Rectangle, button_rect: Rectangle, pending: PendingResolutionState) -> None:
+def _split_desktop_area(stage: Rectangle) -> tuple[Rectangle, Rectangle]:
+    sidebar_w = min(MESSAGE_SIDEBAR_WIDTH, max(260.0, stage.width * 0.16))
+    table_w = stage.width - sidebar_w - MESSAGE_SIDEBAR_GAP - 6.0
+    table_rect = Rectangle(stage.x + 2.0, stage.y + 2.0, table_w, stage.height - 4.0)
+    message_rect = Rectangle(table_rect.x + table_rect.width + MESSAGE_SIDEBAR_GAP, stage.y + 2.0, sidebar_w, stage.height - 4.0)
+    return table_rect, message_rect
+
+
+def _draw_pending_attachment(font: Font | None, state: GameState, rect: Rectangle, button_rect: Rectangle, pending: PendingResolutionState, scale: float = 1.0) -> None:
     resolution = pending.resolution
     if resolution.result is not None and resolution.value is not None:
-        draw_text(font, "判定中", int(rect.x) + 10, int(rect.y) + 6, 16, LIGHTGRAY)
-        _draw_inline_resolution_strip(font, Rectangle(rect.x + 10, rect.y + 26, rect.width - 20, 20), pending)
+        draw_text(font, "判定中", int(rect.x + 10.0 * scale), int(rect.y + 6.0 * scale), max(10, int(round(16 * scale))), LIGHTGRAY)
+        _draw_inline_resolution_strip(font, Rectangle(rect.x + 10.0 * scale, rect.y + 26.0 * scale, rect.width - 20.0 * scale, 20.0 * scale), pending, scale=scale)
     else:
-        draw_text(font, "执行中", int(rect.x) + 10, int(rect.y) + 6, 16, LIGHTGRAY)
+        draw_text(font, "执行中", int(rect.x + 10.0 * scale), int(rect.y + 6.0 * scale), max(10, int(round(16 * scale))), LIGHTGRAY)
     if pending.settled:
         result_rect = _pending_result_rect(font, rect, resolution)
         draw_frame(result_rect, Color(16, 18, 24, 248), Color(78, 84, 98, 220))
-        text_width = result_rect.width - 20
-        text_y = int(result_rect.y) + 10
-        for line in wrap_text_lines(font, resolution.text, text_width, 14):
-            draw_text(font, line, int(result_rect.x) + 10, text_y, 14, RAYWHITE)
-            text_y += 16
+        text_width = result_rect.width - 20.0 * scale
+        text_y = int(result_rect.y + 10.0 * scale)
+        for line in wrap_text_lines(font, resolution.text, text_width, max(10, int(round(14 * scale)))):
+            draw_text(font, line, int(result_rect.x + 10.0 * scale), text_y, max(10, int(round(14 * scale))), RAYWHITE)
+            text_y += int(round(16 * scale))
         if resolution.effect_lines:
-            for line in wrap_text_lines(font, " | ".join(resolution.effect_lines[:2]), text_width, 13):
-                draw_text(font, line, int(result_rect.x) + 10, text_y + 2, 13, Color(212, 196, 132, 255))
-                text_y += 15
-        continue_rect = Rectangle(result_rect.x + result_rect.width - 88, result_rect.y + result_rect.height + 8, 78, 22)
-        if pill(font, continue_rect, "继续", False):
+            for line in wrap_text_lines(font, " | ".join(resolution.effect_lines[:2]), text_width, max(9, int(round(13 * scale)))):
+                draw_text(font, line, int(result_rect.x + 10.0 * scale), text_y + 2, max(9, int(round(13 * scale))), Color(212, 196, 132, 255))
+                text_y += int(round(15 * scale))
+        continue_rect = Rectangle(result_rect.x + result_rect.width - 88.0 * scale, result_rect.y + result_rect.height + 8.0 * scale, 78.0 * scale, 22.0 * scale)
+        if pill(font, continue_rect, "继续", False, scale=scale):
             dismiss_pending_resolution(state)
     else:
-        draw_text(font, "结果会在这张卡下面落定。", int(rect.x) + 10, int(rect.y) + 44, 14, LIGHTGRAY)
+        draw_text(font, "结果会在这张卡下面落定。", int(rect.x + 10.0 * scale), int(rect.y + 44.0 * scale), max(9, int(round(14 * scale))), LIGHTGRAY)
 
 
 def _toggle_presented_slot(state: GameState, action: ActionDef, slot: ActionSlotModel) -> None:
@@ -287,7 +285,7 @@ def _toggle_presented_slot(state: GameState, action: ActionDef, slot: ActionSlot
         focus_action(state, action.id)
 
 
-def _draw_inline_resolution_strip(font: Font | None, rect: Rectangle, pending: PendingResolutionState) -> None:
+def _draw_inline_resolution_strip(font: Font | None, rect: Rectangle, pending: PendingResolutionState, scale: float = 1.0) -> None:
     resolution = pending.resolution
     assert resolution.value is not None
     row = RESULT_TABLE[clamp_action_value(resolution.value)]
@@ -305,7 +303,7 @@ def _draw_inline_resolution_strip(font: Font | None, rect: Rectangle, pending: P
         draw_frame(cell, fill, Color(22, 22, 22, 180))
         if index == active_index:
             draw_rectangle_rounded_lines_ex(cell, 0.035, 6, 3.0, Color(233, 216, 152, 255))
-        draw_text(font, label, int(cell.x + 10), int(cell.y + 4), 16, RAYWHITE)
+        draw_text(font, label, int(cell.x + 10.0 * scale), int(cell.y + 4.0 * scale), max(10, int(round(16 * scale))), RAYWHITE)
         x += cell_w
 
 
@@ -316,3 +314,137 @@ def _pending_result_rect(font: Font | None, preview_rect: Rectangle, resolution)
         line_count += len(wrap_text_lines(font, " | ".join(resolution.effect_lines[:2]), text_width, 13))
     height = max(46.0, 20.0 + line_count * 16.0)
     return Rectangle(preview_rect.x, preview_rect.y + preview_rect.height + 8, preview_rect.width, height)
+
+
+def _fit_grid_cards(
+    rect: Rectangle,
+    count: int,
+    card_w: float,
+    card_h: float,
+    gap_x: float,
+    gap_y: float,
+    columns: int,
+) -> list[tuple[Rectangle, float]]:
+    if count <= 0:
+        return []
+    columns = max(1, min(columns, count))
+    rows = max(1, (count + columns - 1) // columns)
+    base_w = columns * card_w + (columns - 1) * gap_x
+    base_h = rows * card_h + (rows - 1) * gap_y
+    scale = min(1.0, rect.width / base_w, rect.height / base_h)
+    scaled_w = base_w * scale
+    scaled_h = base_h * scale
+    origin_x = rect.x + (rect.width - scaled_w) * 0.5
+    origin_y = rect.y + (rect.height - scaled_h) * 0.5
+    laid_out: list[tuple[Rectangle, float]] = []
+    for index in range(count):
+        col = index % columns
+        row = index // columns
+        laid_out.append(
+            (
+                Rectangle(
+                    origin_x + col * (card_w + gap_x) * scale,
+                    origin_y + row * (card_h + gap_y) * scale,
+                    card_w * scale,
+                    card_h * scale,
+                ),
+                scale,
+            )
+        )
+    return laid_out
+
+
+def _fit_absolute_world_objects(
+    rect: Rectangle,
+    cards: tuple[PresentedWorldObject, ...],
+) -> list[tuple[PresentedWorldObject, tuple[Rectangle, float]]]:
+    if not cards:
+        return []
+    min_x = min(card.position[0] for card in cards)
+    min_y = min(card.position[1] for card in cards)
+    max_x = max(card.position[0] + card.card.style.width * card.scale_bias for card in cards)
+    max_y = max(card.position[1] + card.card.style.height * card.scale_bias for card in cards)
+    base_w = max_x - min_x
+    base_h = max_y - min_y
+    scale = min(1.0, rect.width / base_w, rect.height / base_h)
+    scaled_w = base_w * scale
+    scaled_h = base_h * scale
+    origin_x = rect.x + (rect.width - scaled_w) * 0.5 - min_x * scale
+    origin_y = rect.y + (rect.height - scaled_h) * 0.5 - min_y * scale
+    laid_out: list[tuple[PresentedWorldObject, tuple[Rectangle, float]]] = []
+    for presented in cards:
+        laid_out.append(
+            (
+                presented,
+                (
+                    Rectangle(
+                        origin_x + presented.position[0] * scale,
+                        origin_y + presented.position[1] * scale,
+                        presented.card.style.width * scale * presented.scale_bias,
+                        presented.card.style.height * scale * presented.scale_bias,
+                    ),
+                    scale * presented.scale_bias,
+                ),
+            )
+        )
+    return laid_out
+
+
+def _layout_world_objects(
+    rect: Rectangle,
+    cards: tuple[PresentedWorldObject, ...],
+) -> list[tuple[PresentedWorldObject, tuple[Rectangle, float]]]:
+    return _fit_absolute_world_objects(rect, cards) if _all_positioned(card.position for card in cards) else []
+
+
+def _layout_location_cards(
+    rect: Rectangle,
+    cards: tuple[PresentedLocationCard, ...],
+    columns: int,
+) -> list[tuple[Rectangle, float]]:
+    if _all_positioned(card.position for card in cards):
+        return _fit_absolute_card_positions(rect, cards, lambda item: item.position, lambda item: item.card.style.width, lambda item: item.card.style.height)
+    return _fit_grid_cards(rect, len(cards), 188.0, 96.0, 18.0, 18.0, columns)
+
+
+def _layout_action_cards(
+    rect: Rectangle,
+    cards: tuple[PresentedActionCard, ...],
+    columns: int,
+) -> list[tuple[Rectangle, float]]:
+    if _all_positioned(card.position for card in cards):
+        return _fit_absolute_card_positions(rect, cards, lambda item: item.position, lambda item: item.card.style.width, lambda item: item.card.style.height)
+    return _fit_grid_cards(rect, len(cards), 232.0, 224.0, 18.0, 96.0, columns)
+
+
+def _all_positioned(positions) -> bool:
+    positions = tuple(positions)
+    return bool(positions) and all(position is not None for position in positions)
+
+
+def _fit_absolute_card_positions(rect: Rectangle, cards, position_getter, width_getter, height_getter) -> list[tuple[Rectangle, float]]:
+    if not cards:
+        return []
+    min_x = min(position_getter(card)[0] for card in cards)
+    min_y = min(position_getter(card)[1] for card in cards)
+    max_x = max(position_getter(card)[0] + width_getter(card) for card in cards)
+    max_y = max(position_getter(card)[1] + height_getter(card) for card in cards)
+    base_w = max_x - min_x
+    base_h = max_y - min_y
+    scale = min(1.0, rect.width / base_w, rect.height / base_h)
+    scaled_w = base_w * scale
+    scaled_h = base_h * scale
+    origin_x = rect.x + (rect.width - scaled_w) * 0.5 - min_x * scale
+    origin_y = rect.y + (rect.height - scaled_h) * 0.5 - min_y * scale
+    return [
+        (
+            Rectangle(
+                origin_x + position_getter(card)[0] * scale,
+                origin_y + position_getter(card)[1] * scale,
+                width_getter(card) * scale,
+                height_getter(card) * scale,
+            ),
+            scale,
+        )
+        for card in cards
+    ]

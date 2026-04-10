@@ -26,6 +26,7 @@ class PresentedLocationCard:
     location_id: str
     location: LocationNode
     card: TableCardModel
+    position: tuple[int, int] | None = None
 
 
 @dataclass(frozen=True)
@@ -57,19 +58,33 @@ class PresentedActionCard:
     card: TableCardModel
     slots: tuple[ActionSlotModel, ...]
     attachment: ActionAttachmentModel | None
+    position: tuple[int, int] | None = None
 
 
-def present_world_location_cards(state: GameState) -> tuple[PresentedLocationCard, ...]:
-    cards: list[PresentedLocationCard] = []
+@dataclass(frozen=True)
+class PresentedWorldObject:
+    kind: str
+    position: tuple[int, int]
+    card: TableCardModel
+    scale_bias: float = 1.0
+    location_id: str | None = None
+    action_card: PresentedActionCard | None = None
+
+
+def present_world_objects(state: GameState) -> tuple[PresentedWorldObject, ...]:
+    cards: list[PresentedWorldObject] = []
     resolving = _is_resolving(state)
     for location_id in SCENARIO.root_location_ids:
         location = SCENARIO.locations_by_id[location_id]
         if not _location_is_visible(location_id, state):
             continue
+        assert location.position is not None
         cards.append(
-            PresentedLocationCard(
+            PresentedWorldObject(
+                kind="location",
+                position=location.position,
                 location_id=location_id,
-                location=location,
+                scale_bias=1.0,
                 card=TableCardModel(
                     title=location.title,
                     body=location.description,
@@ -79,6 +94,21 @@ def present_world_location_cards(state: GameState) -> tuple[PresentedLocationCar
                     disabled=resolving,
                     style=WORLD_CARD,
                 ),
+            )
+        )
+    for action_id in SCENARIO.actions_by_location[SCENARIO.world_root_id]:
+        action = get_action(action_id)
+        if not action_is_visible(action, state):
+            continue
+        assert action.position is not None, f"world action missing position: {action.id}"
+        presented_action = _present_action_card(state, action)
+        cards.append(
+            PresentedWorldObject(
+                kind="action",
+                position=action.position,
+                card=presented_action.card,
+                scale_bias=0.86,
+                action_card=presented_action,
             )
         )
     return tuple(cards)
@@ -95,6 +125,7 @@ def present_child_location_cards(state: GameState, location_ids: tuple[str, ...]
             PresentedLocationCard(
                 location_id=location_id,
                 location=location,
+                position=location.position,
                 card=TableCardModel(
                     title=location.title,
                     body=location.description,
@@ -144,6 +175,7 @@ def _present_action_card(state: GameState, action: ActionDef) -> PresentedAction
         ),
         slots=_present_action_slots(state, action, pending is not None),
         attachment=_present_action_attachment(state, action, pending),
+        position=action.position,
     )
 
 
@@ -211,7 +243,7 @@ def _present_action_attachment(
         value = compute_action_value(state.assembly.slotted_card_id, action.check)
         return ActionAttachmentModel(
             mode="preview",
-            title=f"行动值 {value}",
+            title=f"状态档 {value}",
             row=RESULT_TABLE[clamp_action_value(value)],
             value=value,
             can_execute=action_ready_to_execute(action, state),

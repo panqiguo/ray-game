@@ -60,6 +60,7 @@ class ActionDef:
     title: str
     description: str
     screen: ScreenName
+    position: tuple[int, int] | None = None
     check: CheckDef | None = None
     inputs: tuple[InputRequirement, ...] = ()
     effects: tuple[Effect, ...] = ()
@@ -123,7 +124,7 @@ class ScenarioDef:
     id: str
     title: str
     screen: ScreenName
-    roots: tuple[LocationNode, ...]
+    world_root: LocationNode
     clocks: tuple[ProgressClockSpec, ...]
     initial_visible_locations: tuple[str, ...]
     initial_visible_clocks: tuple[str, ...]
@@ -140,6 +141,7 @@ class CompiledScenario:
     id: str
     title: str
     screen: ScreenName
+    world_root_id: str
     root_location_ids: tuple[str, ...]
     locations_by_id: dict[str, LocationNode]
     parent_by_id: dict[str, str | None]

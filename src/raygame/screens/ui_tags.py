@@ -32,6 +32,7 @@ def draw_clock_badges(
     state: GameState,
     align: str = "left",
     outside: bool = True,
+    scale: float = 1.0,
 ) -> None:
     visible_clock_ids = tuple(
         clock_id for clock_id in clock_ids if "action_use" not in SCENARIO.clocks_by_id[clock_id].tags
@@ -41,35 +42,37 @@ def draw_clock_badges(
     total_width = 0.0
     for clock_id in visible_clock_ids:
         spec = SCENARIO.clocks_by_id[clock_id]
-        total_width += max(112.0, measure_text_width(font, spec.title, 14) + spec.segments * 16 + 42.0) + 10.0
+        text_size = max(11, int(round(14 * scale)))
+        total_width += max(112.0 * scale, measure_text_width(font, spec.title, text_size) + spec.segments * 16.0 * scale + 42.0 * scale) + 10.0 * scale
     total_width = max(0.0, total_width - 10.0)
-    x = rect.x + 8 if align == "left" else rect.x + rect.width - total_width - 8
-    y = rect.y - 22 if outside else rect.y + 6
+    x = rect.x + 8.0 * scale if align == "left" else rect.x + rect.width - total_width - 8.0 * scale
+    y = rect.y - 22.0 * scale if outside else rect.y + 6.0 * scale
     for clock_id in visible_clock_ids:
         spec = SCENARIO.clocks_by_id[clock_id]
-        chip_width = max(112.0, measure_text_width(font, spec.title, 14) + spec.segments * 16 + 42.0)
-        chip = Rectangle(x, y, chip_width, 18 if outside else 20)
+        text_size = max(11, int(round(14 * scale)))
+        chip_width = max(112.0 * scale, measure_text_width(font, spec.title, text_size) + spec.segments * 16.0 * scale + 42.0 * scale)
+        chip = Rectangle(x, y, chip_width, (18.0 if outside else 20.0) * scale)
         draw_frame(chip, Color(18, 20, 26, 255), Color(90, 94, 100, 220))
-        draw_text(font, spec.title, int(chip.x) + 8, int(chip.y) + (1 if outside else 2), 12 if outside else 13, LIGHTGRAY)
-        draw_inline_clock(font, chip, spec.segments, state.world.progress_clocks[clock_id].value)
-        x += chip_width + 10
+        draw_text(font, spec.title, int(chip.x) + int(8.0 * scale), int(chip.y) + (1 if outside else 2), max(10, int(round((12 if outside else 13) * scale))), LIGHTGRAY)
+        draw_inline_clock(font, chip, spec.segments, state.world.progress_clocks[clock_id].value, scale=scale)
+        x += chip_width + 10.0 * scale
 
 
-def draw_clock_row(font: Font | None, rect: Rectangle, clock_ids: tuple[str, ...], state: GameState) -> None:
+def draw_clock_row(font: Font | None, rect: Rectangle, clock_ids: tuple[str, ...], state: GameState, scale: float = 1.0) -> None:
     x = rect.x
     y = rect.y
     for clock_id in clock_ids:
         spec = SCENARIO.clocks_by_id[clock_id]
         if "action_use" in spec.tags:
             continue
-        width = max(132.0, measure_text_width(font, spec.title, 16) + spec.segments * 18 + 52.0)
-        chip = Rectangle(x, y, width, 24)
-        draw_text(font, spec.title, int(chip.x), int(chip.y) + 2, 16, LIGHTGRAY)
-        draw_inline_clock(font, Rectangle(chip.x + 74, chip.y + 1, chip.width - 74, 20), spec.segments, state.world.progress_clocks[clock_id].value)
-        x += width + 20
+        width = max(132.0 * scale, measure_text_width(font, spec.title, max(11, int(round(16 * scale)))) + spec.segments * 18.0 * scale + 52.0 * scale)
+        chip = Rectangle(x, y, width, 24.0 * scale)
+        draw_text(font, spec.title, int(chip.x), int(chip.y) + max(1, int(round(2 * scale))), max(11, int(round(16 * scale))), LIGHTGRAY)
+        draw_inline_clock(font, Rectangle(chip.x + 74.0 * scale, chip.y + 1.0 * scale, chip.width - 74.0 * scale, 20.0 * scale), spec.segments, state.world.progress_clocks[clock_id].value, scale=scale)
+        x += width + 20.0 * scale
 
 
-def draw_action_corner_clocks(rect: Rectangle, clock_ids: tuple[str, ...], state: GameState, align: str = "left") -> None:
+def draw_action_corner_clocks(rect: Rectangle, clock_ids: tuple[str, ...], state: GameState, align: str = "left", scale: float = 1.0) -> None:
     offset = 0.0
     for clock_id in clock_ids:
         spec = SCENARIO.clocks_by_id[clock_id]
@@ -77,16 +80,16 @@ def draw_action_corner_clocks(rect: Rectangle, clock_ids: tuple[str, ...], state
             continue
         center_x = rect.x + offset if align == "left" else rect.x + rect.width - offset
         center = Vector2(center_x, rect.y)
-        draw_usage_clock(center, 12.0, state.world.progress_clocks[clock_id].value, spec.segments)
-        offset += 30.0
+        draw_usage_clock(center, 12.0 * scale, state.world.progress_clocks[clock_id].value, spec.segments)
+        offset += 30.0 * scale
 
 
-def draw_corner_labels(font: Font | None, rect: Rectangle, labels: tuple[str, ...], corner: str) -> None:
+def draw_corner_labels(font: Font | None, rect: Rectangle, labels: tuple[str, ...], corner: str, scale: float = 1.0) -> None:
     offset = 0.0
     for label in labels:
-        width = max(54.0, measure_text_width(font, label, 14) + 18.0)
+        width = max(54.0 * scale, measure_text_width(font, label, max(11, int(round(14 * scale)))) + 18.0 * scale)
         box_x = rect.x if corner == "left" else rect.x + rect.width - width
-        box = Rectangle(box_x, rect.y - 24.0 - offset, width, 20.0)
+        box = Rectangle(box_x, rect.y - 24.0 * scale - offset, width, 20.0 * scale)
         if label == "新":
             fill = Color(52, 92, 74, 245)
             border = Color(126, 210, 164, 255)
@@ -94,8 +97,8 @@ def draw_corner_labels(font: Font | None, rect: Rectangle, labels: tuple[str, ..
             fill = Color(80, 66, 47, 245)
             border = Color(190, 162, 96, 255)
         draw_frame(box, fill, border)
-        draw_centered_text(font, label, box, 14, RAYWHITE)
-        offset += 24.0
+        draw_centered_text(font, label, box, max(11, int(round(14 * scale))), RAYWHITE)
+        offset += 24.0 * scale
 
 
 def condition_labels(conditions) -> tuple[str, ...]:
@@ -133,16 +136,16 @@ def location_status_labels(location_id: str, location, state: GameState) -> tupl
     return tuple(labels)
 
 
-def draw_inline_clock(font: Font | None, rect: Rectangle, segments: int, value: int) -> None:
-    chip_size = 10 if rect.height <= 18 else 12
-    spacing = chip_size + 4
-    start_x = rect.x + rect.width - segments * spacing - 28
+def draw_inline_clock(font: Font | None, rect: Rectangle, segments: int, value: int, scale: float = 1.0) -> None:
+    chip_size = max(7, int(round((10 if rect.height <= 18 else 12) * scale)))
+    spacing = chip_size + max(2, int(round(4 * scale)))
+    start_x = rect.x + rect.width - segments * spacing - max(14.0, 28.0 * scale)
     for index in range(segments):
-        cell = Rectangle(start_x + index * spacing, rect.y + (2 if rect.height <= 18 else 3), chip_size, chip_size)
+        cell = Rectangle(start_x + index * spacing, rect.y + (2 if rect.height <= 18 else 3) * scale, chip_size, chip_size)
         fill = Color(190, 162, 96, 255) if index < value else Color(44, 48, 56, 255)
         draw_rectangle_rounded(cell, 0.2, 4, fill)
         draw_rectangle_rounded_lines_ex(cell, 0.2, 4, 1.0, Color(96, 96, 96, 200))
-    draw_text(font, f"{value}/{segments}", int(start_x + segments * spacing + 8), int(rect.y), 12 if rect.height <= 18 else 13, Color(212, 196, 132, 255))
+    draw_text(font, f"{value}/{segments}", int(start_x + segments * spacing + max(6.0, 8.0 * scale)), int(rect.y), max(10, int(round((12 if rect.height <= 18 else 13) * scale))), Color(212, 196, 132, 255))
 
 
 def draw_usage_clock(center: Vector2, radius: float, value: int, segments: int) -> None:

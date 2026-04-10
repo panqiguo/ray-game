@@ -95,6 +95,8 @@ def consume_click() -> None:
 
 
 def draw_frame(rect: Rectangle, fill: Color, border: Color = Color(110, 110, 110, 210)) -> None:
+    if rect.width <= 0 or rect.height <= 0:
+        return
     draw_rectangle_rounded(rect, 0.035, 6, fill)
     draw_rectangle_rounded_lines_ex(rect, 0.035, 6, 1.5, border)
 
@@ -157,7 +159,7 @@ def text_button(font: Font | None, rect: Rectangle, label: str, size: int = 20, 
     return clicked
 
 
-def pill(font: Font | None, rect: Rectangle, label: str, selected: bool = False, disabled: bool = False) -> bool:
+def pill(font: Font | None, rect: Rectangle, label: str, selected: bool = False, disabled: bool = False, scale: float = 1.0) -> bool:
     fill = Color(80, 66, 47, 255) if selected else Color(30, 34, 42, 255)
     border = Color(190, 162, 96, 255) if selected else Color(88, 92, 100, 220)
     if disabled:
@@ -165,11 +167,11 @@ def pill(font: Font | None, rect: Rectangle, label: str, selected: bool = False,
         border = Color(70, 72, 78, 180)
     clicked = False if disabled else clickable(rect)
     draw_frame(rect, fill, border)
-    draw_centered_text(font, label, rect, 18, Color(118, 118, 118, 255) if disabled else RAYWHITE)
+    draw_centered_text(font, label, rect, max(11, int(round(18 * scale))), Color(118, 118, 118, 255) if disabled else RAYWHITE)
     return clicked
 
 
-def draw_slot_chip(font: Font | None, rect: Rectangle, label: str, *, filled: bool = False, receptive: bool = False, disabled: bool = False) -> bool:
+def draw_slot_chip(font: Font | None, rect: Rectangle, label: str, *, filled: bool = False, receptive: bool = False, disabled: bool = False, scale: float = 1.0) -> bool:
     fill = Color(84, 68, 46, 255) if filled else Color(18, 21, 27, 255)
     border = Color(190, 162, 96, 255) if filled else Color(64, 70, 82, 220)
     inner = Rectangle(rect.x + 3, rect.y + 3, rect.width - 6, rect.height - 6)
@@ -182,7 +184,7 @@ def draw_slot_chip(font: Font | None, rect: Rectangle, label: str, *, filled: bo
         draw_frame(inner, Color(12, 14, 18, 210), Color(34, 38, 46, 160))
     elif receptive:
         draw_frame(inner, Color(56, 46, 30, 150), Color(118, 100, 62, 160))
-    draw_centered_text(font, label, rect, 15, RAYWHITE if not disabled else Color(110, 110, 110, 255))
+    draw_centered_text(font, label, rect, max(10, int(round(15 * scale))), RAYWHITE if not disabled else Color(110, 110, 110, 255))
     return clicked
 
 

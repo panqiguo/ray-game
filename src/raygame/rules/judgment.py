@@ -5,30 +5,28 @@ from raygame.model.defs import CheckDef
 from raygame.model.enums import ResultType, Suit
 
 
+MATCH_BONUS = 1
+
 RESULT_TABLE: dict[int, tuple[ResultType, ...]] = {
-    1: (ResultType.FAIL, ResultType.FAIL, ResultType.FAIL, ResultType.COST, ResultType.COST, ResultType.SUCCESS),
+    1: (ResultType.FAIL, ResultType.FAIL, ResultType.FAIL, ResultType.COST, ResultType.COST, ResultType.COST),
     2: (ResultType.FAIL, ResultType.FAIL, ResultType.COST, ResultType.COST, ResultType.COST, ResultType.SUCCESS),
-    3: (ResultType.FAIL, ResultType.FAIL, ResultType.COST, ResultType.COST, ResultType.SUCCESS, ResultType.SUCCESS),
-    4: (ResultType.FAIL, ResultType.COST, ResultType.COST, ResultType.SUCCESS, ResultType.SUCCESS, ResultType.SUCCESS),
-    5: (ResultType.COST, ResultType.COST, ResultType.SUCCESS, ResultType.SUCCESS, ResultType.SUCCESS, ResultType.SUCCESS),
-    6: (ResultType.SUCCESS, ResultType.SUCCESS, ResultType.SUCCESS, ResultType.SUCCESS, ResultType.SUCCESS, ResultType.SUCCESS),
+    3: (ResultType.FAIL, ResultType.COST, ResultType.COST, ResultType.COST, ResultType.SUCCESS, ResultType.SUCCESS),
+    4: (ResultType.SUCCESS, ResultType.SUCCESS, ResultType.SUCCESS, ResultType.SUCCESS, ResultType.SUCCESS, ResultType.SUCCESS),
 }
 
 
 def clamp_action_value(action_value: int) -> int:
-    return max(1, min(6, action_value))
+    return max(1, min(4, action_value))
 
 
 def compute_action_value(card_id: str | None, check: CheckDef, wildcard_suit: Suit | None = None) -> int:
     if card_id is None:
         return 0
     card = CARD_DEFS[card_id]
-    if card.is_negative:
-        return 0
     suit = wildcard_suit or card.suit
-    value = check.difficulty + card.points
+    value = card.points
     if suit in check.suits:
-        value += 1
+        value += MATCH_BONUS
     return clamp_action_value(value)
 
 

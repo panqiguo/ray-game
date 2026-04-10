@@ -23,6 +23,7 @@ from raygame.rules.rng import RandomSource
 
 
 TRAUMA_CARD_ID = "trauma"
+TRAUMA_HEALTH_STEP = 2
 
 
 def _push_log(state: GameState, text: str) -> None:
@@ -80,7 +81,7 @@ def action_is_visible(action: ActionDef, state: GameState) -> bool:
     if action.id in state.world.hidden_actions:
         return False
     location_id = location_for_action(action.id)
-    if not location_is_visible(location_id, state):
+    if location_id is not None and not location_is_visible(location_id, state):
         return False
     return all_met(action.conditions, state)
 
@@ -90,6 +91,8 @@ def action_is_available(action: ActionDef, state: GameState) -> bool:
 
 
 def location_is_visible(location_id: str, state: GameState) -> bool:
+    if location_id == SCENARIO.world_root_id:
+        return True
     parent_id = SCENARIO.parent_by_id[location_id]
     if parent_id is None:
         if location_id not in state.world.visible_locations:
@@ -363,7 +366,7 @@ def perform_current_action(state: GameState, rng: RandomSource) -> None:
             resolution=resolution,
             effects=action.effects,
             log_text=f"{action.title}: {action.description}",
-            location_id=location_id,
+            location_id=location_id or "",
         )
     else:
         card_id = state.assembly.slotted_card_id
@@ -379,20 +382,21 @@ def perform_current_action(state: GameState, rng: RandomSource) -> None:
         else:
             outcome = action.check.fail
         resolved_effects = action.effects + outcome.effects
+        effect_lines = _describe_effects(resolved_effects, action.id)
         resolution = ActionResolution(
             action_id=action.id,
             card_id=card_id,
             result=result,
             die_roll=die_roll,
             value=value,
-            text=outcome.text,
-            effect_lines=_describe_effects(resolved_effects, action.id),
+            text=_compose_resolution_text(result, effect_lines, outcome.text),
+            effect_lines=effect_lines,
         )
         state.pending_resolution = PendingResolutionState(
             resolution=resolution,
             effects=resolved_effects,
-            log_text=f"{action.title}: {outcome.text}",
-            location_id=location_id,
+            log_text=f"{action.title}: {_compose_resolution_text(result, effect_lines, outcome.text)}",
+            location_id=location_id or "",
         )
     clear_selected_input(state)
 
@@ -576,12 +580,13 @@ def change_stress(state: GameState, amount: int, extra_lines: list[str] | None =
 
 def sync_trauma_cards_with_health(state: GameState) -> None:
     missing = state.attributes.max_health - state.attributes.health
+    target_trauma = missing // TRAUMA_HEALTH_STEP
     current = _count_card(state, TRAUMA_CARD_ID)
-    if current < missing:
-        for _ in range(missing - current):
+    if current < target_trauma:
+        for _ in range(target_trauma - current):
             state.deck.draw_pile.append(TRAUMA_CARD_ID)
-    elif current > missing:
-        _remove_specific_cards(state, TRAUMA_CARD_ID, current - missing)
+    elif current > target_trauma:
+        _remove_specific_cards(state, TRAUMA_CARD_ID, current - target_trauma)
 
 
 def _count_card(state: GameState, card_id: str) -> int:
@@ -614,6 +619,17 @@ def _check_endings(state: GameState) -> None:
         state.screen = ScreenName.ENDING
 
 
+def _compose_resolution_text(result: ResultType, effect_lines: tuple[str, ...], fallback: str) -> str:
+    if effect_lines:
+        prefix = {
+            ResultType.SUCCESS: "成功",
+            ResultType.COST: "代价成功",
+            ResultType.FAIL: "失败",
+        }[result]
+        return f"{prefix}：{'，'.join(effect_lines[:2])}"
+    return fallback
+
+
 def _describe_effects(effects: tuple[Effect, ...], action_id: str) -> tuple[str, ...]:
     lines: list[str] = []
     for item in effects:
@@ -643,7 +659,10 @@ def _describe_effects(effects: tuple[Effect, ...], action_id: str) -> tuple[str,
         elif item.kind == "advance_clock":
             assert isinstance(value, str)
             key, raw = value.split(":")
-            lines.append(f"{SCENARIO.clocks_by_id[key].title} +{raw}")
+            spec = SCENARIO.clocks_by_id[key]
+            if "action_use" in spec.tags:
+                continue
+            lines.append(f"{spec.title} +{raw}")
         elif item.kind == "reveal_location":
             assert isinstance(value, str)
             lines.append(f"发现地点：{SCENARIO.locations_by_id[value].title}")
@@ -686,7 +705,7 @@ def claim_growth(state: GameState, growth_id: str) -> None:
     close_modal(state)
 
 
-def location_for_action(action_id: str) -> str:
+def location_for_action(action_id: str) -> str | None:
     for location_id, action_ids in SCENARIO.actions_by_location.items():
         if action_id in action_ids:
             return location_id

@@ -27,6 +27,7 @@ class ResultType(str, Enum):
 
 class ScreenName(str, Enum):
     CITY = "city"
+    ENCOUNTER = "encounter"
     ENDING = "ending"
 
 

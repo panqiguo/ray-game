@@ -46,12 +46,12 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
     draw_pile_button(font, Rectangle(hand.x + 702, hand.y + 10, 112, 32), "弃牌", len(state.deck.discard_pile), state, "discard_pile")
     x = int(hand.x) + 18
     y = int(hand.y) + 48
-    for card_id in state.deck.hand:
+    for index, card_id in enumerate(state.deck.hand):
         rect = Rectangle(x, y, 150, 106)
-        selected = state.selected_input.kind == "card" and state.selected_input.key == card_id
-        slotted = state.assembly.slotted_card_id == card_id
+        selected = state.selected_input.kind == "card" and state.selected_input.index == index
+        slotted = state.assembly.slotted_card_index == index
         if draw_compact_card(font, rect, card_id, selected or slotted):
-            select_card_input(state, card_id)
+            select_card_input(state, card_id, index)
         x += 162
         if x > hand.x + hand.width - 260:
             break

@@ -48,6 +48,7 @@ class WorldState:
 class ActionAssemblyState:
     action_id: str | None = None
     slotted_card_id: str | None = None
+    slotted_card_index: int | None = None
     slotted_resources: dict[str, int] = field(default_factory=dict)
     slotted_items: dict[str, int] = field(default_factory=dict)
 
@@ -56,6 +57,7 @@ class ActionAssemblyState:
 class SelectedInputState:
     kind: str = ""
     key: str = ""
+    index: int | None = None
 
 
 @dataclass
@@ -88,6 +90,18 @@ class ModalState:
 
 
 @dataclass
+class ActiveEncounterState:
+    encounter_id: str
+    current_act_id: str
+    current_state_id: str
+    clocks: dict[str, int] = field(default_factory=dict)
+    flags: set[str] = field(default_factory=set)
+    modifiers: dict[str, int] = field(default_factory=dict)
+    hidden_actions: set[str] = field(default_factory=set)
+    hidden_locations: set[str] = field(default_factory=set)
+
+
+@dataclass
 class GameState:
     deck: DeckState
     attributes: AttributeState = field(default_factory=AttributeState)
@@ -101,6 +115,7 @@ class GameState:
     growth_points: int = 0
     unlocked_growths: set[str] = field(default_factory=set)
     modal: ModalState = field(default_factory=ModalState)
+    active_encounter: ActiveEncounterState | None = None
     last_resolution: ActionResolution | None = None
     pending_resolution: PendingResolutionState | None = None
     action_log: list[str] = field(default_factory=list)

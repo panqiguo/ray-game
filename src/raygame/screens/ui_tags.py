@@ -4,10 +4,10 @@ import math
 
 from pyray import *  # type: ignore
 
-from raygame.content import SCENARIO
 from raygame.model.defs import ActionDef, InputRequirement
 from raygame.model.state import GameState
 from raygame.rendering import draw_text
+from raygame.rules import get_clock_spec_for_state, get_clock_value
 
 from .ui_core import draw_centered_text, draw_frame, measure_text_width
 
@@ -35,26 +35,26 @@ def draw_clock_badges(
     scale: float = 1.0,
 ) -> None:
     visible_clock_ids = tuple(
-        clock_id for clock_id in clock_ids if "action_use" not in SCENARIO.clocks_by_id[clock_id].tags
+        clock_id for clock_id in clock_ids if "action_use" not in _clock_spec(state, clock_id).tags
     )
     if not visible_clock_ids:
         return
     total_width = 0.0
     for clock_id in visible_clock_ids:
-        spec = SCENARIO.clocks_by_id[clock_id]
+        spec = _clock_spec(state, clock_id)
         text_size = max(11, int(round(14 * scale)))
         total_width += max(112.0 * scale, measure_text_width(font, spec.title, text_size) + spec.segments * 16.0 * scale + 42.0 * scale) + 10.0 * scale
     total_width = max(0.0, total_width - 10.0)
     x = rect.x + 8.0 * scale if align == "left" else rect.x + rect.width - total_width - 8.0 * scale
     y = rect.y - 22.0 * scale if outside else rect.y + 6.0 * scale
     for clock_id in visible_clock_ids:
-        spec = SCENARIO.clocks_by_id[clock_id]
+        spec = _clock_spec(state, clock_id)
         text_size = max(11, int(round(14 * scale)))
         chip_width = max(112.0 * scale, measure_text_width(font, spec.title, text_size) + spec.segments * 16.0 * scale + 42.0 * scale)
         chip = Rectangle(x, y, chip_width, (18.0 if outside else 20.0) * scale)
         draw_frame(chip, Color(18, 20, 26, 255), Color(90, 94, 100, 220))
         draw_text(font, spec.title, int(chip.x) + int(8.0 * scale), int(chip.y) + (1 if outside else 2), max(10, int(round((12 if outside else 13) * scale))), LIGHTGRAY)
-        draw_inline_clock(font, chip, spec.segments, state.world.progress_clocks[clock_id].value, scale=scale)
+        draw_inline_clock(font, chip, spec.segments, _clock_value(state, clock_id), scale=scale)
         x += chip_width + 10.0 * scale
 
 
@@ -62,25 +62,25 @@ def draw_clock_row(font: Font | None, rect: Rectangle, clock_ids: tuple[str, ...
     x = rect.x
     y = rect.y
     for clock_id in clock_ids:
-        spec = SCENARIO.clocks_by_id[clock_id]
+        spec = _clock_spec(state, clock_id)
         if "action_use" in spec.tags:
             continue
         width = max(132.0 * scale, measure_text_width(font, spec.title, max(11, int(round(16 * scale)))) + spec.segments * 18.0 * scale + 52.0 * scale)
         chip = Rectangle(x, y, width, 24.0 * scale)
         draw_text(font, spec.title, int(chip.x), int(chip.y) + max(1, int(round(2 * scale))), max(11, int(round(16 * scale))), LIGHTGRAY)
-        draw_inline_clock(font, Rectangle(chip.x + 74.0 * scale, chip.y + 1.0 * scale, chip.width - 74.0 * scale, 20.0 * scale), spec.segments, state.world.progress_clocks[clock_id].value, scale=scale)
+        draw_inline_clock(font, Rectangle(chip.x + 74.0 * scale, chip.y + 1.0 * scale, chip.width - 74.0 * scale, 20.0 * scale), spec.segments, _clock_value(state, clock_id), scale=scale)
         x += width + 20.0 * scale
 
 
 def draw_action_corner_clocks(rect: Rectangle, clock_ids: tuple[str, ...], state: GameState, align: str = "left", scale: float = 1.0) -> None:
     offset = 0.0
     for clock_id in clock_ids:
-        spec = SCENARIO.clocks_by_id[clock_id]
+        spec = _clock_spec(state, clock_id)
         if "action_use" not in spec.tags:
             continue
         center_x = rect.x + offset if align == "left" else rect.x + rect.width - offset
         center = Vector2(center_x, rect.y)
-        draw_usage_clock(center, 12.0 * scale, state.world.progress_clocks[clock_id].value, spec.segments)
+        draw_usage_clock(center, 12.0 * scale, _clock_value(state, clock_id), spec.segments)
         offset += 30.0 * scale
 
 
@@ -166,3 +166,11 @@ def draw_usage_clock(center: Vector2, radius: float, value: int, segments: int) 
 
 def is_single_use_action(action: ActionDef) -> bool:
     return any(item.kind == "hide_action" and item.value == action.id for item in action.effects)
+
+
+def _clock_spec(state: GameState, clock_id: str):
+    return get_clock_spec_for_state(state, clock_id)
+
+
+def _clock_value(state: GameState, clock_id: str) -> int:
+    return get_clock_value(state, clock_id)

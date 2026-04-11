@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from raygame.encounters import ENCOUNTERS_BY_ID
 from raygame.content.cards import CARD_DEFS
 from raygame.content.growth import GROWTH_DEFS
 from raygame.content.scenario_escape import SCENARIO
@@ -12,6 +13,10 @@ VALID_CONDITIONS = {
     "clock_at_least",
     "clock_hidden",
     "location_visible",
+    "in_encounter_act",
+    "in_encounter_state",
+    "encounter_flag",
+    "encounter_clock_at_least",
 }
 
 VALID_EFFECTS = {
@@ -29,6 +34,13 @@ VALID_EFFECTS = {
     "reset_hand",
     "advance_day",
     "end_run",
+    "start_encounter",
+    "set_encounter_act",
+    "set_encounter_state",
+    "set_encounter_flag",
+    "advance_encounter_clock",
+    "damage_encounter_clock",
+    "finish_encounter",
 }
 
 
@@ -53,7 +65,6 @@ def _validate_action(action: ActionDef) -> None:
     for effect in action.effects:
         _validate_effect(effect)
     if action.check is not None:
-        assert action.check.difficulty >= 1, f"Invalid difficulty: {action.id}"
         for outcome in (action.check.success, action.check.cost, action.check.fail):
             for effect in outcome.effects:
                 _validate_effect(effect)
@@ -84,6 +95,17 @@ def validate_content() -> None:
     for clock_id, spec in SCENARIO.clocks_by_id.items():
         assert spec.id == clock_id
         _validate_clock(spec)
+    for encounter_id, encounter in ENCOUNTERS_BY_ID.items():
+        assert encounter.id == encounter_id
+        for location_id, location in encounter.locations_by_id.items():
+            assert location.id == location_id
+            _validate_location(location)
+        for action_id, action in encounter.actions_by_id.items():
+            assert action.id == action_id
+            _validate_action(action)
+        for clock_id, spec in encounter.clocks_by_id.items():
+            assert spec.id == clock_id
+            _validate_clock(spec)
 
 
 def _validate_location(location: LocationNode) -> None:

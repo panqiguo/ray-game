@@ -40,13 +40,12 @@ def outcome(text: str, *effects_: Effect, completes: bool = True) -> OutcomeDef:
 def check(
     *,
     suits: tuple[Suit, ...],
-    difficulty: int,
     risk: Risk,
     success: OutcomeDef,
     cost: OutcomeDef,
     fail: OutcomeDef,
 ) -> CheckDef:
-    return CheckDef(suits=suits, difficulty=difficulty, risk=risk, success=success, cost=cost, fail=fail)
+    return CheckDef(suits=suits, risk=risk, success=success, cost=cost, fail=fail)
 
 
 def resource(key: str, amount: int, label: str = "") -> InputRequirement:

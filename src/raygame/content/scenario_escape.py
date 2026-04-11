@@ -89,7 +89,6 @@ def build_escape_scenario() -> CompiledScenario:
                 uses=3,
                 check=check(
                     suits=(Suit.EMPATHY,),
-                    difficulty=2,
                     risk=Risk.LOW,
                     success=outcome("今晚还算顺利。", effect("change_resource", "money:20")),
                     cost=outcome("钱还是拿到了，只是比你想的少。", effect("change_resource", "money:15")),
@@ -123,7 +122,6 @@ def build_escape_scenario() -> CompiledScenario:
                 segments=4,
                 check=check(
                     suits=(Suit.EMPATHY,),
-                    difficulty=2,
                     risk=Risk.MID,
                     success=outcome("你摸到了一条新路。", effect("advance_clock", "slum_knowledge:1")),
                     cost=outcome("知道了点东西，也被人记住了。", effect("change_stress", 1)),
@@ -141,7 +139,6 @@ def build_escape_scenario() -> CompiledScenario:
                 screen=ScreenName.CITY,
                 check=check(
                     suits=(Suit.INSTINCT,),
-                    difficulty=2,
                     risk=Risk.MID,
                     success=outcome("你摸清了几条出入的路。", effect("advance_clock", "slum_knowledge:1")),
                     cost=outcome("你等到了点东西，也让自己更紧绷。", effect("change_stress", 1)),
@@ -169,7 +166,6 @@ def build_escape_scenario() -> CompiledScenario:
                 segments=4,
                 check=check(
                     suits=(Suit.REASON,),
-                    difficulty=2,
                     risk=Risk.LOW,
                     success=outcome("你记住了这里的节奏。", effect("advance_clock", "residential_knowledge:1")),
                     cost=outcome("你看见了点门道，只是还不够完整。"),
@@ -187,7 +183,6 @@ def build_escape_scenario() -> CompiledScenario:
                 screen=ScreenName.CITY,
                 check=check(
                     suits=(Suit.EMPATHY,),
-                    difficulty=2,
                     risk=Risk.LOW,
                     success=outcome("你从闲聊里拼出了新的门路。", effect("advance_clock", "residential_knowledge:1")),
                     cost=outcome("消息有了，只是还欠一点火候。"),
@@ -230,7 +225,6 @@ def build_escape_scenario() -> CompiledScenario:
                 uses=3,
                 check=check(
                     suits=(Suit.FORCE,),
-                    difficulty=2,
                     risk=Risk.MID,
                     success=outcome("你把活干完了。", effect("change_resource", "money:35")),
                     cost=outcome("钱到手了，但这活把你累得够呛。", effect("change_resource", "money:25"), effect("change_stress", 1)),
@@ -385,7 +379,6 @@ def build_escape_scenario() -> CompiledScenario:
                 screen=ScreenName.CITY,
                 check=check(
                     suits=(Suit.FORCE,),
-                    difficulty=3,
                     risk=Risk.HIGH,
                     success=outcome("你把麻烦处理干净了。", effect("give_item", "repair_case_item:1")),
                     cost=outcome("东西拿到了，但你也挂了彩。", effect("give_item", "repair_case_item:1"), effect("change_health", -1)),
@@ -410,7 +403,6 @@ def build_escape_scenario() -> CompiledScenario:
                 screen=ScreenName.CITY,
                 check=check(
                     suits=(Suit.REASON,),
-                    difficulty=3,
                     risk=Risk.LOW,
                     success=outcome("委托办成了。", effect("change_resource", "money:180")),
                     cost=outcome("事情办成了，只是对方压了你的价。", effect("change_resource", "money:140")),
@@ -453,6 +445,14 @@ def build_escape_scenario() -> CompiledScenario:
                 description="先停下来理一理手里的牌和呼吸。",
                 screen=ScreenName.CITY,
                 position=(902, 140),
+            ),
+            action(
+                id="take_thug_job",
+                title="接个告示",
+                description="有人想让一个小混混吃点教训。",
+                screen=ScreenName.CITY,
+                position=(602, 192),
+                effects=(effect("start_encounter", "teach_thug"),),
             ),
         ),
         children=(

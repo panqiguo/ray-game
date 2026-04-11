@@ -13,6 +13,8 @@ from .progression import (
     dismiss_pending_resolution,
     focus_action,
     get_action,
+    get_action_for_state,
+    get_clock_spec_for_state,
     get_clock_value,
     location_is_visible,
     location_for_action,

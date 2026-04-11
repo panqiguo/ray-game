@@ -47,7 +47,6 @@ class OutcomeDef:
 @dataclass(frozen=True)
 class CheckDef:
     suits: tuple[Suit, ...]
-    difficulty: int
     risk: Risk
     success: OutcomeDef
     cost: OutcomeDef

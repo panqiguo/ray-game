@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from raygame.encounters import ENCOUNTERS_BY_ID
+from raygame.encounters import ENCOUNTERS_BY_ID, initial_store, render_encounter, validate_encounter_program
 from raygame.content.cards import CARD_DEFS
 from raygame.content.growth import GROWTH_DEFS
 from raygame.content.scenario_escape import SCENARIO
@@ -35,9 +35,7 @@ VALID_EFFECTS = {
     "advance_day",
     "end_run",
     "start_encounter",
-    "set_encounter_act",
-    "set_encounter_state",
-    "set_encounter_flag",
+    "set_encounter_store",
     "advance_encounter_clock",
     "damage_encounter_clock",
     "finish_encounter",
@@ -97,10 +95,12 @@ def validate_content() -> None:
         _validate_clock(spec)
     for encounter_id, encounter in ENCOUNTERS_BY_ID.items():
         assert encounter.id == encounter_id
-        for location_id, location in encounter.locations_by_id.items():
+        validate_encounter_program(encounter)
+        snapshot = render_encounter(encounter, initial_store(encounter))
+        for location_id, location in snapshot.locations_by_id.items():
             assert location.id == location_id
             _validate_location(location)
-        for action_id, action in encounter.actions_by_id.items():
+        for action_id, action in snapshot.actions_by_id.items():
             assert action.id == action_id
             _validate_action(action)
         for clock_id, spec in encounter.clocks_by_id.items():

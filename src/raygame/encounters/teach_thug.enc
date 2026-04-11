@@ -1,0 +1,102 @@
+(encounter teach_thug
+  (title "教训一个小混混")
+  (desc "拿人钱财，帮人把这件事办干干净净。")
+  (reward (money +80))
+
+  (store
+    (clock initiative "主动权" 0 4)
+    (clock knife "夺刀" 0 2)
+    (clock enemy_hp "敌人血量" 4 4)
+    (clock opening "破绽" 0 2))
+
+  (defs
+    (defaction breathe
+      (action "喘息一下" "你强行拉开半口气，重新整理手里的节奏，但也会挨上一下。"
+        (do (reset_hand) (health -1))))
+
+    (defaction counter
+      (check "防守反击" "你先稳住头脸和脚步，再找机会把他顶开。"
+        (suits reason empathy) (risk low)
+        (ok "你稳稳顶住了节奏。" (initiative +1))
+        (partial "你至少没有继续吃亏。" (initiative +1))
+        (fail "你还是没完全顶住。" (health -1))))
+
+    (defaction (knee_kick desc)
+      (check "踹膝脱身" desc
+        (suits reason force) (risk mid)
+        (ok "你一下踹垮了他。" (enemy_hp -2))
+        (partial "你踹实了一下。" (enemy_hp -1))
+        (fail "你动作慢了。" (health -1)))))
+
+  (reacts
+    ((<= enemy_hp 0) (finish success)))
+
+  (view
+    (cond
+      ((< initiative 4)
+       (cond
+         ((< knife 2)
+          (scene pressure_unarmed
+            "徒手受压"
+            "打手把你逼在墙边。你得先决定，是稳着反顶、直接狠狠干、还是冒险把折刀夺到手。"
+            (show_clocks initiative knife)
+            (actions
+              counter
+              (check "直接挥拳" "你不跟他磨，直接狠狠干出一步空间。"
+                (suits force) (risk high)
+                (ok "你狠狠干出了一步空间。" (initiative +2))
+                (partial "你砸中了他，但也只是暂时逼开。" (initiative +1))
+                (fail "你被他顶了回来。" (health -1)))
+              (check "扑向折刀" "你冒险扑向地上的折刀，想先把局势翻过来。"
+                (do (health -1))
+                (suits instinct force) (risk high)
+                (ok "你手已经摸到刀柄了。" (knife +1))
+                (partial "你拖着伤抢到了第一步位置。" (knife +1))
+                (fail "你扑过去了，但还没真正把刀抢出来。"))
+              breathe)))
+         (else
+          (scene pressure_with_knife
+            "持刀逼退"
+            "刀终于到了你手里。现在你可以借着这口气把主动权彻底抢回来。"
+            (show_clocks initiative knife)
+            (actions
+              counter
+              (check "持刀逼退" "刀一到手，你立刻逼他后撤，把主动权压回来。"
+                (suits force reason) (risk mid)
+                (ok "你借着刀势一口气压住了他。" (initiative +2))
+                (partial "你逼得他后退了一步。" (initiative +1))
+                (fail "他还是硬顶了上来。" (health -1)))
+              breathe)))))
+      (else
+       (cond
+         ((< opening 2)
+          (scene duel
+            "对峙"
+            "对方后退半步，准备再扑上来。你可以直接狠狠干，也可以先撬开他的破绽。"
+            (show_clocks enemy_hp opening)
+            (actions
+              (check "重拳追击" "你不给他喘气空间，直接压上去狠狠干。"
+                (suits force) (risk mid)
+                (ok "你狠狠干中了一拳。" (enemy_hp -1))
+                (partial "你打实了一下，但他还撑着。" (enemy_hp -1))
+                (fail "你被他架住了。" (health -1)))
+              (check "假动作试探" "你做一个假动作，先试着把他的防守骗开一层。"
+                (suits empathy instinct) (risk mid)
+                (ok "他的防守被你骗得动了一下。" (opening +1))
+                (partial "他开始有点被你带着走。" (opening +1))
+                (fail "他没上当。"))
+              (knee_kick "你不追求漂亮，而是直接踹他的支撑腿。")
+              breathe)))
+         (else
+          (scene guard_open
+            "空门大开"
+            "他的防守空档已经完全露出来了。狠狠干净地结束这场架。"
+            (show_clocks enemy_hp opening)
+            (actions
+              (check "终结一击" "你抓住空门，一击把他放倒。"
+                (suits force) (risk low)
+                (ok "你干净利落地结束了这场架。" (enemy_hp -2))
+                (partial "你一击放倒了他。" (enemy_hp -2))
+                (fail "没打实，但已经足够。" (enemy_hp -1)))
+              (knee_kick "你直接踹他的支撑腿，狠狠干净利落地结束。")
+              breathe))))))))

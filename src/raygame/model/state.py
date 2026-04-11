@@ -92,14 +92,7 @@ class ModalState:
 @dataclass
 class ActiveEncounterState:
     encounter_id: str
-    current_act_id: str
-    current_state_id: str
-    clocks: dict[str, int] = field(default_factory=dict)
-    flags: set[str] = field(default_factory=set)
-    modifiers: dict[str, int] = field(default_factory=dict)
-    fired_transitions: set[tuple[str, int]] = field(default_factory=set)
-    hidden_actions: set[str] = field(default_factory=set)
-    hidden_locations: set[str] = field(default_factory=set)
+    store: dict[str, int | bool | str] = field(default_factory=dict)
 
 
 @dataclass

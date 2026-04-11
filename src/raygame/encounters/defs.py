@@ -1,62 +1,83 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypeAlias
 
 from raygame.model.defs import ActionDef, Effect, LocationNode, ProgressClockSpec
 
 
+SexpAtom: TypeAlias = str | int | bool
+SexpNode: TypeAlias = SexpAtom | list["SexpNode"]
+
+
 @dataclass(frozen=True)
-class EncounterTransitionDef:
+class StoreFieldSpec:
+    id: str
     kind: str
-    source: str
+    initial: int | bool | str
+    title: str = ""
+    maximum: int | None = None
+
+
+@dataclass(frozen=True)
+class ActionTemplate:
+    name: str
+    params: tuple[str, ...]
+    body: SexpNode
+
+
+@dataclass(frozen=True)
+class ReactRule:
+    condition: SexpNode
     effects: tuple[Effect, ...]
+    source: str
 
 
 @dataclass(frozen=True)
-class EncounterStateDef:
+class CompiledEncounterProgram:
     id: str
     title: str
     description: str
+    store_specs: dict[str, StoreFieldSpec]
+    clocks_by_id: dict[str, ProgressClockSpec]
+    action_templates: dict[str, ActionTemplate]
+    react_rules: tuple[ReactRule, ...]
+    view_expr: SexpNode
+    rewards: tuple[Effect, ...]
+    fail_effects: tuple[Effect, ...]
+
+
+@dataclass(frozen=True)
+class ActionHandle:
+    action_id: str
+    scene_path: tuple[str, ...]
+    slot_index: int
+    action_key: str
+
+
+@dataclass(frozen=True)
+class RenderedAction:
+    handle: ActionHandle
+    action: ActionDef
+
+
+@dataclass(frozen=True)
+class RenderedScene:
+    scene_id: str
     root: LocationNode
+    shown_clock_ids: tuple[str, ...]
+    actions: tuple[RenderedAction, ...]
+    children: tuple["RenderedScene", ...]
 
 
 @dataclass(frozen=True)
-class EncounterActDef:
-    id: str
+class RenderedEncounter:
     title: str
     description: str
-    objective_clock: ProgressClockSpec
-    initial_state_id: str
-    states: tuple[EncounterStateDef, ...]
-    clocks: tuple[ProgressClockSpec, ...] = ()
-    transitions: tuple[EncounterTransitionDef, ...] = ()
-
-
-@dataclass(frozen=True)
-class EncounterDef:
-    id: str
-    title: str
-    description: str
-    initial_act_id: str
-    acts: tuple[EncounterActDef, ...]
-    rewards: tuple[Effect, ...] = ()
-    fail_effects: tuple[Effect, ...] = ()
-
-
-@dataclass(frozen=True)
-class CompiledEncounter:
-    id: str
-    title: str
-    description: str
-    initial_act_id: str
-    acts_by_id: dict[str, EncounterActDef]
-    root_by_state: dict[tuple[str, str], str]
-    states_by_key: dict[tuple[str, str], EncounterStateDef]
+    root: RenderedScene
     locations_by_id: dict[str, LocationNode]
     parent_by_id: dict[str, str | None]
     actions_by_id: dict[str, ActionDef]
     actions_by_location: dict[str, tuple[str, ...]]
-    clocks_by_id: dict[str, ProgressClockSpec]
-    transitions_by_act: dict[str, tuple[EncounterTransitionDef, ...]]
-    rewards: tuple[Effect, ...]
-    fail_effects: tuple[Effect, ...]
+    action_handles_by_id: dict[str, ActionHandle]
+    shown_clock_ids_by_scene: dict[str, tuple[str, ...]]

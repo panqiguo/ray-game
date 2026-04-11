@@ -722,21 +722,28 @@ def damage_encounter_clock(state: GameState, clock_id: str, amount: int = 1) -> 
     state.active_encounter.clocks[clock_id] = max(0, current - amount)
 
 
+def _initialize_encounter_act_clocks(state: GameState, act) -> None:
+    assert state.active_encounter is not None
+    state.active_encounter.clocks[act.objective_clock.id] = (
+        act.objective_clock.segments
+        if any(t.kind == "clock_empty" and t.source == act.objective_clock.id for t in act.transitions)
+        else 0
+    )
+    for spec in act.clocks:
+        state.active_encounter.clocks[spec.id] = 0
+
+
 def start_encounter(state: GameState, encounter_id: str) -> None:
     encounter = get_encounter(encounter_id)
     initial_act = encounter.acts_by_id[encounter.initial_act_id]
     clocks: dict[str, int] = {}
-    clocks[initial_act.objective_clock.id] = (
-        initial_act.objective_clock.segments
-        if any(t.kind == "clock_empty" and t.source == initial_act.objective_clock.id for t in initial_act.transitions)
-        else 0
-    )
     state.active_encounter = ActiveEncounterState(
         encounter_id=encounter_id,
         current_act_id=encounter.initial_act_id,
         current_state_id=initial_act.initial_state_id,
         clocks=clocks,
     )
+    _initialize_encounter_act_clocks(state, initial_act)
     state.screen = ScreenName.ENCOUNTER
     state.modal.kind = ""
     state.modal.primary_id = None
@@ -755,11 +762,7 @@ def _set_encounter_act(state: GameState, act_id: str) -> None:
     state.active_encounter.current_state_id = act.initial_state_id
     state.active_encounter.hidden_actions.clear()
     state.active_encounter.hidden_locations.clear()
-    state.active_encounter.clocks[act.objective_clock.id] = (
-        act.objective_clock.segments
-        if any(t.kind == "clock_empty" and t.source == act.objective_clock.id for t in act.transitions)
-        else 0
-    )
+    _initialize_encounter_act_clocks(state, act)
 
 
 def finish_encounter(state: GameState, outcome: str, rng: RandomSource, extra_lines: list[str] | None = None) -> None:

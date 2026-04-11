@@ -152,6 +152,9 @@ def compile_encounter(encounter: EncounterDef) -> CompiledEncounter:
         transitions_by_act[act.id] = act.transitions
         assert act.objective_clock.id not in clocks_by_id, f"Duplicate encounter clock id: {act.objective_clock.id}"
         clocks_by_id[act.objective_clock.id] = act.objective_clock
+        for spec in act.clocks:
+            assert spec.id not in clocks_by_id, f"Duplicate encounter clock id: {spec.id}"
+            clocks_by_id[spec.id] = spec
         state_ids = {state.id for state in act.states}
         assert act.initial_state_id in state_ids, f"Missing initial state {act.initial_state_id} for act {act.id}"
         for state in act.states:

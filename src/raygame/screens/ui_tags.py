@@ -43,14 +43,14 @@ def draw_clock_badges(
     for clock_id in visible_clock_ids:
         spec = _clock_spec(state, clock_id)
         text_size = max(11, int(round(14 * scale)))
-        total_width += max(112.0 * scale, measure_text_width(font, spec.title, text_size) + spec.segments * 16.0 * scale + 42.0 * scale) + 10.0 * scale
+        total_width += max(112.0 * scale, measure_text_width(font, spec.title, text_size) + spec.segments * 18.0 * scale + 42.0 * scale) + 10.0 * scale
     total_width = max(0.0, total_width - 10.0)
     x = rect.x + 8.0 * scale if align == "left" else rect.x + rect.width - total_width - 8.0 * scale
     y = rect.y - 22.0 * scale if outside else rect.y + 6.0 * scale
     for clock_id in visible_clock_ids:
         spec = _clock_spec(state, clock_id)
         text_size = max(11, int(round(14 * scale)))
-        chip_width = max(112.0 * scale, measure_text_width(font, spec.title, text_size) + spec.segments * 16.0 * scale + 42.0 * scale)
+        chip_width = max(112.0 * scale, measure_text_width(font, spec.title, text_size) + spec.segments * 18.0 * scale + 42.0 * scale)
         chip = Rectangle(x, y, chip_width, (18.0 if outside else 20.0) * scale)
         draw_frame(chip, Color(18, 20, 26, 255), Color(90, 94, 100, 220))
         draw_text(font, spec.title, int(chip.x) + int(8.0 * scale), int(chip.y) + (1 if outside else 2), max(10, int(round((12 if outside else 13) * scale))), LIGHTGRAY)
@@ -138,8 +138,8 @@ def location_status_labels(location_id: str, location, state: GameState) -> tupl
 
 def draw_inline_clock(font: Font | None, rect: Rectangle, segments: int, value: int, scale: float = 1.0) -> None:
     chip_size = max(7, int(round((10 if rect.height <= 18 else 12) * scale)))
-    spacing = chip_size + max(2, int(round(4 * scale)))
-    start_x = rect.x + rect.width - segments * spacing - max(14.0, 28.0 * scale)
+    spacing = chip_size + max(4, int(round(6 * scale)))
+    start_x = rect.x + rect.width - segments * spacing - max(16.0, 30.0 * scale)
     for index in range(segments):
         cell = Rectangle(start_x + index * spacing, rect.y + (2 if rect.height <= 18 else 3) * scale, chip_size, chip_size)
         fill = Color(190, 162, 96, 255) if index < value else Color(44, 48, 56, 255)

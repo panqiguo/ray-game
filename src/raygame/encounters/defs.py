@@ -28,6 +28,7 @@ class EncounterActDef:
     objective_clock: ProgressClockSpec
     initial_state_id: str
     states: tuple[EncounterStateDef, ...]
+    clocks: tuple[ProgressClockSpec, ...] = ()
     transitions: tuple[EncounterTransitionDef, ...] = ()
 
 

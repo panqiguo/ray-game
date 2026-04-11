@@ -30,7 +30,7 @@ def current_encounter_clock_ids(state: GameState) -> tuple[str, ...]:
     assert state.active_encounter is not None
     encounter = get_encounter(state.active_encounter.encounter_id)
     act = encounter.acts_by_id[state.active_encounter.current_act_id]
-    return (act.objective_clock.id,)
+    return (act.objective_clock.id, *(clock.id for clock in act.clocks))
 
 
 def current_encounter_titles(state: GameState) -> tuple[str, str, str]:

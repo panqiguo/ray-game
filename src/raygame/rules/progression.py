@@ -760,6 +760,7 @@ def _set_encounter_act(state: GameState, act_id: str) -> None:
     act = encounter.acts_by_id[act_id]
     state.active_encounter.current_act_id = act_id
     state.active_encounter.current_state_id = act.initial_state_id
+    state.active_encounter.fired_transitions.clear()
     state.active_encounter.hidden_actions.clear()
     state.active_encounter.hidden_locations.clear()
     _initialize_encounter_act_clocks(state, act)
@@ -794,18 +795,26 @@ def _resolve_encounter_transitions(state: GameState, rng: RandomSource, extra_li
         encounter = _encounter(state)
         transitions = encounter.transitions_by_act[state.active_encounter.current_act_id]
         fired = False
-        for transition in transitions:
+        active_act_id = state.active_encounter.current_act_id
+        for index, transition in enumerate(transitions):
+            transition_key = (active_act_id, index)
+            should_fire = False
             if transition.kind == "clock_full":
                 spec = encounter.clocks_by_id[transition.source]
                 if state.active_encounter.clocks.get(transition.source, 0) >= spec.segments:
-                    _apply_effects(transition.effects, state, rng, extra_lines)
-                    fired = True
-                    break
+                    should_fire = True
             elif transition.kind == "clock_empty":
                 if state.active_encounter.clocks.get(transition.source, 0) <= 0:
-                    _apply_effects(transition.effects, state, rng, extra_lines)
-                    fired = True
-                    break
+                    should_fire = True
+            if not should_fire:
+                state.active_encounter.fired_transitions.discard(transition_key)
+                continue
+            if transition_key in state.active_encounter.fired_transitions:
+                continue
+            state.active_encounter.fired_transitions.add(transition_key)
+            _apply_effects(transition.effects, state, rng, extra_lines)
+            fired = True
+            break
         if not fired or state.active_encounter is None or state.screen != ScreenName.ENCOUNTER:
             return
 

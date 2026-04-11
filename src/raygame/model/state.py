@@ -97,6 +97,7 @@ class ActiveEncounterState:
     clocks: dict[str, int] = field(default_factory=dict)
     flags: set[str] = field(default_factory=set)
     modifiers: dict[str, int] = field(default_factory=dict)
+    fired_transitions: set[tuple[str, int]] = field(default_factory=set)
     hidden_actions: set[str] = field(default_factory=set)
     hidden_locations: set[str] = field(default_factory=set)
 

@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import sys
+import traceback
 from pathlib import Path
+
+# Keep these imports at module top-level so pygbag can detect and bundle the
+# browser-compatible pyray/raylib runtime when building the web package.
+import pyray  # type: ignore  # noqa: F401
+import raylib  # type: ignore  # noqa: F401
 
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "src"
@@ -10,12 +16,15 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from raygame.app import GameApp
-
-
 async def main() -> None:
-    app = GameApp()
-    await app.run_async()
+    try:
+        from raygame.app import GameApp
+
+        app = GameApp()
+        await app.run_async()
+    except Exception:
+        traceback.print_exc()
+        raise
 
 
 if __name__ == "__main__":

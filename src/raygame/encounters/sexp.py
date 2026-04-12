@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from raygame.encounters.defs import SexpNode
+from raygame.encounters.defs import SexpNode, StringAtom
 
 
 def parse_sexp(text: str) -> list[SexpNode]:
@@ -73,7 +73,7 @@ def _parse_form(tokens: list[str], index: int) -> tuple[SexpNode, int]:
 
 def _parse_atom(token: str) -> SexpNode:
     if token.startswith('"'):
-        return token[1:-1]
+        return StringAtom(token[1:-1])
     if token == "true":
         return True
     if token == "false":

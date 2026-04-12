@@ -12,7 +12,7 @@
   (defs
     (defaction breathe
       (action "喘息一下" "你强行拉开半口气，重新整理手里的节奏，但也会挨上一下。"
-        (do (reset_hand) (health -1))))
+        (before (reset_hand) (health -1))))
 
     (defaction counter
       (check "防守反击" "你先稳住头脸和脚步，再找机会把他顶开。"
@@ -24,18 +24,18 @@
     (defaction (knee_kick desc)
       (check "踹膝脱身" desc
         (suits reason force) (risk mid)
-        (ok "你一下踹垮了他。" (enemy_hp -2))
-        (partial "你踹实了一下。" (enemy_hp -1))
+        (ok "你一下踹垮了他。" (enemy_hp -1))
+        (partial "你们各有胜负" (enemy_hp -1) (health -1))
         (fail "你动作慢了。" (health -1)))))
 
   (reacts
-    ((<= enemy_hp 0) (finish success)))
+    ((<= (clock-value enemy_hp) 0) (finish success)))
 
   (view
     (cond
-      ((< initiative 4)
+      ((< (clock-value initiative) (clock-full initiative))
        (cond
-         ((< knife 2)
+         ((< (clock-value knife) (clock-full knife))
           (scene pressure_unarmed
             "徒手受压"
             "打手把你逼在墙边。你得先决定，是稳着反顶、直接狠狠干、还是冒险把折刀夺到手。"
@@ -44,15 +44,15 @@
               counter
               (check "直接挥拳" "你不跟他磨，直接狠狠干出一步空间。"
                 (suits force) (risk high)
-                (ok "你狠狠干出了一步空间。" (initiative +2))
-                (partial "你砸中了他，但也只是暂时逼开。" (initiative +1))
+                (ok "你狠狠干出了一步空间。" (initiative +1))
+                (partial "你砸中了他，但也只是暂时逼开。" (initiative +1) (health -1))
                 (fail "你被他顶了回来。" (health -1)))
               (check "扑向折刀" "你冒险扑向地上的折刀，想先把局势翻过来。"
-                (do (health -1))
+                (before (health -1))
                 (suits instinct force) (risk high)
                 (ok "你手已经摸到刀柄了。" (knife +1))
                 (partial "你拖着伤抢到了第一步位置。" (knife +1))
-                (fail "你扑过去了，但还没真正把刀抢出来。"))
+                (fail "你被拦住了"))
               breathe)))
          (else
           (scene pressure_with_knife
@@ -69,7 +69,7 @@
               breathe)))))
       (else
        (cond
-         ((< opening 2)
+         ((< (clock-value opening) (clock-full opening))
           (scene duel
             "对峙"
             "对方后退半步，准备再扑上来。你可以直接狠狠干，也可以先撬开他的破绽。"

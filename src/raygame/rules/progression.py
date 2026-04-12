@@ -3,7 +3,7 @@ from __future__ import annotations
 from raygame.constants import HAND_SIZE, MAX_LOG_LINES
 from raygame.content import GROWTH_DEFS, SCENARIO
 from raygame.content.cards import CARD_DEFS
-from raygame.encounters import apply_reacts, get_encounter, initial_store, render_encounter
+from raygame.encounters import MAX_REACT_STEPS, get_encounter, initial_store, next_react_rule, react_rule_matches, render_encounter
 from raygame.model.defs import ActionDef, Effect, InputRequirement
 from raygame.model.enums import ResultType, ScreenName
 from raygame.model.state import (
@@ -566,16 +566,19 @@ def _slotted_card_id(state: GameState) -> str | None:
     return card_id
 
 
-def _apply_effects(effects: tuple[Effect, ...], state: GameState, rng: RandomSource, extra_lines: list[str] | None = None) -> tuple[str, ...]:
+def _apply_effects(
+    effects: tuple[Effect, ...],
+    state: GameState,
+    rng: RandomSource,
+    extra_lines: list[str] | None = None,
+    *,
+    resolve_encounter_reacts: bool = True,
+) -> tuple[str, ...]:
     derived: list[str] = [] if extra_lines is None else extra_lines
     for item in effects:
         _apply_effect(item, state, rng, derived)
-    if state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None:
-        encounter = _encounter(state)
-        store, outcome = apply_reacts(encounter, state.active_encounter.store)
-        state.active_encounter.store = store
-        if outcome is not None:
-            finish_encounter(state, outcome, rng, derived)
+    if resolve_encounter_reacts and state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None:
+        _resolve_encounter_reacts(state, rng, derived)
     return tuple(derived)
 
 
@@ -689,6 +692,32 @@ def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines
         state.screen = ScreenName.ENDING
         return
     raise AssertionError(f"Unsupported effect kind: {item.kind}")
+
+
+def _resolve_encounter_reacts(state: GameState, rng: RandomSource, extra_lines: list[str]) -> None:
+    if state.active_encounter is None or state.screen != ScreenName.ENCOUNTER:
+        return
+    encounter = _encounter(state)
+    blocked_sources: set[str] = set()
+    steps = 0
+    while state.active_encounter is not None and state.screen == ScreenName.ENCOUNTER:
+        blocked_sources = {
+            source
+            for source in blocked_sources
+            if any(rule.source == source and react_rule_matches(encounter, state.active_encounter.store, rule) for rule in encounter.react_rules)
+        }
+        rule = next_react_rule(encounter, state.active_encounter.store, blocked_sources)
+        if rule is None:
+            return
+        steps += 1
+        assert steps <= MAX_REACT_STEPS, f"Encounter react did not converge: {encounter.id}"
+        _apply_effects(rule.effects, state, rng, extra_lines, resolve_encounter_reacts=False)
+        if state.active_encounter is None or state.screen != ScreenName.ENCOUNTER:
+            return
+        if react_rule_matches(encounter, state.active_encounter.store, rule):
+            blocked_sources.add(rule.source)
+        else:
+            blocked_sources.discard(rule.source)
 
 
 def reset_hand(state: GameState, rng: RandomSource) -> None:

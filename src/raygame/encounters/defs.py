@@ -6,7 +6,17 @@ from typing import TypeAlias
 from raygame.model.defs import ActionDef, Effect, LocationNode, ProgressClockSpec
 
 
-SexpAtom: TypeAlias = str | int | bool
+@dataclass(frozen=True)
+class StringAtom:
+    value: str
+
+
+@dataclass(frozen=True)
+class ClockRef:
+    id: str
+
+
+SexpAtom: TypeAlias = str | int | bool | StringAtom
 SexpNode: TypeAlias = SexpAtom | list["SexpNode"]
 
 

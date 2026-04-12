@@ -6,12 +6,14 @@ from dataclasses import replace
 from raygame.encounters.defs import (
     ActionHandle,
     ActionTemplate,
+    ClockRef,
     CompiledEncounterProgram,
     ReactRule,
     RenderedAction,
     RenderedEncounter,
     RenderedScene,
     SexpNode,
+    StringAtom,
     StoreFieldSpec,
 )
 from raygame.encounters.sexp import parse_sexp
@@ -20,7 +22,6 @@ from raygame.model.enums import Risk, ScreenName, Suit
 
 
 MAX_REACT_STEPS = 64
-REACT_EFFECT_KINDS = {"advance_encounter_clock", "damage_encounter_clock", "set_encounter_store", "finish_encounter"}
 RISK_BY_NAME = {"low": Risk.LOW, "mid": Risk.MID, "high": Risk.HIGH}
 SUIT_BY_NAME = {
     "reason": Suit.REASON,
@@ -28,6 +29,9 @@ SUIT_BY_NAME = {
     "empathy": Suit.EMPATHY,
     "instinct": Suit.INSTINCT,
 }
+EXPR_KIND_BOOL = "bool"
+EXPR_KIND_VALUE = "value"
+EXPR_KIND_CLOCK_REF = "clock-ref"
 
 
 def compile_encounter_program(source: str) -> CompiledEncounterProgram:
@@ -78,10 +82,6 @@ def compile_encounter_program(source: str) -> CompiledEncounterProgram:
                 rule_list = _list(rule_form)
                 assert len(rule_list) >= 2, "React rule must contain condition and at least one effect."
                 compiled_effects = tuple(_compile_effect(effect_form, store_specs) for effect_form in rule_list[1:])
-                for effect in compiled_effects:
-                    assert effect.kind in REACT_EFFECT_KINDS, (
-                        f"React only supports store/finish effects, got {effect.kind} in react[{index}]"
-                    )
                 react_rules.append(
                     ReactRule(
                         condition=rule_list[0],
@@ -152,26 +152,21 @@ def render_encounter(program: CompiledEncounterProgram, store: dict[str, int | b
     )
 
 
-def apply_reacts(program: CompiledEncounterProgram, store: dict[str, int | bool | str]) -> tuple[dict[str, int | bool | str], str | None]:
-    working = dict(store)
-    steps = 0
-    while True:
-        fired = False
-        for rule in program.react_rules:
-            if not _eval_condition(program, working, rule.condition):
-                continue
-            next_store = _apply_store_effects(program, working, rule.effects)
-            outcome = _extract_finish(rule.effects)
-            if outcome is not None:
-                return next_store, outcome
-            if next_store != working:
-                working = next_store
-                steps += 1
-                assert steps <= MAX_REACT_STEPS, f"Encounter react did not converge: {program.id}"
-                fired = True
-                break
-        if not fired:
-            return working, None
+def next_react_rule(
+    program: CompiledEncounterProgram,
+    store: dict[str, int | bool | str],
+    blocked_sources: set[str],
+) -> ReactRule | None:
+    for rule in program.react_rules:
+        if rule.source in blocked_sources and react_rule_matches(program, store, rule):
+            continue
+        if react_rule_matches(program, store, rule):
+            return rule
+    return None
+
+
+def react_rule_matches(program: CompiledEncounterProgram, store: dict[str, int | bool | str], rule: ReactRule) -> bool:
+    return _eval_condition(program, store, rule.condition)
 
 
 def _compile_store_field(form: list[SexpNode]) -> StoreFieldSpec:
@@ -229,6 +224,10 @@ def _compile_effect(form: SexpNode, store_specs: dict[str, StoreFieldSpec]) -> E
     raise AssertionError(f"Unsupported encounter effect: {head}")
 
 
+def _compile_effect_bundle(forms: list[SexpNode], store_specs: dict[str, StoreFieldSpec]) -> tuple[Effect, ...]:
+    return tuple(_compile_effect(form, store_specs) for form in forms)
+
+
 def _effect_value_token(node: SexpNode) -> str:
     value = _atom_value(node)
     if isinstance(value, bool):
@@ -280,7 +279,11 @@ def _build_scene(
         section_items = _list(section)
         head = _symbol(section_items[0])
         if head == "show_clocks":
-            shown_clock_ids = tuple(_symbol(item) for item in section_items[1:])
+            shown_clock_ids = tuple(
+                clock_id
+                for item in section_items[1:]
+                if (clock_id := _eval_clock_ref_expr(program, store, item)) is not None
+            )
         elif head == "actions":
             for source_index, item in enumerate(section_items[1:]):
                 rendered = _eval_action_expr(
@@ -357,12 +360,12 @@ def _resolve_action_form(program: CompiledEncounterProgram, expr: SexpNode) -> t
     assert head in program.action_templates, f"Unknown action expression: {head}"
     template = program.action_templates[head]
     assert len(items) - 1 == len(template.params), f"Wrong arity for defaction {head}: {len(items) - 1}"
-    bindings = {param: _atom_value(arg) for param, arg in zip(template.params, items[1:], strict=True)}
+    bindings = {param: _atom_node(arg) for param, arg in zip(template.params, items[1:], strict=True)}
     body = _substitute(template.body, bindings)
     return f"def:{head}", body
 
 
-def _substitute(node: SexpNode, bindings: dict[str, int | bool | str]) -> SexpNode:
+def _substitute(node: SexpNode, bindings: dict[str, SexpNode]) -> SexpNode:
     if isinstance(node, list):
         return [_substitute(item, bindings) for item in node]
     if isinstance(node, str) and node in bindings:
@@ -387,7 +390,7 @@ def _compile_action_form(
         effects = ()
         for part in items[3:]:
             part_items = _list(part)
-            if _symbol(part_items[0]) == "do":
+            if _symbol(part_items[0]) == "before":
                 effects = tuple(_compile_effect(effect_form, program.store_specs) for effect_form in part_items[1:])
             else:
                 raise AssertionError(f"Unsupported action section: {_symbol(part_items[0])}")
@@ -408,7 +411,7 @@ def _compile_action_form(
     for part in items[3:]:
         part_items = _list(part)
         section = _symbol(part_items[0])
-        if section == "do":
+        if section == "before":
             base_effects = tuple(_compile_effect(effect_form, program.store_specs) for effect_form in part_items[1:])
         elif section == "suits":
             suits = tuple(SUIT_BY_NAME[_symbol(item)] for item in part_items[1:])
@@ -416,7 +419,7 @@ def _compile_action_form(
             risk = RISK_BY_NAME[_symbol(part_items[1])]
         elif section in {"ok", "partial", "fail"}:
             text = _string(part_items[1])
-            effects = tuple(_compile_effect(effect_form, program.store_specs) for effect_form in part_items[2:])
+            effects = _compile_effect_bundle(part_items[2:], program.store_specs)
             key = {"ok": "success", "partial": "cost", "fail": "fail"}[section]
             outcomes[key] = OutcomeDef(text=text, effects=effects)
         else:
@@ -476,31 +479,14 @@ def _flatten_scene(
 
 
 def _eval_condition(program: CompiledEncounterProgram, store: dict[str, int | bool | str], expr: SexpNode) -> bool:
-    items = _list(expr)
-    head = _symbol(items[0])
-    if head == "and":
-        return all(_eval_condition(program, store, item) for item in items[1:])
-    if head == "or":
-        return any(_eval_condition(program, store, item) for item in items[1:])
-    if head == "not":
-        return not _eval_condition(program, store, items[1])
-    if head == "=":
-        return _eval_value(store, items[1]) == _eval_value(store, items[2])
-    if head == "<":
-        return _eval_value(store, items[1]) < _eval_value(store, items[2])
-    if head == "<=":
-        return _eval_value(store, items[1]) <= _eval_value(store, items[2])
-    if head == ">":
-        return _eval_value(store, items[1]) > _eval_value(store, items[2])
-    if head == ">=":
-        return _eval_value(store, items[1]) >= _eval_value(store, items[2])
-    raise AssertionError(f"Unsupported condition expression: {head}")
+    value = _eval_expr(program, store, expr, expected_kind=EXPR_KIND_BOOL)
+    assert isinstance(value, bool), f"Condition must evaluate to bool: {expr!r}"
+    return value
 
 
-def _eval_value(store: dict[str, int | bool | str], node: SexpNode) -> int | bool | str:
-    value = _atom_value(node)
-    if isinstance(value, str) and value in store:
-        return store[value]
+def _eval_value(program: CompiledEncounterProgram, store: dict[str, int | bool | str], node: SexpNode) -> int | bool | str:
+    value = _eval_expr(program, store, node, expected_kind=EXPR_KIND_VALUE)
+    assert not isinstance(value, ClockRef), f"Value expression cannot resolve to clock ref: {node!r}"
     return value
 
 
@@ -536,8 +522,6 @@ def validate_encounter_program(program: CompiledEncounterProgram) -> None:
         _validate_template(template)
     for rule in program.react_rules:
         _validate_condition_expr(program, rule.condition)
-        for effect in rule.effects:
-            assert effect.kind in REACT_EFFECT_KINDS, f"Invalid react effect kind: {effect.kind}"
     _validate_scene_expr(program, program.view_expr, scene_ids=scene_ids, scene_path=())
 
 
@@ -587,9 +571,8 @@ def _validate_scene_expr(
             section_items = _list(section)
             section_head = _symbol(section_items[0])
             if section_head == "show_clocks":
-                for clock_id in section_items[1:]:
-                    name = _symbol(clock_id)
-                    assert name in program.clocks_by_id, f"Unknown encounter clock in show_clocks: {name}"
+                for clock_expr in section_items[1:]:
+                    _validate_clock_ref_expr(program, clock_expr)
             elif section_head == "actions":
                 for source_index, action_expr in enumerate(section_items[1:]):
                     _validate_action_expr(program, action_expr, scene_path=(*scene_path, scene_id), source_index=source_index)
@@ -635,29 +618,176 @@ def _validate_action_expr(
 
 
 def _validate_condition_expr(program: CompiledEncounterProgram, expr: SexpNode) -> None:
-    items = _list(expr)
-    head = _symbol(items[0])
-    if head in {"and", "or"}:
-        for item in items[1:]:
-            _validate_condition_expr(program, item)
-        return
-    if head == "not":
-        _validate_condition_expr(program, items[1])
-        return
-    if head in {"=", "<", "<=", ">", ">="}:
-        _validate_value_expr(program, items[1])
-        _validate_value_expr(program, items[2])
-        return
-    raise AssertionError(f"Unsupported condition expression: {head}")
+    _validate_expr(program, expr, expected_kind=EXPR_KIND_BOOL)
 
 
 def _validate_value_expr(program: CompiledEncounterProgram, expr: SexpNode) -> None:
+    _validate_expr(program, expr, expected_kind=EXPR_KIND_VALUE)
+
+
+def _eval_clock_ref_expr(
+    program: CompiledEncounterProgram,
+    store: dict[str, int | bool | str],
+    expr: SexpNode,
+) -> str | None:
+    value = _eval_expr(program, store, expr, expected_kind=EXPR_KIND_CLOCK_REF)
+    if value is None:
+        return None
+    assert isinstance(value, ClockRef), f"Clock ref expression must resolve to clock ref or nil: {expr!r}"
+    return value.id
+
+
+def _validate_clock_ref_expr(program: CompiledEncounterProgram, expr: SexpNode) -> None:
+    _validate_expr(program, expr, expected_kind=EXPR_KIND_CLOCK_REF)
+
+
+def _eval_expr(
+    program: CompiledEncounterProgram,
+    store: dict[str, int | bool | str],
+    expr: SexpNode,
+    *,
+    expected_kind: str,
+) -> int | bool | str | None | ClockRef:
     if isinstance(expr, list):
-        raise AssertionError(f"Unsupported value expression: {expr}")
+        head = _symbol(expr[0])
+        if head == "if":
+            assert len(expr) == 4, "Expr if-expression must be `(if condition then else)`."
+            branch = expr[2] if _eval_condition(program, store, expr[1]) else expr[3]
+            return _eval_expr(program, store, branch, expected_kind=expected_kind)
+        if head == "and":
+            assert expected_kind == EXPR_KIND_BOOL, "`and` is only valid in bool expressions."
+            return all(_eval_condition(program, store, item) for item in expr[1:])
+        if head == "or":
+            assert expected_kind == EXPR_KIND_BOOL, "`or` is only valid in bool expressions."
+            return any(_eval_condition(program, store, item) for item in expr[1:])
+        if head == "not":
+            assert expected_kind == EXPR_KIND_BOOL, "`not` is only valid in bool expressions."
+            assert len(expr) == 2, "`not` expects exactly one operand."
+            return not _eval_condition(program, store, expr[1])
+        if head in {"=", "<", "<=", ">", ">="}:
+            assert expected_kind == EXPR_KIND_BOOL, f"`{head}` is only valid in bool expressions."
+            left = _eval_value(program, store, expr[1])
+            right = _eval_value(program, store, expr[2])
+            if head == "=":
+                return left == right
+            if head == "<":
+                return left < right
+            if head == "<=":
+                return left <= right
+            if head == ">":
+                return left > right
+            return left >= right
+        if head == "clock-value":
+            assert expected_kind == EXPR_KIND_VALUE, "`clock-value` is only valid in value expressions."
+            clock_id = _symbol(expr[1])
+            return _clock_current_value(program, store, clock_id)
+        if head == "clock-full":
+            assert expected_kind == EXPR_KIND_VALUE, "`clock-full` is only valid in value expressions."
+            clock_id = _symbol(expr[1])
+            return _clock_full_value(program, clock_id)
+        if head == "clock-half":
+            assert expected_kind == EXPR_KIND_VALUE, "`clock-half` is only valid in value expressions."
+            clock_id = _symbol(expr[1])
+            return _clock_half_value(program, clock_id)
+        raise AssertionError(f"Unsupported {expected_kind} expression: {expr}")
+    if expected_kind == EXPR_KIND_CLOCK_REF:
+        name = _symbol(expr)
+        if name == "nil":
+            return None
+        assert name in program.clocks_by_id, f"Unknown encounter clock ref: {name}"
+        return ClockRef(name)
+    value = _atom_value(expr)
+    if isinstance(value, str) and value == "nil":
+        raise AssertionError("`nil` is only valid in clock-ref expressions.")
+    if isinstance(value, str) and value in store:
+        spec = program.store_specs[value]
+        assert spec.kind != "clock", f"Clock value must be read explicitly via (clock-value {value})."
+        return store[value]
+    return value
+
+
+def _validate_expr(program: CompiledEncounterProgram, expr: SexpNode, *, expected_kind: str) -> None:
+    if isinstance(expr, list):
+        head = _symbol(expr[0])
+        if head == "if":
+            assert len(expr) == 4, "Expr if-expression must be `(if condition then else)`."
+            _validate_expr(program, expr[1], expected_kind=EXPR_KIND_BOOL)
+            _validate_expr(program, expr[2], expected_kind=expected_kind)
+            _validate_expr(program, expr[3], expected_kind=expected_kind)
+            return
+        if head in {"and", "or"}:
+            assert expected_kind == EXPR_KIND_BOOL, f"`{head}` is only valid in bool expressions."
+            for item in expr[1:]:
+                _validate_expr(program, item, expected_kind=EXPR_KIND_BOOL)
+            return
+        if head == "not":
+            assert expected_kind == EXPR_KIND_BOOL, "`not` is only valid in bool expressions."
+            assert len(expr) == 2, "`not` expects exactly one operand."
+            _validate_expr(program, expr[1], expected_kind=EXPR_KIND_BOOL)
+            return
+        if head in {"=", "<", "<=", ">", ">="}:
+            assert expected_kind == EXPR_KIND_BOOL, f"`{head}` is only valid in bool expressions."
+            assert len(expr) == 3, f"`{head}` expects exactly two operands."
+            _validate_expr(program, expr[1], expected_kind=EXPR_KIND_VALUE)
+            _validate_expr(program, expr[2], expected_kind=EXPR_KIND_VALUE)
+            return
+        if head in {"clock-value", "clock-full", "clock-half"}:
+            assert expected_kind == EXPR_KIND_VALUE, f"`{head}` is only valid in value expressions."
+            assert len(expr) == 2, f"{head} expects exactly one clock id."
+            clock_id = _symbol(expr[1])
+            assert clock_id in program.clocks_by_id, f"Unknown encounter clock in value expression: {clock_id}"
+            return
+        raise AssertionError(f"Unsupported {expected_kind} expression: {expr}")
+    if isinstance(expr, StringAtom):
+        assert expected_kind == EXPR_KIND_VALUE, f"String literal is only valid in value expressions: {expr!r}"
+        return
+    if isinstance(expr, bool):
+        assert expected_kind in {EXPR_KIND_BOOL, EXPR_KIND_VALUE}, f"Bool literal is not valid here: {expr!r}"
+        return
+    if isinstance(expr, int):
+        assert expected_kind == EXPR_KIND_VALUE, f"Int literal is only valid in value expressions: {expr!r}"
+        return
+    if expected_kind == EXPR_KIND_CLOCK_REF:
+        name = _symbol(expr)
+        if name == "nil":
+            return
+        assert name in program.clocks_by_id, f"Unknown encounter clock ref: {name}"
+        return
     if isinstance(expr, str) and expr in {"true", "false"}:
+        assert expected_kind == EXPR_KIND_VALUE, f"Bool literal token is only valid in value expressions: {expr}"
         return
-    if isinstance(expr, str) and expr not in program.store_specs:
+    if isinstance(expr, str):
+        if expr not in program.store_specs:
+            assert expected_kind == EXPR_KIND_VALUE, f"Unknown symbol is only valid in value expressions: {expr}"
+            return
+        spec = program.store_specs[expr]
+        assert expected_kind == EXPR_KIND_VALUE, f"Store symbol is only valid in value expressions: {expr}"
+        assert spec.kind != "clock", f"Clock value must be read explicitly via (clock-value {expr})."
         return
+
+
+def _clock_full_value(program: CompiledEncounterProgram, clock_id: str) -> int:
+    spec = program.store_specs[clock_id]
+    assert spec.kind == "clock" and spec.maximum is not None, f"clock-full target must be a clock: {clock_id}"
+    return spec.maximum
+
+
+def _clock_half_value(program: CompiledEncounterProgram, clock_id: str) -> int:
+    spec = program.store_specs[clock_id]
+    assert spec.kind == "clock" and spec.maximum is not None, f"clock-half target must be a clock: {clock_id}"
+    return (spec.maximum + 1) // 2
+
+
+def _clock_current_value(
+    program: CompiledEncounterProgram,
+    store: dict[str, int | bool | str],
+    clock_id: str,
+) -> int:
+    spec = program.store_specs[clock_id]
+    assert spec.kind == "clock", f"clock-value target must be a clock: {clock_id}"
+    value = store[clock_id]
+    assert isinstance(value, int), f"clock-value must resolve to int: {clock_id}"
+    return value
 
 
 def _list(node: SexpNode) -> list[SexpNode]:
@@ -666,13 +796,13 @@ def _list(node: SexpNode) -> list[SexpNode]:
 
 
 def _symbol(node: SexpNode) -> str:
-    assert isinstance(node, str), f"Expected symbol, got: {node!r}"
+    assert isinstance(node, str) and not isinstance(node, StringAtom), f"Expected symbol, got: {node!r}"
     return node
 
 
 def _string(node: SexpNode) -> str:
-    assert isinstance(node, str), f"Expected string, got: {node!r}"
-    return node
+    assert isinstance(node, StringAtom), f"Expected string literal, got: {node!r}"
+    return node.value
 
 
 def _int(node: SexpNode) -> int:
@@ -695,6 +825,13 @@ def _signed_int(node: SexpNode) -> int:
 
 
 def _atom_value(node: SexpNode) -> int | bool | str:
+    if isinstance(node, StringAtom):
+        return node.value
     if isinstance(node, (int, bool, str)):
         return node
     raise AssertionError(f"Expected atom, got: {node!r}")
+
+
+def _atom_node(node: SexpNode) -> SexpNode:
+    assert isinstance(node, (int, bool, str, StringAtom)), f"Expected atom, got: {node!r}"
+    return node

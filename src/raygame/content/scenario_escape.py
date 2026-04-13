@@ -428,6 +428,13 @@ def build_escape_scenario() -> CompiledScenario:
                 effects=(effect("start_encounter", "teach_thug"),),
             ),
             action(
+                id="take_酒吧艳遇_job",
+                title="接下酒吧艳遇的活",
+                description="有人想让你去酒吧里套一段话，别把事办砸了。",
+                screen=ScreenName.CITY,
+                effects=(effect("start_encounter", "酒吧艳遇"),),
+            ),
+            action(
                 id="take_black_night_job",
                 title="接下黑夜入宅的活",
                 description="有人出钱让你深夜入宅，去听一个不该外传的真相。",

@@ -1,0 +1,259 @@
+(def cold_direct_talk
+  (check
+    (title "直白搭话")
+    (desc "你没有铺垫，直接把话扔到他面前。")
+    (suits empathy reason)
+    (risk low)
+    (ok "他抬眼看了你一眼，开始愿意接话。" (rapport +2))
+    (partial "他回了你一句，话匣子松了一点。" (rapport +1))
+    (fail "他礼貌地点了点头，话头又被关上了。" (tension +1))))
+
+(def breathe
+  (action
+    (title "喘息一下")
+    (desc "你拉开半口气，重新整理手里的节奏，但也会挨上一下。")
+    (before
+      (reset-hand)
+      (health -1))))
+
+(def cold_ask_help
+  (check
+    (title "寻求帮助")
+    (desc "你借一个无害的小问题，把自己的目的藏进请教里。")
+    (suits reason empathy)
+    (risk low)
+    (ok "他很自然地开始解释，戒心松了一层。" (rapport +2))
+    (partial "他给了个简短答案，但没有彻底关门。" (rapport +1))
+    (fail "他看出这不是单纯请教，气氛冷了下来。" (tension +1))))
+
+(def cold_use_room
+  (check
+    (title "借环境起头")
+    (desc "你拿酒吧里的动静做引子，把他拉到同一条观察线上。")
+    (suits empathy instinct)
+    (risk mid)
+    (ok "他顺着你的目光看过去，开始把你当成同类。" (rapport +2))
+    (partial "他跟着扫了一眼，嗯了一声。" (rapport +1))
+    (fail "时机不对，他没接住你抛过去的视角。" (tension +1))))
+
+(def cold_leave_hook
+  (check
+    (title "留个钩子")
+    (desc "你故意停在半句上，让他忍不住追问。")
+    (suits reason instinct)
+    (risk mid)
+    (ok "他果然追了上来，主动权开始往你手里滑。" (rapport +2))
+    (partial "他没追问，但眼神明显被你钩住了。" (rapport +1))
+    (fail "他没上钩，空气里只剩下一点尴尬。" (tension +1))))
+
+(def warm_interest
+  (check
+    (title "引起兴趣")
+    (desc "你抛出一个他没想到的观点，让这段聊天开始有重量。")
+    (suits reason empathy)
+    (risk mid)
+    (ok "他往前倾了一点，开始认真听你说话。" (rapport +2))
+    (partial "他表示认同，话题顺势延续。" (rapport +1))
+    (fail "你说的东西没落到他心上，热度掉下去一点。" (tension +1))))
+
+(def warm_flirt
+  (check
+    (title "制造暧昧")
+    (desc "你把语气往模糊的地方轻轻一推。")
+    (suits empathy instinct)
+    (risk mid)
+    (ok "他接住了那点模糊，氛围一下子变软了。" (rapport +2))
+    (partial "他有些犹豫，但还是没有退开。" (rapport +1))
+    (fail "你推得太过，他把距离又收了回去。" (rapport -1))))
+
+(def warm_read_him
+  (check
+    (title "展示判断力")
+    (desc "你说出他没说出口的那半句，让他知道你听懂了。")
+    (suits reason empathy)
+    (risk mid)
+    (ok "他愣了一下，防备明显松了。" (rapport +2))
+    (partial "他嘴上没承认，但表情已经出卖了他。" (rapport +1))
+    (fail "你猜错了，他的态度一下子硬了起来。" (rapport -1))))
+
+(def warm_keep_distance
+  (check
+    (title "留一点距离")
+    (desc "你在他靠近的时候轻轻退半步，让他意识到你不是唾手可得。")
+    (suits empathy instinct)
+    (risk low)
+    (ok "他反而更想往前一步，兴趣被你勾起来了。" (rapport +2))
+    (partial "他有点不确定，但没有失去耐心。" (rapport +1))
+    (fail "距离留得太硬，他误读成了拒绝。" )))
+
+(def soft_follow_lead
+  (check
+    (title "接住主动")
+    (desc "他主动抛出一句话，你只负责顺着接住，不打断也不评判。")
+    (suits empathy instinct)
+    (risk low)
+    (ok "他越说越顺，口风开始往外松。" (rapport +2))
+    (partial "他说了一些，但还留着最后半句。" (rapport +1))
+    (fail "你接歪了方向，他觉得自己被牵着走。" (tension +1))))
+
+(def soft_make_promise
+  (check
+    (title "许诺")
+    (desc "你给他一个理由，相信继续说是值得的。")
+    (suits reason empathy)
+    (risk mid)
+    (ok "他决定相信你，话明显多了起来。" (rapport +2))
+    (partial "他半信半疑，但已经开始松口。" (rapport +1))
+    (fail "你的许诺太空，他听得出你没落地。" (tension +1))))
+
+(def soft_tempt
+  (check
+    (title "诱惑")
+    (desc "你让他看到，说出来会得到某种隐秘的好处。")
+    (suits empathy instinct)
+    (risk mid)
+    (ok "他被你说动了，继续聊下去的欲望压过了防备。" (rapport +2))
+    (partial "他靠近了一点，但还没真正开口。" (rapport +1))
+    (fail "你踩到了他的线，他把话题往回缩了。" (rapport -1))))
+
+(def soft_pull_thread
+  (check
+    (title "顺势套话")
+    (desc "你抓住他刚刚那句无心的话，从口子里继续往里切。")
+    (suits reason instinct)
+    (risk mid)
+    (ok "情报浮了出来，他已经挡不住这条线了。" (rapport +2))
+    (partial "他只吐出了一半，还差一步。" (rapport +1))
+    (fail "你切得太准，他马上警觉起来了。" (rapport -1))))
+
+(def soft_answer_probe
+  (check
+    (title "回应试探")
+    (desc "他在测试你，你的回答决定他会不会把最后那层门打开。")
+    (suits reason empathy)
+    (risk high)
+    (ok "你通过了他的测试，他最后的防线松开了。" (rapport +2))
+    (partial "你稳稳接住了试探，局面没有散。" (rapport +1))
+    (fail "你暴露了意图，他把信任收了回去。" (rapport -2))))
+
+(def leave_polite
+  (action
+    (title "找借口离开")
+    (desc "你编一个合理的理由，把今晚收得体面一点。")
+    (before
+      (set ending 'clean)
+      (finish success))))
+
+(def walk_away
+  (check
+    (title "头也不回地离开")
+    (desc "你什么也不解释，起身就走。")
+    (suits instinct)
+    (risk high)
+    (ok "你留下一点谜面，然后消失在门口。" (set ending 'mystery') (finish success))
+    (partial "你走得太干脆，留下的味道有点复杂。" (set ending 'mystery') (tension +1) (finish success))
+    (fail "你转身太快，连尾声都显得有点可疑。" (set ending 'mystery') (tension +1) (finish fail))))
+
+(def invite_along
+  (check
+    (title "邀请共度一晚")
+    (desc "你把话题往更近的地方推了一步。")
+    (suits empathy instinct)
+    (risk high)
+    (ok "他接受了这份延伸，故事还会继续。" (set ending 'continue') (finish success))
+    (partial "他没有立刻拒绝，关系被你往前推了一点。" (set ending 'continue') (tension +1) (finish success))
+    (fail "你推得太急，他一下子警觉起来。" (set ending 'continue') (tension +1) (finish fail))))
+
+(def stage_cold
+  (scene
+    (id bar_cold)
+    (title "冷淡")
+    (desc "目标把自己裹在沉默里。你得先让他愿意继续说话。")
+    (show-clocks rapport tension)
+    (actions
+      breathe
+      (when (and (< (clock-value rapport) 3) (= cold_direct_talk_used false)) cold_direct_talk)
+      (when (and (< (clock-value rapport) 3) (= cold_ask_help_used false)) cold_ask_help)
+      (when (and (< (clock-value rapport) 3) (= cold_use_room_used false)) cold_use_room)
+      (when (and (< (clock-value rapport) 3) (= cold_leave_hook_used false)) cold_leave_hook))))
+
+(def stage_warm
+  (scene
+    (id bar_warm)
+    (title "熟络")
+    (desc "话题已经打开了。你要让他意识到，这次偶遇有点不一样。")
+    (show-clocks rapport tension)
+    (actions
+      breathe
+      (when (and (>= (clock-value rapport) 3) (< (clock-value rapport) 6) (= warm_interest_used false)) warm_interest)
+      (when (and (>= (clock-value rapport) 3) (< (clock-value rapport) 6) (= warm_flirt_used false)) warm_flirt)
+      (when (and (>= (clock-value rapport) 3) (< (clock-value rapport) 6) (= warm_read_him_used false)) warm_read_him)
+      (when (and (>= (clock-value rapport) 3) (< (clock-value rapport) 6) (= warm_keep_distance_used false)) warm_keep_distance))))
+
+(def stage_soft
+  (scene
+    (id bar_soft)
+    (title "松动")
+    (desc "他的防备已经松了。现在只差最后一层，情报就在那后面。")
+    (show-clocks rapport tension)
+    (actions
+      breathe
+      (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_follow_lead_used false)) soft_follow_lead)
+      (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_make_promise_used false)) soft_make_promise)
+      (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_tempt_used false)) soft_tempt)
+      (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_pull_thread_used false)) soft_pull_thread)
+      (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_answer_probe_used false)) soft_answer_probe))))
+
+(def stage_exit
+  (scene
+    (id bar_exit)
+    (title "离场")
+    (desc "情报已经到手。你只剩下决定今晚怎么收尾。")
+    (show-clocks rapport tension)
+    (actions
+      breathe
+      leave_polite
+      walk_away
+      invite_along)))
+
+(encounter
+  (id 酒吧艳遇)
+  (title "酒吧艳遇")
+  (desc "深夜的酒吧里，玩家要在目标关上心门之前钻进去，把情报带出来。")
+  (reward)
+
+  (store
+    (clock rapport "好感" 0 9)
+    (clock tension "警觉度" 0 3)
+    (value attitude 'cold)
+    (value ending 'none)
+    (flag cold_direct_talk_used false)
+    (flag cold_ask_help_used false)
+    (flag cold_use_room_used false)
+    (flag cold_leave_hook_used false)
+    (flag warm_interest_used false)
+    (flag warm_flirt_used false)
+    (flag warm_read_him_used false)
+    (flag warm_keep_distance_used false)
+    (flag soft_follow_lead_used false)
+    (flag soft_make_promise_used false)
+    (flag soft_tempt_used false)
+    (flag soft_pull_thread_used false)
+    (flag soft_answer_probe_used false))
+
+  (reacts
+    ((>= (clock-value tension) (clock-full tension))
+     (finish fail))
+    ((>= (clock-value rapport) 3)
+     (set attitude 'chatty))
+    ((>= (clock-value rapport) 6)
+     (set attitude 'engaged))
+    ((>= (clock-value rapport) 9)
+     (set attitude 'loose)))
+
+  (view
+    (cond
+      ((< (clock-value rapport) 3) stage_cold)
+      ((< (clock-value rapport) 6) stage_warm)
+      ((< (clock-value rapport) 9) stage_soft)
+      (else stage_exit))))

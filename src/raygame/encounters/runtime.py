@@ -117,9 +117,7 @@ def validate_encounter_program(program: CompiledEncounterProgram) -> None:
     for name, value in program.bindings.items():
         if isinstance(value, list) and value:
             head = _form_head(value)
-            if head in {"scene", "if", "cond"}:
-                _validate_expr(program, value, expected_kind=EXPR_KIND_SCENE, scene_ids=scene_ids, scene_path=())
-            elif head in {"action", "check"}:
+            if head in {"action", "check"}:
                 _validate_expr(program, value, expected_kind=EXPR_KIND_ACTION, scene_ids=scene_ids, scene_path=())
     for rule in program.react_rules:
         _validate_expr(program, rule.condition, expected_kind=EXPR_KIND_BOOL, scene_ids=scene_ids, scene_path=())

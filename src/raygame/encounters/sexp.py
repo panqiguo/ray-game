@@ -29,6 +29,10 @@ def _tokenize(text: str) -> list[str]:
             tokens.append(ch)
             i += 1
             continue
+        if ch == "'":
+            tokens.append("'")
+            i += 1
+            continue
         if ch == '"':
             i += 1
             chars: list[str] = []
@@ -67,6 +71,9 @@ def _parse_form(tokens: list[str], index: int) -> tuple[SexpNode, int]:
             items.append(item)
         assert index < len(tokens) and tokens[index] == ")", "Missing closing parenthesis."
         return items, index + 1
+    if token == "'":
+        quoted, next_index = _parse_form(tokens, index + 1)
+        return ["quote", quoted], next_index
     assert token != ")", "Unexpected closing parenthesis."
     return _parse_atom(token), index + 1
 

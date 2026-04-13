@@ -102,6 +102,8 @@ def draw_location_contents(
     content_rect: Rectangle,
     child_cards: tuple[PresentedLocationCard, ...],
     action_cards: tuple[PresentedActionCard, ...],
+    *,
+    nested_locations: bool = True,
 ) -> None:
     if child_cards:
         child_strip = Rectangle(content_rect.x, content_rect.y, content_rect.width, 114)
@@ -111,7 +113,7 @@ def draw_location_contents(
             child_strip,
             child_cards,
             columns=max(1, min(3, len(child_cards))),
-            nested=True,
+            nested=nested_locations,
         )
         action_top = child_strip.y + child_strip.height + 18
     else:

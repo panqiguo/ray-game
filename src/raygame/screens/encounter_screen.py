@@ -10,6 +10,7 @@ from raygame.screens.encounter_presenters import (
     current_encounter_titles,
     present_encounter_action_cards,
     present_encounter_child_location_cards,
+    present_encounter_location_clock_ids,
 )
 from raygame.screens.table_views import draw_location_contents, floating_table_rect, split_desktop_area
 from raygame.screens.widgets import (
@@ -67,7 +68,7 @@ def _draw_encounter_table(font: Font | None, state: GameState, rng, rect: Rectan
         current_encounter_clock_ids(state),
         state,
     )
-    _draw_location_contents(font, state, rng, root, sections.content)
+    _draw_location_contents(font, state, rng, root, sections.content, nested_locations=False)
 
 
 def _draw_encounter_location_table(font: Font | None, state: GameState, rng) -> None:
@@ -91,9 +92,12 @@ def _draw_encounter_location_table(font: Font | None, state: GameState, rng) -> 
     if closed and not resolving:
         close_modal(state)
         return
-    _draw_location_contents(font, state, rng, target, sections.content)
+    location_clock_ids = present_encounter_location_clock_ids(state, target.id)
+    if location_clock_ids:
+        draw_clock_row(font, Rectangle(sections.header.x + 18, sections.header.y + 84, sections.header.width - 36, 26), location_clock_ids, state)
+    _draw_location_contents(font, state, rng, target, sections.content, nested_locations=True)
 
-def _draw_location_contents(font: Font | None, state: GameState, rng, location, content_rect: Rectangle) -> None:
+def _draw_location_contents(font: Font | None, state: GameState, rng, location, content_rect: Rectangle, *, nested_locations: bool) -> None:
     child_ids = tuple(child.id for child in location.children if location_is_visible(child.id, state))
     draw_location_contents(
         font,
@@ -102,6 +106,7 @@ def _draw_location_contents(font: Font | None, state: GameState, rng, location, 
         content_rect,
         present_encounter_child_location_cards(state, child_ids),
         present_encounter_action_cards(state, location),
+        nested_locations=nested_locations,
     )
 
 

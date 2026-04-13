@@ -414,6 +414,29 @@ def build_escape_scenario() -> CompiledScenario:
         conditions=(condition("location_visible", "client_case_scene"),),
     )
 
+    bulletin_board, bulletin_board_clocks = location(
+        id="bulletin_board",
+        title="告示板",
+        description="破木板上钉满了私活、委托和见不得光的麻烦。你要找的侦探任务，大多从这里开始。",
+        position=(620, 198),
+        actions=(
+            action(
+                id="take_thug_job",
+                title="接下教训混混的活",
+                description="有人想让一个小混混吃点教训。",
+                screen=ScreenName.CITY,
+                effects=(effect("start_encounter", "teach_thug"),),
+            ),
+            action(
+                id="take_black_night_job",
+                title="接下黑夜入宅的活",
+                description="有人出钱让你深夜入宅，去听一个不该外传的真相。",
+                screen=ScreenName.CITY,
+                effects=(effect("start_encounter", "black_night"),),
+            ),
+        ),
+    )
+
     clocks = (
         clock(id="pursuit", title="被追击", segments=6, thresholds=(threshold(6, effect("end_run", "caught")),)),
         *inn_clocks,
@@ -432,6 +455,7 @@ def build_escape_scenario() -> CompiledScenario:
         *grand_hotel_private_room_clocks,
         *repair_job_clocks,
         *client_case_clocks,
+        *bulletin_board_clocks,
     )
 
     world_root, _ = location(
@@ -445,14 +469,6 @@ def build_escape_scenario() -> CompiledScenario:
                 description="先停下来理一理手里的牌和呼吸。",
                 screen=ScreenName.CITY,
                 position=(902, 140),
-            ),
-            action(
-                id="take_thug_job",
-                title="接个告示",
-                description="有人想让一个小混混吃点教训。",
-                screen=ScreenName.CITY,
-                position=(602, 192),
-                effects=(effect("start_encounter", "teach_thug"),),
             ),
         ),
         children=(
@@ -471,6 +487,7 @@ def build_escape_scenario() -> CompiledScenario:
             grand_hotel,
             repair_job_scene,
             client_case_scene,
+            bulletin_board,
         ),
     )
 
@@ -480,7 +497,7 @@ def build_escape_scenario() -> CompiledScenario:
         screen=ScreenName.CITY,
         world_root=world_root,
         clocks=clocks,
-        initial_visible_locations=("inn", "bridge", "clinic", "bar", "slum_street", "residential", "hotel"),
+        initial_visible_locations=("inn", "bridge", "clinic", "bar", "slum_street", "residential", "hotel", "bulletin_board"),
         initial_visible_clocks=("pursuit", "slum_knowledge", "residential_knowledge"),
         initial_health=6,
         initial_stress=4,

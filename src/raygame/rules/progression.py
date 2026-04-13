@@ -488,8 +488,15 @@ def advance_pending_resolution(state: GameState, rng: RandomSource, dt: float) -
     if pending is None:
         return
     if not pending.settled:
+        previous_screen = state.screen
+        previous_encounter_root_id = (
+            _current_encounter_root_id(state)
+            if state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None
+            else None
+        )
         pending.progress = min(1.0, pending.progress + dt / 0.7)
         if pending.progress >= 1.0:
+            _push_log(state, pending.log_text)
             extra_lines = _apply_effects(pending.effects, state, rng)
             if extra_lines:
                 merged = list(pending.resolution.effect_lines)
@@ -497,12 +504,18 @@ def advance_pending_resolution(state: GameState, rng: RandomSource, dt: float) -
                     if line not in merged:
                         merged.append(line)
                 pending.resolution.effect_lines = tuple(merged[:6])
-            _push_log(state, pending.log_text)
             state.last_resolution = pending.resolution
             _check_endings(state)
             if state.modal.kind == "location" and state.modal.primary_id is not None and not location_is_visible(state.modal.primary_id, state):
                 close_modal(state)
             pending.settled = True
+            if _should_auto_dismiss_pending_resolution(
+                state,
+                pending,
+                previous_screen=previous_screen,
+                previous_encounter_root_id=previous_encounter_root_id,
+            ):
+                dismiss_pending_resolution(state)
         return
 
 
@@ -513,6 +526,27 @@ def dismiss_pending_resolution(state: GameState) -> None:
     if pending.settled and state.assembly.action_id == pending.resolution.action_id:
         clear_assembly(state)
     state.pending_resolution = None
+
+
+def _should_auto_dismiss_pending_resolution(
+    state: GameState,
+    pending: PendingResolutionState,
+    *,
+    previous_screen: ScreenName,
+    previous_encounter_root_id: str | None,
+) -> bool:
+    if state.screen != previous_screen:
+        return True
+    if previous_screen == ScreenName.ENCOUNTER:
+        if state.active_encounter is None:
+            return True
+        if get_action_for_state(state, pending.resolution.action_id) is None:
+            return True
+        if previous_encounter_root_id is not None and _current_encounter_root_id(state) != previous_encounter_root_id:
+            return True
+        if pending.location_id and not location_is_visible(pending.location_id, state):
+            return True
+    return False
 
 
 def _consume_inputs(state: GameState, action: ActionDef) -> None:

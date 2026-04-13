@@ -11,7 +11,10 @@ def _load_program(filename: str) -> CompiledEncounterProgram:
     return compile_encounter_program(path.read_text(encoding="utf-8"))
 
 
-RAW_ENCOUNTERS = (_load_program("teach_thug.enc"),)
+RAW_ENCOUNTERS = (
+    _load_program("teach_thug.enc"),
+    _load_program("black_night.enc"),
+)
 ENCOUNTERS_BY_ID = {encounter.id: encounter for encounter in RAW_ENCOUNTERS}
 
 

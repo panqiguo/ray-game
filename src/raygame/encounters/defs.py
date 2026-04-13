@@ -30,17 +30,17 @@ class StoreFieldSpec:
 
 
 @dataclass(frozen=True)
-class ActionTemplate:
-    name: str
-    params: tuple[str, ...]
-    body: SexpNode
-
-
-@dataclass(frozen=True)
 class ReactRule:
     condition: SexpNode
     effects: tuple[Effect, ...]
     source: str
+
+
+@dataclass(frozen=True)
+class MacroTemplate:
+    name: str
+    params: tuple[str, ...]
+    body: SexpNode
 
 
 @dataclass(frozen=True)
@@ -50,7 +50,8 @@ class CompiledEncounterProgram:
     description: str
     store_specs: dict[str, StoreFieldSpec]
     clocks_by_id: dict[str, ProgressClockSpec]
-    action_templates: dict[str, ActionTemplate]
+    bindings: dict[str, SexpNode]
+    macros: dict[str, MacroTemplate]
     react_rules: tuple[ReactRule, ...]
     view_expr: SexpNode
     rewards: tuple[Effect, ...]

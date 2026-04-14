@@ -9,26 +9,27 @@
 
 ## 可直接复用的小模板
 
-### 1. 最小 `def + check`
+### 1. 最小 `def + action(check)`
 
 来自 `teach_thug`，适合提取公共动作：
 
 ```lisp
 (def counter
-  (check
+  (action
     (title "防守反击")
     (desc "你先稳住头脸和脚步，再找机会把他顶开。")
-    (suits reason empathy)
-    (risk low)
-    (ok
-      "你稳稳顶住了节奏。"
-      (initiative +1))
-    (partial
-      "你至少没有继续吃亏。"
-      (initiative +1))
-    (fail
-      "你还是没完全顶住。"
-      (health -1))))
+    (check
+      (suits reason empathy)
+      (risk low)
+      (ok
+        "你稳稳顶住了节奏。"
+        (initiative +1))
+      (partial
+        "你至少没有继续吃亏。"
+        (initiative +1))
+      (fail
+        "你还是没完全顶住。"
+        (health -1)))))
 ```
 
 ### 2. 标准两幕 `cond`
@@ -80,11 +81,11 @@
 (actions
   (when (= (clock-value patrol) 0)
     left_start_patrol)
-  (when (and (= route left)
+  (when (and (= route 'left)
              (> (clock-value patrol) 0)
              (< (clock-value patrol) (clock-full patrol)))
     left_hold_position)
-  (when (and (= route left)
+  (when (and (= route 'left)
              (= (clock-value patrol) (clock-full patrol)))
     left_fight_guard))
 ```
@@ -116,7 +117,7 @@
 
 ```lisp
 ((= phase bedroom)
- (if (= entry_method front)
+ (if (= entry_method 'front)
    (scene
      (id bedroom_front)
      (actions
@@ -194,16 +195,16 @@
 
 ```lisp
 (actions
-  (check ...)
-  (check ...)
-  (check ...))
+  (action ... )
+  (action ... )
+  (action ... ))
 ```
 
 推荐先提成：
 
 ```lisp
 (def front_pick_lock
-  (check ...))
+  (action ...))
 ```
 
 再在 scene 里引用：

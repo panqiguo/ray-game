@@ -48,26 +48,39 @@
         (actions)))))
 ```
 
-## 3. 标准 Check 模板
+## 3. 标准带检定 Action 模板
 
 ```lisp
-(check
+(action
   (title "动作标题")
   (desc "玩家是怎么出手的。")
-  (suits reason instinct)
-  (risk mid)
   (before
     (alert +1))
-  (ok
-    "成功文案。"
-    (progress +1))
-  (partial
-    "代价成功文案。"
-    (progress +1)
-    (health -1))
-  (fail
-    "失败文案。"
-    (alert +1)))
+  (check
+    (suits reason instinct)
+    (risk mid)
+    (ok
+      "成功文案。"
+      (progress +1))
+    (partial
+      "代价成功文案。"
+      (progress +1)
+      (health -1))
+    (fail
+      "失败文案。"
+      (alert +1))))
+```
+
+如果这个行动还需要资源 / 物品 / 手牌，把它们也写进 `action`：
+
+```lisp
+(action
+  (title "拿钥匙开门")
+  (desc "你拿出钥匙，试着直接把门打开。")
+  (inputs
+    (item car_key 1 "车钥匙" false))
+  (before
+    (progress +1)))
 ```
 
 ## 4. 多幕模板
@@ -115,6 +128,13 @@
 4. 最后填动作
 
 如果上来就把长文案和复杂 `if/cond` 混在一起，最容易写坏。
+
+如果 encounter 很长，可以先把公共动作、某一幕的 scene 定义拆到子文件，再在主文件顶部：
+
+```lisp
+(include "black_night/yard.enc")
+(include "black_night/entry.enc")
+```
 
 ## 7. 休息 / 调整 / 重抽类动作模板
 

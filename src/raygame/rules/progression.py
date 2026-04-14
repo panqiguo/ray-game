@@ -888,6 +888,8 @@ def _check_endings(state: GameState) -> None:
 
 
 def _compose_resolution_text(result: ResultType, effect_lines: tuple[str, ...], fallback: str) -> str:
+    if fallback:
+        return fallback
     if effect_lines:
         prefix = {
             ResultType.SUCCESS: "成功",
@@ -895,7 +897,7 @@ def _compose_resolution_text(result: ResultType, effect_lines: tuple[str, ...], 
             ResultType.FAIL: "失败",
         }[result]
         return f"{prefix}：{'，'.join(effect_lines[:2])}"
-    return fallback
+    return ""
 
 
 def _describe_effects(effects: tuple[Effect, ...], action_id: str, state: GameState) -> tuple[str, ...]:
@@ -943,9 +945,9 @@ def _describe_effects(effects: tuple[Effect, ...], action_id: str, state: GameSt
             title = encounter.clocks_by_id[key].title if encounter is not None else key
             lines.append(f"{title} -{raw}")
         elif item.kind == "set_encounter_store":
-            assert isinstance(value, str)
-            key, raw = value.split(":", 1)
-            lines.append(f"{key} -> {raw}")
+            # Encounter store writes drive dynamic scene changes, but most of them
+            # are internal authoring facts rather than player-facing outcomes.
+            continue
         elif item.kind == "finish_encounter":
             lines.append("处境结束")
         elif item.kind == "start_encounter":

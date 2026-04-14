@@ -20,6 +20,10 @@ SexpAtom: TypeAlias = str | int | bool | StringAtom
 SexpNode: TypeAlias = SexpAtom | list["SexpNode"]
 
 
+class EncounterCompileError(Exception):
+    pass
+
+
 @dataclass(frozen=True)
 class StoreFieldSpec:
     id: str

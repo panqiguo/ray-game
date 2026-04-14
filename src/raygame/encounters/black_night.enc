@@ -1,12 +1,15 @@
+(include "common_clock_macros.enc")
+
 (def bedroom_circle_probe
-  (check
+  (action
     (title "试探迂回")
     (desc "你从边角绕进去，把话一点点逼近核心。")
-    (suits reason instinct)
-    (risk low)
-    (ok "他被你绕开了防备。" (truth +1))
-    (partial "你逼近了真相，但还差一口气。" (truth +1))
-    (fail "他看穿了你的路子。" (alert +1))))
+    (check
+      (suits reason instinct)
+      (risk low)
+      (ok "他被你绕开了防备。" (truth +1))
+      (partial "你逼近了真相，但还差一口气。" (truth +1))
+      (fail "他看穿了你的路子。" (alert +1)))))
 
 (def bedroom_leave
   (action
@@ -16,34 +19,37 @@
       (finish 'abort))))
 
 (def front_pick_lock
-  (check
+  (action
     (title "撬锁进入")
     (desc "你从正门进去，尽量别留下动静。")
-    (suits reason instinct)
-    (risk mid)
-    (ok "门锁被你撬开了。" (set entry_method 'front))
-    (partial "门开得不够干净，但你还是挤了进去。" (set entry_method 'front) (alert +1))
-    (fail "锁发出一声轻响。" (alert +1))))
+    (check
+      (suits reason instinct)
+      (risk mid)
+      (ok "门锁被你撬开了。" (set entry_method 'front))
+      (partial "门开得不够干净，但你还是挤了进去。" (set entry_method 'front) (alert +1))
+      (fail "锁发出一声轻响。" (alert +1)))))
 
 (def front_wait_gap
-  (check
+  (action
     (title "等巡查空档")
     (desc "你盯着屋里的人影，等他们错开。")
-    (suits reason empathy)
-    (risk low)
-    (ok "你抓住了空档，悄悄从正门进去了。" (set entry_method 'front))
-    (partial "你等得有点久，还是进去了。" (set entry_method 'front) (alert +1))
-    (fail "你等得太久，外头的动静多了起来。" (alert +1))))
+    (check
+      (suits reason empathy)
+      (risk low)
+      (ok "你抓住了空档，悄悄从正门进去了。" (set entry_method 'front))
+      (partial "你等得有点久，还是进去了。" (set entry_method 'front) (alert +1))
+      (fail "你等得太久，外头的动静多了起来。" (alert +1)))))
 
 (def climb_window
-  (check
+  (action
     (title "翻上二楼窗户")
     (desc "你沿着排水管往上爬，从窗缝里翻进去。")
-    (suits instinct force)
-    (risk high)
-    (ok "你无声翻进了二楼。" (set entry_method 'window))
-    (partial "你擦伤了手，但还是进去了。" (set entry_method 'window) (health -1))
-    (fail "你没抓稳，差点摔下去。" (health -1) (alert +1))))
+    (check
+      (suits instinct force)
+      (risk high)
+      (ok "你无声翻进了二楼。" (set entry_method 'window))
+      (partial "你擦伤了手，但还是进去了。" (set entry_method 'window) (health -1))
+      (fail "你没抓稳，差点摔下去。" (health -1) (alert +1)))))
 
 (def left_start_patrol
   (action
@@ -64,64 +70,70 @@
       (patrol +1))))
 
 (def left_advance
-  (check
+  (action
     (title "趁隙穿越")
     (desc "你贴着墙往前压，赌他还没回头。")
-    (suits reason instinct)
-    (risk mid)
-    (ok "你稳稳跨过一段。" (traverse +1) (patrol +1))
-    (partial "你碰到了点动静，但还是往前挪了一步。" (traverse +1) (patrol +1) (alert +1))
-    (fail "手电光差点扫到你。你只能先把呼吸压住。" (patrol +1) (alert +1))))
+    (check
+      (suits reason instinct)
+      (risk mid)
+      (ok "你稳稳跨过一段。" (traverse +1) (patrol +1))
+      (partial "你碰到了点动静，但还是往前挪了一步。" (traverse +1) (patrol +1) (alert +1))
+      (fail "手电光差点扫到你。你只能先把呼吸压住。" (patrol +1) (alert +1)))))
 
 (def left_fight_guard
-  (check
+  (action
     (title "搏斗")
     (desc "你只能抢先动手，把人压回去。")
-    (suits force)
-    (risk high)
-    (ok "保安倒下了，通路也开了。" (set route 'none) (set phase 'entry) (set traverse 0) (alert +1))
-    (partial "你把他压住了，自己也挨了一下。" (set route 'none) (set phase 'entry) (set traverse 0) (health -1) (alert +1))
-    (fail "你没压住他。" (health -2) (alert +2))))
+    (check
+      (suits force)
+      (risk high)
+      (ok "保安倒下了，通路也开了。" (set route 'none) (set phase 'entry) (reset-clock traverse) (alert +1))
+      (partial "你把他压住了，自己也挨了一下。" (set route 'none) (set phase 'entry) (reset-clock traverse) (health -1) (alert +1))
+      (fail "你没压住他。" (health -2) (alert +2)))))
 
 (def left_berserk_rush
-  (check
+  (action
     (title "狠狠干硬闯")
     (desc "你不跟他绕，狠狠干着肩膀和步子直接撞穿这条走廊。")
-    (suits force instinct)
-    (risk high)
-    (ok "你狠狠干翻了保安，直接冲到了屋外。" (set route 'none) (set phase 'entry) (set patrol 0) (set traverse 0) (alert +2))
-    (partial "你是硬闯过去了，但自己也挨了一下。" (set route 'none) (set phase 'entry) (set patrol 0) (set traverse 0) (health -1) (alert +2))
-    (fail "你刚冲出去就被堵了回来。" (set route 'left) (set patrol 2) (health -1) (alert +2))))
+    (check
+      (suits force instinct)
+      (risk high)
+      (ok "你狠狠干翻了保安，直接冲到了屋外。" (set route 'none) (set phase 'entry) (reset-clock patrol) (reset-clock traverse) (alert +2))
+      (partial "你是硬闯过去了，但自己也挨了一下。" (set route 'none) (set phase 'entry) (reset-clock patrol) (reset-clock traverse) (health -1) (alert +2))
+      (fail "你刚冲出去就被堵了回来。" (set route 'left) (set patrol 2) (health -1) (alert +2)))))
 
 (def right_edge_forward
-  (check
+  (action
     (title "贴墙慢行")
     (desc "你贴着外墙慢慢挪，尽量不碰响任何东西。")
-    (suits reason instinct)
-    (risk mid)
-    (ok "你无声挪过了一段。" (set route 'right) (set patrol 0) (traverse +1))
-    (partial "你还是让它抬了头。你往前挪了一步。" (set route 'right) (set patrol 0) (traverse +1) (alert +1) (set dog_state 'agitated))
-    (fail "狗开始低吠。" (set route 'right) (set patrol 0) (set traverse 0) (set dog_state 'agitated) (alert +1))))
+    (check
+      (suits reason instinct)
+      (risk mid)
+      (ok "你无声挪过了一段。" (set route 'right) (set patrol 0) (traverse +1))
+      (partial "你还是让它抬了头。你往前挪了一步。" (set route 'right) (set patrol 0) (traverse +1) (alert +1) (set dog_state 'agitated))
+      (fail "狗开始低吠。" (set route 'right) (set patrol 0) (set traverse 0) (set dog_state 'agitated) (alert +1)))))
 
 (def drug_the_dog
-  (check
+  (action
     (title "投喂毒食")
     (desc "你把预备好的毒食丢进它够得着的地方。")
-    (suits reason instinct)
-    (risk high)
-    (ok "狗安静了下来。" (set dog_state 'asleep) (traverse +1))
-    (partial "它吃下去了，但还是挣扎了一下。" (set dog_state 'asleep) (traverse +1) (alert +1))
-    (fail "它警觉地躲开了。" (alert +1))))
+    (check
+      (suits reason instinct)
+      (risk high)
+      (ok "狗安静了下来。" (set dog_state 'asleep) (traverse +1))
+      (partial "它吃下去了，但还是挣扎了一下。" (set dog_state 'asleep) (traverse +1) (alert +1))
+      (fail "它警觉地躲开了。" (alert +1)))))
 
 (def soothe_the_dog
-  (check
+  (action
     (title "低声安抚")
     (desc "你压低声音和动作，试着先让它把你当成没有威胁的东西。")
-    (suits empathy instinct)
-    (risk mid)
-    (ok "它慢慢安静下来，你也顺势往前挪了一段。" (set route 'right) (set dog_state 'asleep) (traverse +1))
-    (partial "它没有彻底放松，但也没立刻扑上来。" (set route 'right) (set dog_state 'agitated) (alert +1))
-    (fail "它被你这一下彻底惊起来了。" (set route 'right) (set dog_state 'agitated) (alert +1))))
+    (check
+      (suits empathy instinct)
+      (risk mid)
+      (ok "它慢慢安静下来，你也顺势往前挪了一段。" (set route 'right) (set dog_state 'asleep) (traverse +1))
+      (partial "它没有彻底放松，但也没立刻扑上来。" (set route 'right) (set dog_state 'agitated) (alert +1))
+      (fail "它被你这一下彻底惊起来了。" (set route 'right) (set dog_state 'agitated) (alert +1)))))
 
 (def slip_past_dog
   (action
@@ -131,64 +143,70 @@
       (traverse +1))))
 
 (def front_direct_inquiry
-  (check
+  (action
     (title "直接询问")
     (desc "你开门见山，问他到底在藏什么。")
-    (suits reason empathy)
-    (risk low)
-    (ok "他沉默了一下，吐出了一点实话。" (truth +1))
-    (partial "他没回答全部，但你听到了关键半句。" (truth +1) (alert +1))
-    (fail "他把话题挡了回去。" (alert +1))))
+    (check
+      (suits reason empathy)
+      (risk low)
+      (ok "他沉默了一下，吐出了一点实话。" (truth +1))
+      (partial "他没回答全部，但你听到了关键半句。" (truth +1) (alert +1))
+      (fail "他把话题挡了回去。" (alert +1)))))
 
 (def front_present_evidence
-  (check
+  (action
     (title "摆出线索")
     (desc "你把一路摸来的痕迹摊给他看。")
-    (suits reason empathy)
-    (risk mid)
-    (ok "他终于不再硬扛。" (truth +2))
-    (partial "他承认了一半。" (truth +1) (alert +1))
-    (fail "他知道你手里的东西还不够。" (alert +1))))
+    (check
+      (suits reason empathy)
+      (risk mid)
+      (ok "他终于不再硬扛。" (truth +2))
+      (partial "他承认了一半。" (truth +1) (alert +1))
+      (fail "他知道你手里的东西还不够。" (alert +1)))))
 
 (def front_silent_pressure
-  (check
+  (action
     (title "沉默施压")
     (desc "你什么也不说，只是看着他。")
-    (suits empathy instinct)
-    (risk mid)
-    (ok "他先败下阵来。" (truth +1) (alert +1))
-    (partial "他开始坐不住了。" (truth +1) (alert +1))
-    (fail "沉默压不住他。" (alert +1))))
+    (check
+      (suits empathy instinct)
+      (risk mid)
+      (ok "他先败下阵来。" (truth +1) (alert +1))
+      (partial "他开始坐不住了。" (truth +1) (alert +1))
+      (fail "沉默压不住他。" (alert +1)))))
 
 (def window_direct_inquiry
-  (check
+  (action
     (title "直接询问")
     (desc "你开门见山，问他到底在藏什么。")
-    (suits reason empathy)
-    (risk mid)
-    (ok "他沉默了一下，吐出了一点实话。" (truth +1))
-    (partial "他没回答全部，但你听到了关键半句。" (truth +1) (alert +1))
-    (fail "他把话题挡了回去。" (alert +1))))
+    (check
+      (suits reason empathy)
+      (risk mid)
+      (ok "他沉默了一下，吐出了一点实话。" (truth +1))
+      (partial "他没回答全部，但你听到了关键半句。" (truth +1) (alert +1))
+      (fail "他把话题挡了回去。" (alert +1)))))
 
 (def window_present_evidence
-  (check
+  (action
     (title "摆出线索")
     (desc "你把一路摸来的痕迹摊给他看。")
-    (suits reason empathy)
-    (risk high)
-    (ok "他终于不再硬扛。" (truth +2))
-    (partial "他承认了一半。" (truth +1) (alert +1))
-    (fail "他知道你手里的东西还不够。" (alert +1))))
+    (check
+      (suits reason empathy)
+      (risk high)
+      (ok "他终于不再硬扛。" (truth +2))
+      (partial "他承认了一半。" (truth +1) (alert +1))
+      (fail "他知道你手里的东西还不够。" (alert +1)))))
 
 (def window_silent_pressure
-  (check
+  (action
     (title "沉默施压")
     (desc "你什么也不说，只是看着他。")
-    (suits empathy instinct)
-    (risk high)
-    (ok "他先败下阵来。" (truth +1) (alert +1))
-    (partial "他开始坐不住了。" (truth +1) (alert +1))
-    (fail "沉默压不住他。" (alert +1))))
+    (check
+      (suits empathy instinct)
+      (risk high)
+      (ok "他先败下阵来。" (truth +1) (alert +1))
+      (partial "他开始坐不住了。" (truth +1) (alert +1))
+      (fail "沉默压不住他。" (alert +1)))))
 
 (def exposed_scene
   (scene
@@ -199,6 +217,7 @@
     (actions)))
 
 ;; act1
+
 (def yard_act
   (scene
     (id yard_root)
@@ -213,15 +232,15 @@
         (desc "这是一条没有遮挡的硬路。你可以先控场，把巡逻引偏后再穿；也可以狠狠干硬闯，拿伤势和警觉度去换速度。")
         (show-clocks alert patrol traverse)
         (actions
-          (when (= (clock-value patrol) 0)
+          (when (clock-empty? patrol)
             left_start_patrol)
-          (when (< (clock-value traverse) (clock-full traverse))
+          (when (not (clock-filled? traverse))
             left_berserk_rush)
-          (when (and (= route 'left) (> (clock-value patrol) 0) (< (clock-value patrol) (clock-full patrol)) (< (clock-value traverse) (clock-full traverse)))
+          (when (and (= route 'left) (clock-partial? patrol) (not (clock-filled? traverse)))
             left_hold_position)
-          (when (and (= route 'left) (> (clock-value patrol) 0) (< (clock-value traverse) (clock-full traverse)))
+          (when (and (= route 'left) (not (clock-empty? patrol)) (not (clock-filled? traverse)))
             left_advance)
-          (when (and (= route 'left) (= (clock-value patrol) (clock-full patrol)) (< (clock-value traverse) (clock-full traverse)))
+          (when (and (= route 'left) (clock-filled? patrol) (not (clock-filled? traverse)))
             left_fight_guard)))
       (scene
         (id right_path)
@@ -229,16 +248,17 @@
         (desc "这条路更偏潜行。你可以贴墙慢行，也可以先处理那条看门犬，再从树影里悄悄摸过去。")
         (show-clocks alert traverse)
         (actions
-          (when (and (= dog_state 'calm) (< (clock-value traverse) (clock-full traverse)))
+          (when (and (= dog_state 'calm) (not (clock-filled? traverse)))
             right_edge_forward)
-          (when (and (or (= dog_state 'calm) (= dog_state 'agitated)) (< (clock-value traverse) (clock-full traverse)))
+          (when (and (or (= dog_state 'calm) (= dog_state 'agitated)) (not (clock-filled? traverse)))
             soothe_the_dog)
           (when (and (= route 'right) (= dog_state 'agitated))
             drug_the_dog)
-          (when (and (= route 'right) (= dog_state 'asleep) (< (clock-value traverse) (clock-full traverse)))
+          (when (and (= route 'right) (= dog_state 'asleep) (not (clock-filled? traverse)))
             slip_past_dog))))))
 
 ;; act2
+
 (def entry_act
   (scene
     (id entry_outer)
@@ -264,6 +284,7 @@
           climb_window)))))
 
 ;; act3
+
 (def bedroom_front_scene
   (scene
     (id bedroom_front)
@@ -313,25 +334,25 @@
     (value entry_method 'none))
 
   (reacts
-    ((>= (clock-value alert) (clock-full alert))
+    ((clock-filled? alert)
      (finish 'fail))
-    ((>= (clock-value truth) (clock-full truth))
+    ((clock-filled? truth)
      (finish 'success))
-    ((and (= phase 'yard) (= route 'left) (>= (clock-value traverse) (clock-full traverse)))
+    ((and (= phase 'yard) (= route 'left) (clock-filled? traverse))
      (set phase 'entry)
      (set route 'none)
-     (set patrol 0)
-     (set traverse 0))
-    ((and (= phase 'yard) (= route 'right) (= dog_state 'asleep) (>= (clock-value traverse) (clock-full traverse)))
+     (reset-clock patrol)
+     (reset-clock traverse))
+    ((and (= phase 'yard) (= route 'right) (= dog_state 'asleep) (clock-filled? traverse))
      (set phase 'entry)
      (set route 'none)
-     (set traverse 0))
+     (reset-clock traverse))
     ((and (= phase 'entry) (not (= entry_method 'none)))
      (set phase 'bedroom)))
 
   (view
     (cond
-      ((>= (clock-value alert) (clock-full alert))
+      ((clock-filled? alert)
        exposed_scene)
       ((= phase 'yard)
        yard_act)

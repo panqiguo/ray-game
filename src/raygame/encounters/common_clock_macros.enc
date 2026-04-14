@@ -1,0 +1,16 @@
+(defmacro (clock-empty? x)
+  (= (clock-value x) 0))
+
+(defmacro (clock-filled? x)
+  (= (clock-value x) (clock-full x)))
+
+(defmacro (clock-partial? x)
+  (and
+    (> (clock-value x) 0)
+    (< (clock-value x) (clock-full x))))
+
+(defmacro (clock-at-least-half? x)
+  (>= (clock-value x) (clock-half x)))
+
+(defmacro (reset-clock x)
+  (set x 0))

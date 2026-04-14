@@ -26,7 +26,7 @@
 最小 encounter 长这样：
 
 ```lisp
-(include "core_symbols.enc")
+(include "enum-symbols.enc")
 
 (encounter
   (id example_id)
@@ -64,7 +64,7 @@
 
 - clock 名字在 `show-clocks` 里直接当 clock ref 用
 - 非 clock 名字在 value / bool context 里会读当前 store 值
-- 通用常量如 `low / reason / success / none / abort` 推荐来自 `(include "core_symbols.enc")`
+- 通用常量如 `low / reason / success / none / abort` 推荐来自 `(include "enum-symbols.enc")`
 - 场景内部自己的阶段、路径、状态通常直接写 quoted symbol，例如 `'entry`、`'left`、`'calm`
 
 ### 2. symbol 规则只有一条
@@ -82,7 +82,7 @@
 
 - `phase` / `alert` 都是 lookup 出来的名字
 - `'intro` / `'entry` 是显式字面量
-- `success` 是来自 `core_symbols.enc` 的通用常量绑定
+- `success` 是来自 `enum-symbols.enc` 的通用常量绑定
 
 如果找不到某个裸 symbol，编译器会直接报错；如果你本来想写局部剧情字面量，就给它加 `'`。如果是项目里反复使用的通用常量，优先放到共享 include 文件里。
 

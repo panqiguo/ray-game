@@ -1,4 +1,4 @@
-(include "core_symbols.enc")
+(include "enum-symbols.enc")
 (include "common_clock_macros.enc")
 
 (def bedroom_circle_probe
@@ -344,7 +344,7 @@
      (set route none)
      (reset-clock patrol)
      (reset-clock traverse))
-    ((and (= phase 'yard) (= route 'right) (= dog_state 'asleep) (clock-filled? traverse))
+    ((and (= phase 'yard) (= route 'right) (clock-filled? traverse))
      (set phase 'entry)
      (set route none)
      (reset-clock traverse))

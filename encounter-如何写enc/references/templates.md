@@ -5,7 +5,7 @@
 ## 1. 最小 Encounter 模板
 
 ```lisp
-(include "core_symbols.enc")
+(include "enum-symbols.enc")
 
 (encounter
   (id example_id)
@@ -135,7 +135,7 @@
 如果 encounter 很长，可以先把公共动作、某一幕的 scene 定义拆到子文件，再在主文件顶部：
 
 ```lisp
-(include "core_symbols.enc")
+(include "enum-symbols.enc")
 (include "black_night/yard.enc")
 (include "black_night/entry.enc")
 ```

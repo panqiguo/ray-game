@@ -111,7 +111,7 @@
        (actions climb_window)))))
 ```
 
-这里只有 `success`、`abort`、`low`、`reason` 这类跨 encounter 复用的常量，才推荐来自 `core_symbols.enc`；像 `'entry` 这种局部剧情状态，默认直接写 quoted symbol。
+这里只有 `success`、`abort`、`low`、`reason` 这类跨 encounter 复用的常量，才推荐来自 `enum-symbols.enc`；像 `'entry` 这种局部剧情状态，默认直接写 quoted symbol。
 
 ### 7. 同一幕里根据入口切不同版本 scene
 

@@ -1,4 +1,4 @@
-(include "core_symbols.enc")
+(include "enum-symbols.enc")
 
 (def cold_direct_talk
   (action

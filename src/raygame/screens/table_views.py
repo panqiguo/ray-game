@@ -87,7 +87,6 @@ def draw_world_objects(font: Font | None, state: GameState, rng, rect: Rectangle
 
 def draw_action_grid(font: Font | None, state: GameState, rng, cards: tuple[PresentedActionCard, ...], rect: Rectangle) -> None:
     if not cards:
-        draw_note_block(font, Rectangle(rect.x, rect.y, rect.width, 86), "这里暂时没有可做的事", "换个地方，或者先满足别的条件。")
         return
     columns = max(1, min(len(cards), int((rect.width + 18.0) // (232.0 + 18.0))))
     laid_out = layout_action_cards(rect, cards, columns)
@@ -105,6 +104,9 @@ def draw_location_contents(
     *,
     nested_locations: bool = True,
 ) -> None:
+    if not child_cards and not action_cards:
+        draw_note_block(font, Rectangle(content_rect.x, content_rect.y, content_rect.width, 86), "这里暂时没有可做的事", "换个地方，或者先满足别的条件。")
+        return
     if child_cards:
         child_strip = Rectangle(content_rect.x, content_rect.y, content_rect.width, 114)
         draw_location_grid(

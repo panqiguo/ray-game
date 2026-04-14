@@ -1,3 +1,5 @@
+(include "core_symbols.enc")
+
 (def cold_direct_talk
   (action
     (title "直白搭话")
@@ -155,7 +157,7 @@
     (desc "你编一个合理的理由，把今晚收得体面一点。")
     (before
       (set ending 'clean)
-      (finish 'success))))
+      (finish success))))
 
 (def walk_away
   (action
@@ -164,9 +166,9 @@
     (check
       (suits instinct)
       (risk high)
-      (ok "你留下一点谜面，然后消失在门口。" (set ending 'mystery') (finish 'success))
-      (partial "你走得太干脆，留下的味道有点复杂。" (set ending 'mystery') (tension +1) (finish 'success))
-      (fail "你转身太快，连尾声都显得有点可疑。" (set ending 'mystery') (tension +1) (finish 'fail)))))
+      (ok "你留下一点谜面，然后消失在门口。" (set ending 'mystery) (finish success))
+      (partial "你走得太干脆，留下的味道有点复杂。" (set ending 'mystery) (tension +1) (finish success))
+      (fail "你转身太快，连尾声都显得有点可疑。" (set ending 'mystery) (tension +1) (finish fail)))))
 
 (def invite_along
   (action
@@ -175,9 +177,9 @@
     (check
       (suits empathy instinct)
       (risk high)
-      (ok "他接受了这份延伸，故事还会继续。" (set ending 'continue') (finish 'success))
-      (partial "他没有立刻拒绝，关系被你往前推了一点。" (set ending 'continue') (tension +1) (finish 'success))
-      (fail "你推得太急，他一下子警觉起来。" (set ending 'continue') (tension +1) (finish 'fail)))))
+      (ok "他接受了这份延伸，故事还会继续。" (set ending 'continue) (finish success))
+      (partial "他没有立刻拒绝，关系被你往前推了一点。" (set ending 'continue) (tension +1) (finish success))
+      (fail "你推得太急，他一下子警觉起来。" (set ending 'continue) (tension +1) (finish fail)))))
 
 (def stage_cold
   (scene
@@ -238,27 +240,27 @@
   (reward)
 
   (store
-    (clock rapport "好感" 0 9)
-    (clock tension "警觉度" 0 3)
-    (value attitude 'cold)
-    (value ending 'none)
-    (flag cold_direct_talk_used false)
-    (flag cold_ask_help_used false)
-    (flag cold_use_room_used false)
-    (flag cold_leave_hook_used false)
-    (flag warm_interest_used false)
-    (flag warm_flirt_used false)
-    (flag warm_read_him_used false)
-    (flag warm_keep_distance_used false)
-    (flag soft_follow_lead_used false)
-    (flag soft_make_promise_used false)
-    (flag soft_tempt_used false)
-    (flag soft_pull_thread_used false)
-    (flag soft_answer_probe_used false))
+    (rapport (clock "好感" 0 9))
+    (tension (clock "警觉度" 0 3))
+    (attitude 'cold)
+    (ending none)
+    (cold_direct_talk_used false)
+    (cold_ask_help_used false)
+    (cold_use_room_used false)
+    (cold_leave_hook_used false)
+    (warm_interest_used false)
+    (warm_flirt_used false)
+    (warm_read_him_used false)
+    (warm_keep_distance_used false)
+    (soft_follow_lead_used false)
+    (soft_make_promise_used false)
+    (soft_tempt_used false)
+    (soft_pull_thread_used false)
+    (soft_answer_probe_used false))
 
   (reacts
     ((>= (clock-value tension) (clock-full tension))
-     (finish 'fail))
+     (finish fail))
     ((>= (clock-value rapport) 3)
      (set attitude 'chatty))
     ((>= (clock-value rapport) 6)

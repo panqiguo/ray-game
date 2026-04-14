@@ -7,7 +7,7 @@ from pyray import *  # type: ignore
 from raygame.model.state import GameState
 from raygame.rendering import draw_text
 
-from .ui_core import clickable, draw_frame
+from .ui_core import clickable, draw_frame, wrap_text_lines_any
 from .ui_tags import draw_action_corner_clocks, draw_clock_badges, draw_corner_labels
 
 
@@ -53,15 +53,25 @@ def draw_table_card(font: Font | None, rect: Rectangle, state: GameState, model:
         max(10, int(round(model.style.title_size * scale))),
         RAYWHITE if not model.disabled else Color(120, 120, 120, 255),
     )
-    draw_text(
-        font,
-        model.body,
-        int(rect.x + 14 * scale),
-        int(rect.y + 42 * scale),
-        max(9, int(round(model.style.body_size * scale))),
-        LIGHTGRAY if not model.disabled else Color(98, 98, 98, 255),
-    )
-    meta_y = int(rect.y + (42 + model.style.body_size + 14) * scale)
+    body_size = max(9, int(round(model.style.body_size * scale)))
+    body_x = int(rect.x + 14 * scale)
+    body_y = int(rect.y + 42 * scale)
+    body_w = max(1.0, rect.width - 28 * scale)
+    line_h = max(12, int(round(body_size + 2)))
+    reserved_meta = len(model.metadata) * int(round(20 * scale))
+    max_body_bottom = rect.y + rect.height - (10 * scale) - reserved_meta
+    max_lines = max(1, int((max_body_bottom - body_y) // line_h))
+    body_lines = wrap_text_lines_any(font, model.body, body_w, body_size)[:max_lines]
+    for index, line in enumerate(body_lines):
+        draw_text(
+            font,
+            line,
+            body_x,
+            body_y + index * line_h,
+            body_size,
+            LIGHTGRAY if not model.disabled else Color(98, 98, 98, 255),
+        )
+    meta_y = int(body_y + len(body_lines) * line_h + int(round(10 * scale)))
     for line in model.metadata:
         draw_text(font, line, int(rect.x + 14 * scale), meta_y, max(9, int(round(14 * scale))), Color(198, 198, 198, 255))
         meta_y += int(round(20 * scale))

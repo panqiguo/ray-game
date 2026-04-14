@@ -214,3 +214,24 @@ def wrap_text_lines(font: Font | None, text: str, max_width: float, size: int) -
             current = word
     lines.append(current)
     return tuple(lines)
+
+
+def wrap_text_lines_any(font: Font | None, text: str, max_width: float, size: int) -> tuple[str, ...]:
+    if not text:
+        return ()
+    lines: list[str] = []
+    for paragraph in text.splitlines() or ("",):
+        if not paragraph:
+            lines.append("")
+            continue
+        current = ""
+        for ch in paragraph:
+            candidate = f"{current}{ch}"
+            if current and measure_text_width(font, candidate, size) > max_width:
+                lines.append(current)
+                current = ch.lstrip()
+            else:
+                current = candidate
+        if current:
+            lines.append(current)
+    return tuple(lines)

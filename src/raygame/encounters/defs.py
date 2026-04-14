@@ -16,6 +16,11 @@ class ClockRef:
     id: str
 
 
+@dataclass(frozen=True)
+class StoreSlotRef:
+    id: str
+
+
 SexpAtom: TypeAlias = str | int | bool | StringAtom
 SexpNode: TypeAlias = SexpAtom | list["SexpNode"]
 

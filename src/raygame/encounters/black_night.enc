@@ -1,3 +1,4 @@
+(include "core_symbols.enc")
 (include "common_clock_macros.enc")
 
 (def bedroom_circle_probe
@@ -16,7 +17,7 @@
     (title "收手离开")
     (desc "你已经听到足够多的半句真话。")
     (before
-      (finish 'abort))))
+      (finish abort))))
 
 (def front_pick_lock
   (action
@@ -60,7 +61,7 @@
       (set patrol 1)
       (set traverse 0)
       (set dog_state 'calm)
-      (set entry_method 'none))))
+      (set entry_method none))))
 
 (def left_hold_position
   (action
@@ -87,8 +88,8 @@
     (check
       (suits force)
       (risk high)
-      (ok "保安倒下了，通路也开了。" (set route 'none) (set phase 'entry) (reset-clock traverse) (alert +1))
-      (partial "你把他压住了，自己也挨了一下。" (set route 'none) (set phase 'entry) (reset-clock traverse) (health -1) (alert +1))
+      (ok "保安倒下了，通路也开了。" (set route none) (set phase 'entry) (reset-clock traverse) (alert +1))
+      (partial "你把他压住了，自己也挨了一下。" (set route none) (set phase 'entry) (reset-clock traverse) (health -1) (alert +1))
       (fail "你没压住他。" (health -2) (alert +2)))))
 
 (def left_berserk_rush
@@ -98,8 +99,8 @@
     (check
       (suits force instinct)
       (risk high)
-      (ok "你狠狠干翻了保安，直接冲到了屋外。" (set route 'none) (set phase 'entry) (reset-clock patrol) (reset-clock traverse) (alert +2))
-      (partial "你是硬闯过去了，但自己也挨了一下。" (set route 'none) (set phase 'entry) (reset-clock patrol) (reset-clock traverse) (health -1) (alert +2))
+      (ok "你狠狠干翻了保安，直接冲到了屋外。" (set route none) (set phase 'entry) (reset-clock patrol) (reset-clock traverse) (alert +2))
+      (partial "你是硬闯过去了，但自己也挨了一下。" (set route none) (set phase 'entry) (reset-clock patrol) (reset-clock traverse) (health -1) (alert +2))
       (fail "你刚冲出去就被堵了回来。" (set route 'left) (set patrol 2) (health -1) (alert +2)))))
 
 (def right_edge_forward
@@ -324,30 +325,30 @@
     (stress +2))
 
   (store
-    (clock alert "全局警觉度" 0 6)
-    (clock patrol "保安巡逻" 0 3)
-    (clock traverse "穿越进度" 0 2)
-    (clock truth "真相" 0 3)
-    (value phase 'yard)
-    (value route 'none)
-    (value dog_state 'calm)
-    (value entry_method 'none))
+    (alert (clock "全局警觉度" 0 6))
+    (patrol (clock "保安巡逻" 0 3))
+    (traverse (clock "穿越进度" 0 2))
+    (truth (clock "真相" 0 3))
+    (phase 'yard)
+    (route none)
+    (dog_state 'calm)
+    (entry_method none))
 
   (reacts
     ((clock-filled? alert)
-     (finish 'fail))
+     (finish fail))
     ((clock-filled? truth)
-     (finish 'success))
+     (finish success))
     ((and (= phase 'yard) (= route 'left) (clock-filled? traverse))
      (set phase 'entry)
-     (set route 'none)
+     (set route none)
      (reset-clock patrol)
      (reset-clock traverse))
     ((and (= phase 'yard) (= route 'right) (= dog_state 'asleep) (clock-filled? traverse))
      (set phase 'entry)
-     (set route 'none)
+     (set route none)
      (reset-clock traverse))
-    ((and (= phase 'entry) (not (= entry_method 'none)))
+    ((and (= phase 'entry) (not (= entry_method none)))
      (set phase 'bedroom)))
 
   (view

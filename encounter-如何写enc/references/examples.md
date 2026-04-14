@@ -95,7 +95,7 @@
 来自 `black_night`，适合“先选入口，再进入同一房间不同版本”的结构：
 
 ```lisp
-((= phase entry)
+((= phase 'entry)
  (scene
    (id entry_outer)
    (title "房屋外墙")
@@ -110,6 +110,8 @@
        (id upper_window)
        (actions climb_window)))))
 ```
+
+这里只有 `success`、`abort`、`low`、`reason` 这类跨 encounter 复用的常量，才推荐来自 `core_symbols.enc`；像 `'entry` 这种局部剧情状态，默认直接写 quoted symbol。
 
 ### 7. 同一幕里根据入口切不同版本 scene
 
@@ -156,7 +158,7 @@
       (actions ...))))
 ```
 
-### 2. 乱用裸 clock symbol
+### 2. 把局部剧情状态写成裸 symbol
 
 不推荐：
 
@@ -169,6 +171,8 @@
 ```lisp
 (= phase 'entry)
 ```
+
+`entry` 这种局部剧情状态，默认直接写 quoted symbol；不要为了省一个 `'` 先额外 `(def entry 'entry)`。
 
 ### 3. 本来只需要条件出现，却写成深层 `if ... nil`
 

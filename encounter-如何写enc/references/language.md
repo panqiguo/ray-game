@@ -1,20 +1,20 @@
 # 当前语言边界
 
-这是现在项目里**真实实现**的 encounter 语言，不是理想中的完整 Lisp。
+这是现在项目里**真实实现**的 encounter 语言。它长得像 Lisp，但不是完整 Scheme；更准确地说，它是一门 **统一 expr + 强 schema IR 构造** 的 encounter 语言。
 
-## 它是什么
+## 先记 5 句
 
-- 一门 **统一 expr + 强 schema IR 构造** 的 encounter 语言
-- 语法表面是 **Lisp/S-expression**
-- 目标是构造 encounter，再在运行时根据 store 重算场景树
+1. 所有代码都是 S-expression。
+2. 裸 symbol 永远先 lookup；quoted symbol 永远是字面量。
+3. `store` 是“名字绑定值”。
+4. `if / when / cond` 负责选择；`scene / action / reacts` 负责组织 IR。
+5. 目标不是“自由写脚本”，而是构造 encounter，然后在运行时根据 store 重算场景树。
 
-## 它不是什么
+如果这 5 句已经够你用，可以直接去看模板和示例。下面只保留真正容易绊倒人的边界。
 
-- 不是完整 Scheme
-- 不是通用 Lisp 方言
-- 不是“任意 list 都能自由求值”的脚本语言
+## 一眼看懂的最小模型
 
-## 顶层真正支持的 form
+顶层只需要记住：
 
 - `include`
 - `def`
@@ -23,49 +23,70 @@
 
 文件最后一个值必须是 `encounter`。
 
-### `include`
-
-`include` 只在顶层可用：
+最小 encounter 长这样：
 
 ```lisp
-(include "black_night/yard.enc")
+(include "core_symbols.enc")
+
+(encounter
+  (id example_id)
+  (title "标题")
+  (desc "一句话说明这个 encounter。")
+
+  (store
+    (progress (clock "进度" 0 3))
+    (phase 'intro))
+
+  (reacts
+    ((>= (clock-value progress) (clock-full progress))
+     (finish success)))
+
+  (view
+    (scene
+      (id root)
+      (title "当前局面")
+      (desc "玩家现在看到的画面。")
+      (show-clocks progress)
+      (actions)
+      (children))))
 ```
 
-语义是：把另一个文件里的顶层 form 并进当前文件。  
-第一版限制：
+## 真正需要记住的语法边界
 
-- 路径必须是字符串字面量
-- 路径相对当前文件解析
-- 会直接按顶层 form 简单拼接
-- 允许继续 include
-- 整个展开后的文件最终必须且只能有一个 `encounter`
+### 1. `store` 是名字绑定值
 
-## 表达式里真正支持的 form
+- `(name (clock "标题" initial maximum))`：声明一个 clock
+- `(name true/false)`：声明一个布尔 store 槽位
+- `(name 'entry)`：声明一个枚举/阶段值
+- `(name 1)`、`(name "text")`：声明普通标量初始值
 
-- `if`
-- `when`
-- `cond`
-- `and`
-- `or`
-- `not`
-- `= < <= > >=`
-- `+ - min max`
-- `clock-value`
-- `clock-full`
-- `clock-half`
-- `quote`
+`store` 中声明的名字会自动进入当前 encounter 环境：
 
-## 对象构造 form
+- clock 名字在 `show-clocks` 里直接当 clock ref 用
+- 非 clock 名字在 value / bool context 里会读当前 store 值
+- 通用常量如 `low / reason / success / none / abort` 推荐来自 `(include "core_symbols.enc")`
+- 场景内部自己的阶段、路径、状态通常直接写 quoted symbol，例如 `'entry`、`'left`、`'calm`
 
-- `scene`
-- `action`
+### 2. symbol 规则只有一条
 
-它们不是普通 Lisp 值构造器，而是**按固定字段 schema 解释**的 special form。  
-其中行动现在只有一个核心 form：`action`。需要检定时，在 `action` 里面写 `(check ...)` 子块。
+> 裸 symbol 先 lookup；quoted symbol 才是字面量。
 
-## `when` 的统一语义
+例如：
 
-`when` 现在统一视为 expr 糖：
+```lisp
+(= phase 'intro)
+(set phase 'entry)
+(show-clocks alert)
+(finish success)
+```
+
+- `phase` / `alert` 都是 lookup 出来的名字
+- `'intro` / `'entry` 是显式字面量
+- `success` 是来自 `core_symbols.enc` 的通用常量绑定
+
+如果找不到某个裸 symbol，编译器会直接报错；如果你本来想写局部剧情字面量，就给它加 `'`。如果是项目里反复使用的通用常量，优先放到共享 include 文件里。
+
+### 3. `when` 就是 `if ... nil`
 
 ```lisp
 (when cond expr)
@@ -77,14 +98,14 @@
 (if cond expr nil)
 ```
 
-只要当前位置允许 `nil` 作为“空结果”，就可以用 `when`。常见位置：
+常见位置：
 
 - `view`
 - `children`
 - `actions`
 - `show-clocks`
 
-## action 的核心字段
+### 4. `action` 是唯一的行动 form
 
 `action` 现在可以组合这些字段：
 
@@ -100,20 +121,7 @@
 - `check` 表示这是不是一个需要手牌检定的行动
 - `inputs` 表示这个行动还需要哪些资源 / 物品 / 手牌输入
 
-### inputs 语法
-
-```lisp
-(inputs
-  (resource money 20 "金币")
-  (item car_key 1 "车钥匙" false)
-  (card any "手牌"))
-```
-
-- `resource`：资源需求
-- `item`：物品需求，最后一个布尔值可选，表示是否消耗，默认 `true`
-- `card`：额外手牌需求，目前支持 `any` 和 `negative`
-
-## 宏系统边界
+### 5. 宏是轻量模板，不是完整 Scheme 宏
 
 `defmacro` 现在是最小 template macro：
 
@@ -122,51 +130,7 @@
 - 不支持 quasiquote / unquote
 - 不提供完整 Lisp 宏语义
 
-所以它更适合结构复用，不适合复杂元编程。
-
-## `def` 现在能绑定什么
-
-`def` 可以绑定任意 expr 值。当前最实用的几类是：
-
-- 一个完整的 `scene`
-- 一个完整的 `action`
-- 一个普通 expr
-
-## 最重要的字面量规则
-
-### 字符串
-
-```lisp
-"描述文本"
-```
-
-### 数字 / 布尔
-
-```lisp
-1
-true
-false
-```
-
-### symbol 字面量
-
-必须显式 quote：
-
-```lisp
-'entry
-'left
-'success
-```
-
-不要再写裸的：
-
-```lisp
-entry
-left
-success
-```
-
-未绑定 symbol 现在会直接报错。
+它适合结构复用，不适合复杂元编程。
 
 ## 推荐心智
 
@@ -175,94 +139,22 @@ success
 - `actions` 里挂动作
 - `reacts` 负责动作后自动推进
 - `store` 只保存事实，不保存当前 scene
+- `store` 里的名字和 `def` 的名字都会进入同一个 lookup 心智：先 lookup，再由上下文决定能不能用
 
-## 错误信息
+## 最常见的错误就 3 类
 
-编译/校验报错会尽量带 encounter 上下文，例如：
+1. 把字面量写成裸 symbol  
+   如果你想写阶段、路径、结局这种局部剧情字面量，请直接写 `'entry`、`'left`、`'calm`。只有 `success`、`abort`、`low`、`reason` 这种通用常量，才推荐从共享 include 文件拿名字。
 
-- `binding foo`
-- `view.actions[2]`
-- `scene root.children[1]`
-- `encounter.store[0]`
+2. 把 clock 当普通值直接用  
+   如果你要读 clock 当前值，请写 `(clock-value alert)`，不要直接把 `alert` 放进比较里。
 
-优先顺着这些路径修 DSL，不要先猜运行时。
+3. 把对象 form 当普通脚本  
+   `scene` / `action` 是强 schema 对象构造，不是随意组合副作用的脚本块。
 
-## 哪些在求值，哪些在组织 IR
+## 最后只记一句
 
-这门语言最容易混淆的一点是：它表面像 Lisp，但整体目标不是“直接执行脚本副作用”，而是**构造 encounter 的内部对象（IR）**。
+这门语言最好用的心智是：
 
-### 主要在求值的 form
-
-这些 form 的职责是“算出当前该用哪个值/哪个对象”：
-
-- `if`
-- `when`
-- `cond`
-- `and`
-- `or`
-- `not`
-- `= < <= > >=`
-- `+ - min max`
-- `clock-value`
-- `clock-full`
-- `clock-half`
-- `quote`
-- `def` 引用出来的绑定
-
-它们更像是在“选择”和“组合”。
-
-### 主要在组织 IR 的 form
-
-这些 form 的职责是“声明 encounter 的对象结构”：
-
-- `encounter`
-- `store`
-- `clock`
-- `flag`
-- `value`
-- `scene`
-- `action`
-- `inputs`
-- `before`
-- `ok`
-- `partial`
-- `fail`
-- `reacts`
-- `show-clocks`
-- `actions`
-- `children`
-- 各种 effect form：`set`、`finish`、`health`、`money`、`reset-hand`、`(alert +1)` 这类
-
-它们更像是在“定义对象”，不是立刻把游戏状态改掉。
-
-### 最实用的判断法
-
-可以这样快速区分：
-
-- 如果一个 form 主要在回答“现在该选哪个分支/值/节点”，它更偏**求值**
-- 如果一个 form 主要在回答“这个 encounter 节点长什么样、这个动作结算长什么样”，它更偏**IR**
-
-### 一个直观例子
-
-下面这段里：
-
-```lisp
-(def bedroom_act
-  (if (= entry_method 'front)
-    bedroom_front_scene
-    bedroom_window_scene))
-```
-
-- `if` 和 `=` 在求值
-- `bedroom_front_scene` / `bedroom_window_scene` 这两个绑定，指向的是已经定义好的 scene IR
-
-而这段：
-
-```lisp
-(scene
-  (id yard_root)
-  (title "院墙缺口")
-  (children ...))
-```
-
-主要是在组织 scene IR。
+> 用少量 expr（`if/when/cond`）去选择，  
+> 用少量 schema form（`store/scene/action/reacts`）去组织 IR。

@@ -15,6 +15,7 @@ from raygame.encounters.defs import (
     RenderedEncounter,
     RenderedScene,
     SexpNode,
+    StoreSlotRef,
     StoreFieldSpec,
     StringAtom,
 )
@@ -170,21 +171,21 @@ def _validate_encounter_program_impl(program: CompiledEncounterProgram) -> None:
 
 def _eval_def(form: list[SexpNode], bindings: dict[str, SexpNode]) -> None:
     assert len(form) == 3, "`def` expects exactly two arguments."
-    name = _symbol(form[1])
+    name = _identifier(form[1])
     bindings[name] = form[2]
 
 
 def _eval_defmacro(form: list[SexpNode]) -> MacroTemplate:
     if len(form) == 4:
-        name = _symbol(form[1])
-        params = tuple(_symbol(item) for item in _list(form[2]))
+        name = _identifier(form[1])
+        params = tuple(_identifier(item) for item in _list(form[2]))
         body = form[3]
         return MacroTemplate(name=name, params=params, body=body)
     assert len(form) == 3, "`defmacro` expects `(defmacro name (params...) body)` or `(defmacro (name params...) body)`."
     signature = _list(form[1])
     assert signature, "`defmacro` signature must be non-empty."
-    name = _symbol(signature[0])
-    params = tuple(_symbol(item) for item in signature[1:])
+    name = _identifier(signature[0])
+    params = tuple(_identifier(item) for item in signature[1:])
     body = form[2]
     return MacroTemplate(name=name, params=params, body=body)
 
@@ -208,17 +209,17 @@ def _compile_encounter_form(
     for index, field in enumerate(field_forms):
         try:
             items = _list(field)
-            head = _symbol(items[0])
+            head = _identifier(items[0])
             if head == "id":
-                encounter_id = _static_symbol(items[1], bindings)
+                encounter_id = _identifier_or_bound_symbol(items[1], bindings)
             elif head == "title":
                 title = _static_string(items[1], bindings)
             elif head == "desc":
                 description = _static_string(items[1], bindings)
             elif head == "reward":
-                rewards = tuple(_compile_effect(effect_form, store_specs) for effect_form in items[1:])
+                rewards = tuple(_compile_effect(effect_form, store_specs, bindings) for effect_form in items[1:])
             elif head == "fail":
-                fail_effects = tuple(_compile_effect(effect_form, store_specs) for effect_form in items[1:])
+                fail_effects = tuple(_compile_effect(effect_form, store_specs, bindings) for effect_form in items[1:])
             elif head == "store":
                 for spec_index, spec_form in enumerate(items[1:]):
                     try:
@@ -238,7 +239,7 @@ def _compile_encounter_form(
                         react_rules.append(
                             ReactRule(
                                 condition=rule_items[0],
-                                effects=tuple(_compile_effect(effect_form, store_specs) for effect_form in rule_items[1:]),
+                                effects=tuple(_compile_effect(effect_form, store_specs, bindings) for effect_form in rule_items[1:]),
                                 source=f"react[{react_index}]",
                             )
                         )
@@ -287,24 +288,30 @@ def _expand_encounter_fields(forms: list[SexpNode], macros: dict[str, MacroTempl
 
 
 def _compile_store_field(form: list[SexpNode], bindings: dict[str, SexpNode]) -> StoreFieldSpec:
-    head = _symbol(form[0])
-    if head == "clock":
-        field_id = _symbol(form[1])
-        title = _static_string(form[2], bindings)
-        initial = _static_int(form[3], bindings)
-        maximum = _static_int(form[4], bindings)
-        assert 0 <= initial <= maximum, f"Clock initial out of range: {field_id}"
-        return StoreFieldSpec(id=field_id, kind="clock", initial=initial, title=title, maximum=maximum)
-    if head == "flag":
-        return StoreFieldSpec(id=_symbol(form[1]), kind="flag", initial=_static_bool(form[2], bindings))
-    if head == "value":
-        return StoreFieldSpec(id=_symbol(form[1]), kind="value", initial=_static_atom(form[2], bindings))
-    raise AssertionError(f"Unsupported store form: {head}")
+    assert len(form) == 2, "Each store binding must be `(name expr)`."
+    field_id = _identifier(form[0])
+    return _compile_store_value(field_id, form[1], bindings)
 
 
-def _compile_effect(form: SexpNode, store_specs: dict[str, StoreFieldSpec]) -> Effect:
+def _compile_store_value(field_id: str, expr: SexpNode, bindings: dict[str, SexpNode]) -> StoreFieldSpec:
+    if isinstance(expr, str) and expr in bindings:
+        return _compile_store_value(field_id, bindings[expr], bindings)
+    if isinstance(expr, list):
+        items = _list(expr)
+        head = _identifier(items[0])
+        if head == "clock":
+            assert len(items) == 4, "`clock` expects `(clock title initial maximum)`."
+            title = _static_string(items[1], bindings)
+            initial = _static_int(items[2], bindings)
+            maximum = _static_int(items[3], bindings)
+            assert 0 <= initial <= maximum, f"Clock initial out of range: {field_id}"
+            return StoreFieldSpec(id=field_id, kind="clock", initial=initial, title=title, maximum=maximum)
+    return StoreFieldSpec(id=field_id, kind="value", initial=_static_atom(expr, bindings))
+
+
+def _compile_effect(form: SexpNode, store_specs: dict[str, StoreFieldSpec], bindings: dict[str, SexpNode]) -> Effect:
     items = _list(form)
-    head = _symbol(items[0])
+    head = _identifier(items[0])
     if head in store_specs and store_specs[head].kind == "clock":
         delta = _signed_int(items[1])
         if delta >= 0:
@@ -319,16 +326,16 @@ def _compile_effect(form: SexpNode, store_specs: dict[str, StoreFieldSpec]) -> E
     if head == "reset-hand":
         return Effect(kind="reset_hand", value=True)
     if head == "set":
-        field_id = _symbol(items[1])
+        field_id = _identifier(items[1])
         assert field_id in store_specs, f"Unknown encounter store field: {field_id}"
-        return Effect(kind="set_encounter_store", value=f"{field_id}:{_effect_value_token(items[2])}")
+        return Effect(kind="set_encounter_store", value=f"{field_id}:{_effect_value_token(items[2], bindings)}")
     if head == "finish":
-        return Effect(kind="finish_encounter", value=_symbol_or_literal(items[1]))
+        return Effect(kind="finish_encounter", value=_literal_string_or_symbol(items[1], bindings))
     raise AssertionError(f"Unsupported encounter effect: {head}")
 
 
-def _effect_value_token(node: SexpNode) -> str:
-    value = _atom_value(node)
+def _effect_value_token(node: SexpNode, bindings: dict[str, SexpNode]) -> str:
+    value = _literal_value(node, bindings)
     if value is None:
         return "nil"
     if isinstance(value, bool):
@@ -375,7 +382,7 @@ def _eval_expr(
     source_index: int = 0,
 ) -> int | bool | str | None | ClockRef | RenderedScene | RenderedAction:
     if isinstance(expr, list):
-        head = _symbol(expr[0])
+        head = _identifier(expr[0])
         if head == "quote":
             assert len(expr) == 2, "`quote` expects exactly one argument."
             return _quoted_atom(expr[1])
@@ -432,13 +439,13 @@ def _eval_expr(
             return max(numbers)
         if head == "clock-value":
             assert expected_kind == EXPR_KIND_VALUE, "`clock-value` is only valid in value expressions."
-            return _clock_current_value(program, store, _symbol(expr[1]))
+            return _clock_current_value(program, store, _identifier(expr[1]))
         if head == "clock-full":
             assert expected_kind == EXPR_KIND_VALUE, "`clock-full` is only valid in value expressions."
-            return _clock_full_value(program, _symbol(expr[1]))
+            return _clock_full_value(program, _identifier(expr[1]))
         if head == "clock-half":
             assert expected_kind == EXPR_KIND_VALUE, "`clock-half` is only valid in value expressions."
-            return _clock_half_value(program, _symbol(expr[1]))
+            return _clock_half_value(program, _identifier(expr[1]))
         if head == "scene":
             assert expected_kind == EXPR_KIND_SCENE, "`scene` is only valid in scene contexts."
             return _build_scene(program, store, expr, scene_path=scene_path)
@@ -489,24 +496,43 @@ def _resolve_runtime_symbol(
         assert expected_kind == EXPR_KIND_VALUE, f"Int literal is only valid in value contexts: {expr!r}"
         return expr
     symbol = _symbol(expr)
-    if expected_kind == EXPR_KIND_CLOCK_REF:
-        if symbol == "nil":
-            return None
-        bound = program.bindings.get(symbol)
-        if bound is not None:
-            return _eval_expr(program, store, bound, expected_kind=EXPR_KIND_CLOCK_REF, scene_path=scene_path, source_index=source_index)
-        assert symbol in program.clocks_by_id, f"Unknown encounter clock ref: {symbol}"
-        return ClockRef(symbol)
     if symbol == "nil":
         return None
-    if symbol in store:
-        spec = program.store_specs[symbol]
-        assert expected_kind == EXPR_KIND_VALUE, f"Store symbol is only valid in value contexts: {symbol}"
-        assert spec.kind != "clock", f"Clock value must be read explicitly via (clock-value {symbol})."
-        return store[symbol]
+    looked_up = _lookup_symbol(program, symbol)
+    if looked_up is None:
+        hint = f"Unknown symbol: {symbol}"
+        if expected_kind in {EXPR_KIND_BOOL, EXPR_KIND_VALUE}:
+            hint += f". If you meant a literal symbol, write '{symbol}"
+        raise AssertionError(hint)
+    if isinstance(looked_up, StoreSlotRef):
+        spec = program.store_specs[looked_up.id]
+        if spec.kind == "clock":
+            if expected_kind == EXPR_KIND_CLOCK_REF:
+                return ClockRef(looked_up.id)
+            raise AssertionError(
+                f"Symbol `{looked_up.id}` resolved to a clock. Use it directly only where a clock ref is expected, or read its current value with `(clock-value {looked_up.id})`."
+            )
+        assert expected_kind in {EXPR_KIND_BOOL, EXPR_KIND_VALUE}, (
+            f"Symbol `{looked_up.id}` resolved to a store slot, but this context expects {_expected_kind_label(expected_kind)}."
+        )
+        value = store[looked_up.id]
+        if expected_kind == EXPR_KIND_BOOL:
+            assert isinstance(value, bool), f"Store slot {looked_up.id} does not resolve to bool."
+        return value
+    if isinstance(looked_up, ClockRef):
+        assert expected_kind == EXPR_KIND_CLOCK_REF, (
+            f"Symbol `{looked_up.id}` resolved to a clock ref, but this context expects {_expected_kind_label(expected_kind)}."
+        )
+        return looked_up
+    return _eval_expr(program, store, looked_up, expected_kind=expected_kind, scene_path=scene_path, source_index=source_index)
+
+
+def _lookup_symbol(program: CompiledEncounterProgram, symbol: str) -> SexpNode | ClockRef | StoreSlotRef | None:
     if symbol in program.bindings:
-        return _eval_expr(program, store, program.bindings[symbol], expected_kind=expected_kind, scene_path=scene_path, source_index=source_index)
-    raise AssertionError(f"Unknown symbol in {expected_kind} context: {symbol}")
+        return program.bindings[symbol]
+    if symbol in program.store_specs:
+        return StoreSlotRef(symbol)
+    return None
 
 
 def _eval_condition(program: CompiledEncounterProgram, store: dict[str, int | bool | str], expr: SexpNode, *, scene_path: tuple[str, ...]) -> bool:
@@ -530,7 +556,7 @@ def _build_scene(
     scene_path: tuple[str, ...],
 ) -> RenderedScene:
     fields = _field_map(form[1:], allowed={"id", "title", "desc", "show-clocks", "actions", "children"})
-    scene_id = _static_symbol(fields["id"][0], program.bindings)
+    scene_id = _identifier_or_bound_symbol(fields["id"][0], program.bindings)
     title = _static_string(fields["title"][0], program.bindings)
     description = _static_string(fields["desc"][0], program.bindings)
     path = (*scene_path, scene_id)
@@ -576,7 +602,7 @@ def _build_action(
     scene_path: tuple[str, ...],
     source_index: int,
 ) -> RenderedAction:
-    head = _symbol(form[0])
+    head = _identifier(form[0])
     action_key = f"inline:{head}:{hashlib.sha1(repr(form).encode('utf-8')).hexdigest()[:10]}"
     action_id = f"{program.id}:{'/'.join(scene_path)}:{source_index}:{action_key}"
     fields = _field_map(form[1:], allowed={"title", "desc", "inputs", "before", "check"})
@@ -587,7 +613,7 @@ def _build_action(
         description=_static_string(fields["desc"][0], program.bindings),
         screen=ScreenName.ENCOUNTER,
         inputs=_compile_inputs(fields.get("inputs", ()), program.bindings),
-        effects=tuple(_compile_effect(effect_form, program.store_specs) for effect_form in fields.get("before", ())),
+        effects=tuple(_compile_effect(effect_form, program.store_specs, program.bindings) for effect_form in fields.get("before", ())),
         check=_compile_check_block(check_block, program) if check_block else None,
     )
     handle = ActionHandle(
@@ -602,17 +628,17 @@ def _build_action(
 def _compile_outcome(parts: tuple[SexpNode, ...], store_specs: dict[str, StoreFieldSpec], bindings: dict[str, SexpNode]) -> OutcomeDef:
     assert parts, "Outcome field must not be empty."
     text = _static_string(parts[0], bindings)
-    effects = tuple(_compile_effect(effect_form, store_specs) for effect_form in parts[1:])
+    effects = tuple(_compile_effect(effect_form, store_specs, bindings) for effect_form in parts[1:])
     return OutcomeDef(text=text, effects=effects)
 
 
 def _compile_check_block(parts: tuple[SexpNode, ...], program: CompiledEncounterProgram) -> CheckDef:
     fields = {head: tuple(items[1:]) for head, items in (
-        (_symbol(_list(item)[0]), _list(item)) for item in parts
+        (_identifier(_list(item)[0]), _list(item)) for item in parts
     )}
-    suits = tuple(SUIT_BY_NAME[_symbol(item)] for item in fields["suits"])
+    suits = tuple(SUIT_BY_NAME[_literal_string_or_symbol(item, program.bindings)] for item in fields["suits"])
     risk_expr = fields["risk"][0]
-    risk_name = _symbol_or_literal(risk_expr)
+    risk_name = _literal_string_or_symbol(risk_expr, program.bindings)
     risk = RISK_BY_NAME[risk_name]
     outcomes = {
         "success": _compile_outcome(fields["ok"], program.store_specs, program.bindings),
@@ -634,23 +660,23 @@ def _compile_inputs(parts: tuple[SexpNode, ...], bindings: dict[str, SexpNode]) 
 
 def _compile_input(form: SexpNode, bindings: dict[str, SexpNode]) -> InputRequirement:
     items = _list(form)
-    head = _symbol(items[0])
+    head = _identifier(items[0])
     if head == "resource":
         assert len(items) in {3, 4}, "`resource` input expects `(resource key amount [label])`."
-        key = _symbol(items[1])
+        key = _identifier(items[1])
         amount = _static_int(items[2], bindings)
         label = _static_string(items[3], bindings) if len(items) == 4 else key
         return InputRequirement(kind="resource", key=key, amount=amount, label=label, consume=True)
     if head == "item":
         assert len(items) in {2, 3, 4, 5}, "`item` input expects `(item key [amount] [label] [consume])`."
-        key = _symbol(items[1])
+        key = _identifier(items[1])
         amount = _static_int(items[2], bindings) if len(items) >= 3 else 1
         label = _static_string(items[3], bindings) if len(items) >= 4 else key
         consume = _static_bool(items[4], bindings) if len(items) == 5 else True
         return InputRequirement(kind="item", key=key, amount=amount, label=label, consume=consume)
     if head == "card":
         assert len(items) in {2, 3}, "`card` input expects `(card key [label])`."
-        key = _symbol(items[1])
+        key = _identifier(items[1])
         assert key in {"any", "negative"}, f"Unsupported card input kind: {key}"
         label = _static_string(items[2], bindings) if len(items) == 3 else ("负面牌" if key == "negative" else "手牌")
         return InputRequirement(kind="card", key=key, amount=1, label=label, consume=True)
@@ -775,26 +801,33 @@ def _validate_expr(
             assert expected_kind in {EXPR_KIND_BOOL, EXPR_KIND_VALUE}, f"Literal is not valid in {expected_kind} context: {expr!r}"
             return
         symbol = _symbol(expr)
-        if expected_kind == EXPR_KIND_CLOCK_REF:
-            if symbol == "nil":
-                return
-            if symbol in program.bindings:
-                _validate_expr(program, program.bindings[symbol], expected_kind=EXPR_KIND_CLOCK_REF, scene_ids=scene_ids, scene_path=scene_path, context=f"{context}->{symbol}")
-                return
-            assert symbol in program.clocks_by_id, f"Unknown encounter clock ref: {symbol}"
-            return
         if symbol == "nil":
-            assert expected_kind in {EXPR_KIND_ACTION, EXPR_KIND_SCENE}, "`nil` is only valid in object/clock-ref contexts."
+            assert expected_kind in {EXPR_KIND_ACTION, EXPR_KIND_SCENE, EXPR_KIND_CLOCK_REF}, "`nil` is only valid in object/clock-ref contexts."
             return
-        if symbol in program.store_specs:
-            assert expected_kind == EXPR_KIND_VALUE, f"Store symbol is only valid in value contexts: {symbol}"
-            spec = program.store_specs[symbol]
-            assert spec.kind != "clock", f"Clock value must be read explicitly via (clock-value {symbol})."
+        looked_up = _lookup_symbol(program, symbol)
+        if looked_up is None:
+            hint = f"Unknown symbol: {symbol}"
+            if expected_kind in {EXPR_KIND_BOOL, EXPR_KIND_VALUE}:
+                hint += f". If you meant a literal symbol, write '{symbol}"
+            raise AssertionError(hint)
+        if isinstance(looked_up, StoreSlotRef):
+            spec = program.store_specs[looked_up.id]
+            if spec.kind == "clock":
+                assert expected_kind == EXPR_KIND_CLOCK_REF, (
+                    f"Symbol `{looked_up.id}` resolved to a clock. Use it directly only where a clock ref is expected, or read its current value with `(clock-value {looked_up.id})`."
+                )
+                return
+            assert expected_kind in {EXPR_KIND_BOOL, EXPR_KIND_VALUE}, (
+                f"Symbol `{looked_up.id}` resolved to a store slot, but this context expects {_expected_kind_label(expected_kind)}."
+            )
             return
-        if symbol in program.bindings:
-            _validate_expr(program, program.bindings[symbol], expected_kind=expected_kind, scene_ids=scene_ids, scene_path=scene_path, context=f"{context}->{symbol}")
+        if isinstance(looked_up, ClockRef):
+            assert expected_kind == EXPR_KIND_CLOCK_REF, (
+                f"Symbol `{looked_up.id}` resolved to a clock ref, but this context expects {_expected_kind_label(expected_kind)}."
+            )
             return
-        raise AssertionError(f"Unknown symbol in {expected_kind} context: {symbol}")
+        _validate_expr(program, looked_up, expected_kind=expected_kind, scene_ids=scene_ids, scene_path=scene_path, context=f"{context}->{symbol}")
+        return
     except EncounterCompileError as exc:
         raise EncounterCompileError(f"{context}: {exc}") from exc
     except AssertionError as exc:
@@ -810,6 +843,11 @@ def _validate_action_form(program: CompiledEncounterProgram, expr: list[SexpNode
                 _compile_input(input_form, program.bindings)
             except AssertionError as exc:
                 raise EncounterCompileError(f"{context}.inputs[{index}]: {exc}") from exc
+        for index, effect_form in enumerate(fields.get("before", ())):
+            try:
+                _compile_effect(effect_form, program.store_specs, program.bindings)
+            except AssertionError as exc:
+                raise EncounterCompileError(f"{context}.before[{index}]: {exc}") from exc
         check_parts = fields.get("check")
         if not check_parts:
             return
@@ -821,6 +859,16 @@ def _validate_action_form(program: CompiledEncounterProgram, expr: list[SexpNode
         for outcome_head in ("ok", "partial", "fail"):
             assert check_fields.get(outcome_head), f"Check action missing outcome: {outcome_head}"
             assert check_fields[outcome_head], f"Outcome field cannot be empty: {outcome_head}"
+            outcome_parts = check_fields[outcome_head]
+            try:
+                _static_string(outcome_parts[0], program.bindings)
+            except AssertionError as exc:
+                raise EncounterCompileError(f"{context}.check.{outcome_head}.text: {exc}") from exc
+            for effect_index, effect_form in enumerate(outcome_parts[1:]):
+                try:
+                    _compile_effect(effect_form, program.store_specs, program.bindings)
+                except AssertionError as exc:
+                    raise EncounterCompileError(f"{context}.check.{outcome_head}[{effect_index}]: {exc}") from exc
     except EncounterCompileError:
         raise
     except AssertionError as exc:
@@ -865,6 +913,16 @@ def _field_map(forms: list[SexpNode], *, allowed: set[str]) -> dict[str, tuple[S
     return fields
 
 
+def _expected_kind_label(expected_kind: str) -> str:
+    return {
+        EXPR_KIND_BOOL: "a bool expression",
+        EXPR_KIND_VALUE: "a value expression",
+        EXPR_KIND_CLOCK_REF: "a clock ref",
+        EXPR_KIND_SCENE: "a scene",
+        EXPR_KIND_ACTION: "an action",
+    }[expected_kind]
+
+
 def _clock_full_value(program: CompiledEncounterProgram, clock_id: str) -> int:
     spec = program.store_specs[clock_id]
     assert spec.kind == "clock" and spec.maximum is not None, f"clock-full target must be a clock: {clock_id}"
@@ -885,50 +943,54 @@ def _clock_current_value(program: CompiledEncounterProgram, store: dict[str, int
     return value
 
 
-def _static_atom(node: SexpNode, bindings: dict[str, SexpNode]) -> int | bool | str:
+def _literal_value(node: SexpNode, bindings: dict[str, SexpNode]) -> int | bool | str | None:
     if _is_symbol_list(node, "quote"):
         return _quoted_atom(_list(node)[1])
     if isinstance(node, StringAtom):
         return node.value
     if isinstance(node, (int, bool)):
         return node
-    symbol = _symbol(node)
-    if symbol == "nil":
-        return "nil"
+    symbol = _identifier(node)
     if symbol in bindings:
-        return _static_atom(bindings[symbol], bindings)
-    return symbol
+        return _literal_value(bindings[symbol], bindings)
+    raise AssertionError(f"Unknown symbol literal: {symbol}. If you meant a literal symbol, write '{symbol}")
+
+
+def _literal_atom(node: SexpNode, bindings: dict[str, SexpNode]) -> int | bool | str:
+    value = _literal_value(node, bindings)
+    assert value is not None, "nil is not valid here."
+    return value
 
 
 def _static_int(node: SexpNode, bindings: dict[str, SexpNode]) -> int:
-    value = _static_atom(node, bindings)
+    value = _literal_atom(node, bindings)
     if isinstance(value, int):
         return value
     return int(value)
 
 
 def _static_bool(node: SexpNode, bindings: dict[str, SexpNode]) -> bool:
-    value = _static_atom(node, bindings)
+    value = _literal_atom(node, bindings)
     assert isinstance(value, bool), f"Expected bool literal, got: {value!r}"
     return value
 
 
 def _static_string(node: SexpNode, bindings: dict[str, SexpNode]) -> str:
-    value = _static_atom(node, bindings)
+    value = _literal_atom(node, bindings)
     assert isinstance(value, str), f"Expected string literal, got: {value!r}"
     return value
 
 
-def _static_symbol(node: SexpNode, bindings: dict[str, SexpNode]) -> str:
+def _identifier_or_bound_symbol(node: SexpNode, bindings: dict[str, SexpNode]) -> str:
     if _is_symbol_list(node, "quote"):
         value = _quoted_atom(_list(node)[1])
         assert isinstance(value, str), f"Expected quoted symbol, got: {value!r}"
         return value
     if isinstance(node, StringAtom):
         return node.value
-    symbol = _symbol(node)
+    symbol = _identifier(node)
     if symbol in bindings:
-        return _static_symbol(bindings[symbol], bindings)
+        return _identifier_or_bound_symbol(bindings[symbol], bindings)
     return symbol
 
 
@@ -944,14 +1006,19 @@ def _quoted_atom(node: SexpNode) -> int | bool | str | None:
     raise AssertionError(f"quote currently supports only atom literals, got: {node!r}")
 
 
-def _symbol_or_literal(node: SexpNode) -> str:
+def _literal_string_or_symbol(node: SexpNode, bindings: dict[str, SexpNode]) -> str:
     if _is_symbol_list(node, "quote"):
         value = _quoted_atom(_list(node)[1])
         assert isinstance(value, str), f"Expected quoted symbol literal, got: {value!r}"
         return value
     if isinstance(node, StringAtom):
         return node.value
-    return _symbol(node)
+    symbol = _identifier(node)
+    if symbol in bindings:
+        value = _literal_value(bindings[symbol], bindings)
+        assert isinstance(value, str), f"Expected symbol/string literal binding, got: {value!r}"
+        return value
+    raise AssertionError(f"Unknown symbol literal: {symbol}. If you meant a literal symbol, write '{symbol}")
 
 
 def _is_symbol_list(node: SexpNode, head: str) -> bool:
@@ -969,9 +1036,29 @@ def _list(node: SexpNode) -> list[SexpNode]:
     return node
 
 
-def _symbol(node: SexpNode) -> str:
+def _identifier(node: SexpNode) -> str:
     assert isinstance(node, str) and not isinstance(node, StringAtom), f"Expected symbol, got: {node!r}"
     return node
+
+
+def _static_literal(node: SexpNode, bindings: dict[str, SexpNode]) -> int | bool | str | None:
+    return _literal_value(node, bindings)
+
+
+def _static_atom(node: SexpNode, bindings: dict[str, SexpNode]) -> int | bool | str:
+    return _literal_atom(node, bindings)
+
+
+def _static_symbol(node: SexpNode, bindings: dict[str, SexpNode]) -> str:
+    return _identifier_or_bound_symbol(node, bindings)
+
+
+def _literal_symbol_or_string(node: SexpNode, bindings: dict[str, SexpNode]) -> str:
+    return _literal_string_or_symbol(node, bindings)
+
+
+def _symbol(node: SexpNode) -> str:
+    return _identifier(node)
 
 
 def _signed_int(node: SexpNode) -> int:
@@ -981,17 +1068,3 @@ def _signed_int(node: SexpNode) -> int:
     if token.startswith("+") or token.startswith("-"):
         return int(token)
     return int(token)
-
-
-def _atom_value(node: SexpNode) -> int | bool | str | None:
-    if _is_symbol_list(node, "quote"):
-        return _quoted_atom(_list(node)[1])
-    if isinstance(node, StringAtom):
-        return node.value
-    if isinstance(node, bool):
-        return node
-    if isinstance(node, int):
-        return node
-    if isinstance(node, str):
-        return None if node == "nil" else node
-    raise AssertionError(f"Expected atom, got: {node!r}")

@@ -5,17 +5,20 @@
 ## 1. 最小 Encounter 模板
 
 ```lisp
+(include "core_symbols.enc")
+
 (encounter
   (id example_id)
   (title "标题")
   (desc "一句话说明这个 encounter。")
 
-(store
-  (clock progress "进度" 0 3))
+  (store
+    (progress (clock "进度" 0 3))
+    (phase 'intro))
 
   (reacts
     ((>= (clock-value progress) (clock-full progress))
-     (finish 'success)))
+     (finish success)))
 
   (view
     (scene
@@ -132,6 +135,7 @@
 如果 encounter 很长，可以先把公共动作、某一幕的 scene 定义拆到子文件，再在主文件顶部：
 
 ```lisp
+(include "core_symbols.enc")
 (include "black_night/yard.enc")
 (include "black_night/entry.enc")
 ```

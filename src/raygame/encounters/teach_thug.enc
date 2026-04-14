@@ -1,3 +1,5 @@
+(include "core_symbols.enc")
+
 (def breathe
   (action
    (title "喘息一下")
@@ -159,14 +161,14 @@
     (money +80))
 
   (store
-    (clock initiative "主动权" 0 4)
-    (clock knife "夺刀" 0 2)
-    (clock enemy_hp "敌人血量" 4 4)
-    (clock opening "破绽" 0 2))
+    (initiative (clock "主动权" 0 4))
+    (knife (clock "夺刀" 0 2))
+    (enemy_hp (clock "敌人血量" 4 4))
+    (opening (clock "破绽" 0 2)))
 
   (reacts
     ((<= (clock-value enemy_hp) 0)
-     (finish 'success)))
+     (finish success)))
 
   (view
     (cond

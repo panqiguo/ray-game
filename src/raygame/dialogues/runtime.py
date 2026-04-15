@@ -1,0 +1,119 @@
+from __future__ import annotations
+
+from inkpython import Story
+
+from raygame.model.state import ActiveDialogueState, GameState
+
+from .defs import DialogueAsset
+
+
+def create_dialogue_session(asset: DialogueAsset, state: GameState) -> ActiveDialogueState:
+    if not asset.compiled_path.exists():
+        error = f"对话资源缺失：{asset.compiled_path.name}"
+        return ActiveDialogueState(
+            dialogue_id=asset.id,
+            title=asset.title,
+            history=[error],
+            finished=True,
+            error=error,
+        )
+    story = Story(asset.compiled_path.read_text(encoding="utf-8"))
+    _bind_story(story, state)
+    session = ActiveDialogueState(
+        dialogue_id=asset.id,
+        title=asset.title,
+        runtime=story,
+    )
+    continue_dialogue_session(session)
+    return session
+
+
+def continue_dialogue_session(session: ActiveDialogueState) -> None:
+    if session.runtime is None or session.finished or session.choices:
+        return
+    story = _story(session)
+    while story.canContinue:
+        text = story.Continue().strip()
+        if text:
+            session.history.append(text)
+            break
+        if story.currentChoices:
+            break
+    _refresh_state(session)
+
+
+def choose_dialogue_option(session: ActiveDialogueState, index: int) -> None:
+    assert 0 <= index < len(session.choices), f"Choice index out of range: {index}"
+    story = _story(session)
+    story.ChooseChoiceIndex(index)
+    session.choices = []
+    continue_dialogue_session(session)
+
+
+def _refresh_state(session: ActiveDialogueState) -> None:
+    if session.runtime is None:
+        session.can_continue = False
+        session.choices = []
+        session.finished = True
+        return
+    story = _story(session)
+    session.choices = [choice.text for choice in story.currentChoices]
+    session.can_continue = bool(story.canContinue)
+    session.finished = not session.can_continue and not session.choices
+
+
+def _bind_story(story: Story, state: GameState) -> None:
+    story.BindExternalFunction("give_item", lambda item_id, amount=1: _give_item(state, str(item_id), int(amount)))
+    story.BindExternalFunction("remove_item", lambda item_id, amount=1: _remove_item(state, str(item_id), int(amount)))
+    story.BindExternalFunction("change_money", lambda amount: _change_money(state, int(amount)))
+    story.BindExternalFunction("change_health", lambda amount: _change_health(state, int(amount)))
+    story.BindExternalFunction("change_stress", lambda amount: _change_stress(state, int(amount)))
+    story.BindExternalFunction("start_encounter", lambda encounter_id: _start_encounter(state, str(encounter_id)))
+    story.BindExternalFunction("finish_encounter", lambda outcome="abort": _finish_encounter(state, str(outcome)))
+    story.BindExternalFunction("log", lambda text: state.action_log.append(str(text)))
+
+
+def _story(session: ActiveDialogueState) -> Story:
+    assert isinstance(session.runtime, Story), "Dialogue runtime is unavailable"
+    return session.runtime
+
+
+def _give_item(state: GameState, item_id: str, amount: int) -> None:
+    state.world.inventory[item_id] = state.world.inventory.get(item_id, 0) + amount
+
+
+def _remove_item(state: GameState, item_id: str, amount: int) -> None:
+    current = state.world.inventory.get(item_id, 0)
+    next_value = max(0, current - amount)
+    if next_value == 0:
+        state.world.inventory.pop(item_id, None)
+    else:
+        state.world.inventory[item_id] = next_value
+
+
+def _change_money(state: GameState, amount: int) -> None:
+    state.resources.money = max(0, state.resources.money + amount)
+
+
+def _change_health(state: GameState, amount: int) -> None:
+    from raygame.rules.progression import change_health
+
+    change_health(state, amount, [])
+
+
+def _change_stress(state: GameState, amount: int) -> None:
+    from raygame.rules.progression import change_stress
+
+    change_stress(state, amount, [])
+
+
+def _start_encounter(state: GameState, encounter_id: str) -> None:
+    from raygame.rules.progression import start_encounter_from_dialogue
+
+    start_encounter_from_dialogue(state, encounter_id)
+
+
+def _finish_encounter(state: GameState, outcome: str) -> None:
+    from raygame.rules.progression import finish_encounter_from_dialogue
+
+    finish_encounter_from_dialogue(state, outcome)

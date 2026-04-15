@@ -15,9 +15,10 @@ def _load_program(filename: str) -> CompiledEncounterProgram:
 
 
 RAW_ENCOUNTERS = (
-    _load_program("teach_thug.enc"),
-    _load_program("black_night.enc"),
-    _load_program("酒吧艳遇.enc"),
+    _load_program("teach_thug.scm"),
+    _load_program("black_night.scm"),
+    _load_program("酒吧艳遇.scm"),
+    _load_program("first_scene.scm"),
 )
 ENCOUNTERS_BY_ID = {encounter.id: encounter for encounter in RAW_ENCOUNTERS}
 

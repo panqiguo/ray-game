@@ -3,6 +3,8 @@ from __future__ import annotations
 from raygame.constants import HAND_SIZE, MAX_LOG_LINES
 from raygame.content import GROWTH_DEFS, SCENARIO
 from raygame.content.cards import CARD_DEFS
+from raygame.dialogues import choose_dialogue_option as choose_runtime_dialogue_option
+from raygame.dialogues import continue_dialogue_session, create_dialogue_session, get_dialogue
 from raygame.encounters import MAX_REACT_STEPS, get_encounter, initial_store, next_react_rule, react_rule_matches, render_encounter
 from raygame.model.defs import ActionDef, Effect, InputRequirement
 from raygame.model.enums import ResultType, ScreenName
@@ -245,6 +247,8 @@ def clear_selected_input(state: GameState) -> None:
 
 def close_modal(state: GameState) -> None:
     dismiss_pending_resolution(state)
+    if state.modal.kind == "dialogue":
+        state.active_dialogue = None
     if state.modal.return_kind:
         state.modal.kind = state.modal.return_kind
         state.modal.primary_id = state.modal.return_primary_id
@@ -276,6 +280,41 @@ def select_item_input(state: GameState, key: str) -> None:
         clear_selected_input(state)
         return
     state.selected_input = SelectedInputState(kind="item", key=key)
+
+
+def start_dialogue(state: GameState, dialogue_id: str) -> None:
+    asset = get_dialogue(dialogue_id)
+    state.active_dialogue = create_dialogue_session(asset, state)
+    if state.modal.kind:
+        state.modal.return_kind = state.modal.kind
+        state.modal.return_primary_id = state.modal.primary_id
+    else:
+        state.modal.return_kind = ""
+        state.modal.return_primary_id = None
+    state.modal.kind = "dialogue"
+    state.modal.primary_id = dialogue_id
+    clear_assembly(state)
+    clear_selected_input(state)
+    _push_log(state, f"进入对话：{asset.title}")
+
+
+def continue_dialogue(state: GameState) -> None:
+    if state.active_dialogue is None:
+        return
+    continue_dialogue_session(state.active_dialogue)
+
+
+def choose_dialogue_option(state: GameState, index: int) -> None:
+    if state.active_dialogue is None:
+        return
+    choose_runtime_dialogue_option(state.active_dialogue, index)
+
+
+def finish_dialogue(state: GameState) -> None:
+    if state.active_dialogue is None:
+        return
+    state.active_dialogue = None
+    close_modal(state)
 
 
 def focus_action(state: GameState, action_id: str) -> None:
@@ -675,6 +714,10 @@ def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines
         assert isinstance(value, str)
         start_encounter(state, value)
         return
+    if item.kind == "start_dialogue":
+        assert isinstance(value, str)
+        start_dialogue(state, value)
+        return
     if item.kind == "finish_encounter":
         assert isinstance(value, str)
         finish_encounter(state, value, rng, extra_lines)
@@ -801,6 +844,11 @@ def start_encounter(state: GameState, encounter_id: str) -> None:
     _push_log(state, f"进入侦探任务：{encounter.title}")
 
 
+def start_encounter_from_dialogue(state: GameState, encounter_id: str) -> None:
+    state.active_dialogue = None
+    start_encounter(state, encounter_id)
+
+
 def finish_encounter(state: GameState, outcome: str, rng: RandomSource, extra_lines: list[str] | None = None) -> None:
     if state.active_encounter is None:
         return
@@ -821,6 +869,11 @@ def finish_encounter(state: GameState, outcome: str, rng: RandomSource, extra_li
         _push_log(state, f"{encounter.title}：失败。")
     else:
         _push_log(state, f"{encounter.title}：中断。")
+
+
+def finish_encounter_from_dialogue(state: GameState, outcome: str) -> None:
+    state.active_dialogue = None
+    finish_encounter(state, outcome, RandomSource(state.seed), [])
 
 
 def change_health(state: GameState, amount: int, extra_lines: list[str] | None = None) -> None:
@@ -954,6 +1007,10 @@ def _describe_effects(effects: tuple[Effect, ...], action_id: str, state: GameSt
             assert isinstance(value, str)
             target = get_encounter(value)
             lines.append(f"进入任务：{target.title}")
+        elif item.kind == "start_dialogue":
+            assert isinstance(value, str)
+            target = get_dialogue(value)
+            lines.append(f"进入对话：{target.title}")
         elif item.kind == "reveal_location":
             assert isinstance(value, str)
             lines.append(f"发现地点：{SCENARIO.locations_by_id[value].title}")

@@ -24,6 +24,7 @@ from .ui_core import (
 from .ui_panels import (
     draw_card_pile_modal,
     draw_compact_card,
+    draw_dialogue_modal,
     draw_hand,
     draw_hud,
     draw_inventory_panel,
@@ -68,6 +69,7 @@ __all__ = [
     "draw_clock_badges",
     "draw_clock_row",
     "draw_compact_card",
+    "draw_dialogue_modal",
     "draw_corner_labels",
     "draw_frame",
     "draw_hand",

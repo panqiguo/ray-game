@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from raygame.dialogues import DIALOGUES_BY_ID
 from raygame.encounters import ENCOUNTERS_BY_ID, initial_store, render_encounter, validate_encounter_program
 from raygame.content.cards import CARD_DEFS
 from raygame.content.growth import GROWTH_DEFS
@@ -35,6 +36,7 @@ VALID_EFFECTS = {
     "advance_day",
     "end_run",
     "start_encounter",
+    "start_dialogue",
     "set_encounter_store",
     "advance_encounter_clock",
     "damage_encounter_clock",
@@ -48,6 +50,8 @@ def _validate_condition(item: Condition) -> None:
 
 def _validate_effect(item: Effect) -> None:
     assert item.kind in VALID_EFFECTS, f"Unknown effect kind: {item.kind}"
+    if item.kind == "start_dialogue":
+        assert isinstance(item.value, str) and item.value in DIALOGUES_BY_ID, f"Unknown dialogue id: {item.value}"
 
 
 def _validate_input(item: InputRequirement) -> None:

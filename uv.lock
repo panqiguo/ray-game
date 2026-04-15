@@ -26,6 +26,15 @@ wheels = [
 ]
 
 [[package]]
+name = "inkpython"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e5/d0/0644f17f4652e98e9f99630e4987f7aeac29267ede71ddb4edd556745d12/inkpython-0.1.0.tar.gz", hash = "sha256:ad7ac4391a68eb29da6245a9edcacca9a5aa95ffa46691201833a1337f41cae6", size = 53634, upload-time = "2026-01-15T03:16:01.137Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/43/01/06c691594eb810edd9fcdd0e2f4f674e95d8c173b82544aab0b4fcd4c57f/inkpython-0.1.0-py3-none-any.whl", hash = "sha256:92bbeef7ffe55f5c9dc3c8c696c62887d6d73918cdaa2590a81de64c2a06dd0f", size = 64723, upload-time = "2026-01-15T03:15:59.502Z" },
+]
+
+[[package]]
 name = "pycparser"
 version = "3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -48,6 +57,7 @@ name = "ray-game"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "inkpython" },
     { name = "raylib" },
 ]
 
@@ -57,7 +67,10 @@ web = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "raylib", specifier = "==5.5.0.3" }]
+requires-dist = [
+    { name = "inkpython", specifier = ">=0.1.0" },
+    { name = "raylib", specifier = "==5.5.0.3" },
+]
 
 [package.metadata.requires-dev]
 web = [{ name = "pygbag", specifier = ">=0.8.7" }]

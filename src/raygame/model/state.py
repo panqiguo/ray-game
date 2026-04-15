@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Any
 from dataclasses import dataclass, field
 
 from .defs import Effect
@@ -96,6 +97,18 @@ class ActiveEncounterState:
 
 
 @dataclass
+class ActiveDialogueState:
+    dialogue_id: str
+    title: str
+    runtime: Any | None = None
+    history: list[str] = field(default_factory=list)
+    choices: list[str] = field(default_factory=list)
+    can_continue: bool = False
+    finished: bool = False
+    error: str = ""
+
+
+@dataclass
 class GameState:
     deck: DeckState
     attributes: AttributeState = field(default_factory=AttributeState)
@@ -110,6 +123,7 @@ class GameState:
     unlocked_growths: set[str] = field(default_factory=set)
     modal: ModalState = field(default_factory=ModalState)
     active_encounter: ActiveEncounterState | None = None
+    active_dialogue: ActiveDialogueState | None = None
     last_resolution: ActionResolution | None = None
     pending_resolution: PendingResolutionState | None = None
     action_log: list[str] = field(default_factory=list)

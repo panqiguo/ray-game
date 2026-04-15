@@ -19,6 +19,7 @@ from raygame.screens.widgets import (
     consume_click,
     draw_card_pile_modal,
     draw_clock_row,
+    draw_dialogue_modal,
     draw_hand,
     draw_message_feed,
     draw_profile_modal,
@@ -51,6 +52,7 @@ def draw_encounter_screen(font: Font | None, state: GameState, rng) -> None:
         _draw_encounter_location_table(font, state, rng)
         end_layer("encounter_location_table")
     draw_profile_modal(font, state)
+    draw_dialogue_modal(font, state)
 
 
 def _draw_encounter_table(font: Font | None, state: GameState, rng, rect: Rectangle) -> None:

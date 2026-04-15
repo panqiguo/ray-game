@@ -23,6 +23,7 @@ from raygame.screens.widgets import (
     consume_click,
     draw_card_pile_modal,
     draw_clock_row,
+    draw_dialogue_modal,
     draw_hand,
     draw_message_feed,
     draw_profile_modal,
@@ -55,6 +56,7 @@ def draw_city_screen(font: Font | None, state: GameState, rng) -> None:
         _draw_location_table(font, state, rng)
         end_layer("location_table")
     draw_profile_modal(font, state, GROWTH_DEFS)
+    draw_dialogue_modal(font, state)
 
 
 def _draw_world_table(font: Font | None, state: GameState, rect: Rectangle, rng) -> None:

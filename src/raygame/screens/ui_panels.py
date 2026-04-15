@@ -9,7 +9,10 @@ from raygame.model.state import GameState
 from raygame.rendering import draw_text
 from raygame.rules import (
     claim_growth,
+    choose_dialogue_option,
     close_modal,
+    continue_dialogue,
+    finish_dialogue,
     open_modal,
     open_overlay,
     requirement_is_slotted,
@@ -244,6 +247,50 @@ def draw_card_pile_modal(font: Font | None, state: GameState) -> None:
             x = int(rect.x) + 20
             y += 104
     end_layer("pile_modal")
+
+
+def draw_dialogue_modal(font: Font | None, state: GameState) -> None:
+    if state.modal.kind != "dialogue" or state.active_dialogue is None:
+        return
+    begin_layer("dialogue_modal", interactive=True)
+    rect = centered_rect(920, 560, -6)
+    draw_scrim(layout().stage)
+    draw_frame(rect, Color(16, 18, 24, 250), Color(118, 118, 118, 220))
+    draw_text(font, state.active_dialogue.title, int(rect.x) + 24, int(rect.y) + 18, 30, RAYWHITE)
+    if text_button(font, Rectangle(rect.x + rect.width - 98, rect.y + 18, 70, 28), "关闭", 16):
+        finish_dialogue(state)
+        end_layer("dialogue_modal")
+        return
+    history_rect = Rectangle(rect.x + 24, rect.y + 64, rect.width - 48, rect.height - 180)
+    y = int(history_rect.y)
+    for block in state.active_dialogue.history[-12:]:
+        for line in wrap_text_lines(font, block, history_rect.width, 18):
+            draw_text(font, line, int(history_rect.x), y, 18, LIGHTGRAY)
+            y += 22
+        y += 12
+        if y > history_rect.y + history_rect.height - 32:
+            break
+    button_y = rect.y + rect.height - 76
+    if state.active_dialogue.choices:
+        x = rect.x + 24
+        for index, choice in enumerate(state.active_dialogue.choices):
+            button = Rectangle(x, button_y, rect.width - 48, 36)
+            if text_button(font, button, choice, 18):
+                choose_dialogue_option(state, index)
+                end_layer("dialogue_modal")
+                return
+            button_y += 44
+    elif state.active_dialogue.finished:
+        if text_button(font, Rectangle(rect.x + rect.width - 118, rect.y + rect.height - 48, 94, 30), "结束", 16):
+            finish_dialogue(state)
+            end_layer("dialogue_modal")
+            return
+    else:
+        if text_button(font, Rectangle(rect.x + rect.width - 118, rect.y + rect.height - 48, 94, 30), "继续", 16):
+            continue_dialogue(state)
+            end_layer("dialogue_modal")
+            return
+    end_layer("dialogue_modal")
 
 
 def _hud_block(font: Font | None, rect: Rectangle, label: str, value: str, color: Color) -> None:

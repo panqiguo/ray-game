@@ -1,0 +1,8 @@
+EXTERNAL give_item(item_id, amount)
+EXTERNAL remove_item(item_id, amount)
+EXTERNAL change_money(amount)
+EXTERNAL change_health(amount)
+EXTERNAL change_stress(amount)
+EXTERNAL log(text)
+EXTERNAL start_encounter(encounter_id)
+EXTERNAL finish_encounter(outcome)

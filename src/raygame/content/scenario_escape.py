@@ -103,6 +103,13 @@ def build_escape_scenario() -> CompiledScenario:
                 inputs=(resource("money", 15, "金币"),),
                 effects=(effect("change_stress", -2),),
             ),
+            action(
+                id="bar_talk_to_bartender",
+                title="和酒保聊聊",
+                description="他盯人的眼神像是在掂量你值不值得开口。",
+                screen=ScreenName.CITY,
+                effects=(effect("start_dialogue", "bar_bartender_intro"),),
+            ),
         ),
     )
 
@@ -440,6 +447,13 @@ def build_escape_scenario() -> CompiledScenario:
                 description="有人出钱让你深夜入宅，去听一个不该外传的真相。",
                 screen=ScreenName.CITY,
                 effects=(effect("start_encounter", "black_night"),),
+            ),
+            action(
+                id="开篇",
+                title="开篇",
+                description="有人丢了东西，想让你帮忙找回来。",
+                screen=ScreenName.CITY,
+                effects=(effect("start_dialogue", "开篇"),),
             ),
         ),
     )

@@ -206,7 +206,7 @@ def base_environment() -> Environment:
             "<=": lambda left, right: _scalar(left) <= _scalar(right),
             ">": lambda left, right: _scalar(left) > _scalar(right),
             ">=": lambda left, right: _scalar(left) >= _scalar(right),
-            "null?": lambda value: value in {None, []},
+            "null?": lambda value: value is None or value == [],
             "number?": lambda value: isinstance(_scalar(value), int),
             "string?": lambda value: isinstance(_scalar(value), str),
             "boolean?": lambda value: isinstance(_scalar(value), bool),

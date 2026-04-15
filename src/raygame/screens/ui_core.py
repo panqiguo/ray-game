@@ -94,6 +94,17 @@ def consume_click() -> None:
     _UI.click_consumed = True
 
 
+def any_input_pressed() -> bool:
+    if _UI.pressed:
+        return True
+    if get_key_pressed() != 0:
+        return True
+    return (
+        is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+        or is_mouse_button_pressed(MOUSE_BUTTON_MIDDLE)
+    )
+
+
 def draw_frame(rect: Rectangle, fill: Color, border: Color = Color(110, 110, 110, 210)) -> None:
     if rect.width <= 0 or rect.height <= 0:
         return

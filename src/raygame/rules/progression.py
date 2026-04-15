@@ -4,7 +4,7 @@ from raygame.constants import HAND_SIZE, MAX_LOG_LINES
 from raygame.content import GROWTH_DEFS, SCENARIO
 from raygame.content.cards import CARD_DEFS
 from raygame.dialogues import choose_dialogue_option as choose_runtime_dialogue_option
-from raygame.dialogues import continue_dialogue_session, create_dialogue_session, get_dialogue
+from raygame.dialogues import continue_dialogue_session, create_dialogue_session, create_quick_dialogue_session, get_dialogue
 from raygame.encounters import MAX_REACT_STEPS, get_encounter, initial_store, next_react_rule, react_rule_matches, render_encounter
 from raygame.model.defs import ActionDef, Effect, InputRequirement
 from raygame.model.enums import ResultType, ScreenName
@@ -284,7 +284,18 @@ def select_item_input(state: GameState, key: str) -> None:
 
 def start_dialogue(state: GameState, dialogue_id: str) -> None:
     asset = get_dialogue(dialogue_id)
-    state.active_dialogue = create_dialogue_session(asset, state)
+    _open_dialogue_session(state, create_dialogue_session(asset, state), primary_id=dialogue_id)
+    _push_log(state, f"进入对话：{asset.title}")
+
+
+def start_quick_dialogue(state: GameState, raw_text: str) -> None:
+    session = create_quick_dialogue_session(raw_text)
+    _open_dialogue_session(state, session, primary_id="__quick__")
+    _push_log(state, f"进入对话：{session.title}")
+
+
+def _open_dialogue_session(state: GameState, session, *, primary_id: str) -> None:
+    state.active_dialogue = session
     if state.modal.kind:
         state.modal.return_kind = state.modal.kind
         state.modal.return_primary_id = state.modal.primary_id
@@ -292,10 +303,9 @@ def start_dialogue(state: GameState, dialogue_id: str) -> None:
         state.modal.return_kind = ""
         state.modal.return_primary_id = None
     state.modal.kind = "dialogue"
-    state.modal.primary_id = dialogue_id
+    state.modal.primary_id = primary_id
     clear_assembly(state)
     clear_selected_input(state)
-    _push_log(state, f"进入对话：{asset.title}")
 
 
 def continue_dialogue(state: GameState) -> None:
@@ -717,6 +727,10 @@ def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines
     if item.kind == "start_dialogue":
         assert isinstance(value, str)
         start_dialogue(state, value)
+        return
+    if item.kind == "start_quick_dialogue":
+        assert isinstance(value, str)
+        start_quick_dialogue(state, value)
         return
     if item.kind == "finish_encounter":
         assert isinstance(value, str)

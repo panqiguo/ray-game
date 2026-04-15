@@ -9,7 +9,6 @@ from raygame.rules.judgment import RESULT_TABLE, clamp_action_value
 from raygame.rules import (
     clear_assembly,
     clear_selected_input,
-    dismiss_pending_resolution,
     focus_action,
     open_modal,
     open_overlay,
@@ -198,9 +197,14 @@ def draw_pending_attachment(font: Font | None, state: GameState, rect: Rectangle
             for line in wrap_text_lines(font, " | ".join(resolution.effect_lines[:2]), text_width, max(9, int(round(13 * scale)))):
                 draw_text(font, line, int(result_rect.x + 10.0 * scale), text_y + 2, max(9, int(round(13 * scale))), Color(212, 196, 132, 255))
                 text_y += int(round(15 * scale))
-        continue_rect = Rectangle(result_rect.x + result_rect.width - 88.0 * scale, result_rect.y + result_rect.height + 8.0 * scale, 78.0 * scale, 22.0 * scale)
-        if pill(font, continue_rect, "继续", False, scale=scale):
-            dismiss_pending_resolution(state)
+        draw_text(
+            font,
+            "任意输入后自动关闭",
+            int(result_rect.x + 10.0 * scale),
+            int(result_rect.y + result_rect.height - 18.0 * scale),
+            max(9, int(round(12 * scale))),
+            Color(144, 144, 144, 255),
+        )
     else:
         draw_text(font, "结果会在这张卡下面落定。", int(rect.x + 10.0 * scale), int(rect.y + 44.0 * scale), max(9, int(round(14 * scale))), LIGHTGRAY)
 

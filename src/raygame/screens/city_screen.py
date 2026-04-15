@@ -19,8 +19,7 @@ from raygame.screens.table_views import (
 )
 from raygame.screens.widgets import (
     begin_layer,
-    click_pressed,
-    consume_click,
+    any_input_pressed,
     draw_card_pile_modal,
     draw_clock_row,
     draw_dialogue_modal,
@@ -35,9 +34,8 @@ from raygame.screens.widgets import (
 
 
 def draw_city_screen(font: Font | None, state: GameState, rng) -> None:
-    if state.pending_resolution is not None and state.pending_resolution.settled and click_pressed():
+    if state.pending_resolution is not None and state.pending_resolution.settled and any_input_pressed():
         dismiss_pending_resolution(state)
-        consume_click()
     resolving = state.pending_resolution is not None and not state.pending_resolution.settled
     if is_key_pressed(KEY_ESCAPE) and not resolving:
         close_modal(state)

@@ -1,10 +1,18 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from inkpython import Story
 
 from raygame.model.state import ActiveDialogueState, GameState
 
 from .defs import DialogueAsset
+
+
+@dataclass
+class QuickDialogueRuntime:
+    blocks: tuple[str, ...]
+    index: int = 0
 
 
 def create_dialogue_session(asset: DialogueAsset, state: GameState) -> ActiveDialogueState:
@@ -28,8 +36,22 @@ def create_dialogue_session(asset: DialogueAsset, state: GameState) -> ActiveDia
     return session
 
 
+def create_quick_dialogue_session(raw_text: str) -> ActiveDialogueState:
+    title, blocks = _parse_quick_dialogue(raw_text)
+    session = ActiveDialogueState(
+        dialogue_id="__quick__",
+        title=title,
+        runtime=QuickDialogueRuntime(blocks=blocks),
+    )
+    continue_dialogue_session(session)
+    return session
+
+
 def continue_dialogue_session(session: ActiveDialogueState) -> None:
     if session.runtime is None or session.finished or session.choices:
+        return
+    if isinstance(session.runtime, QuickDialogueRuntime):
+        _continue_quick_dialogue(session.runtime, session)
         return
     story = _story(session)
     while story.canContinue:
@@ -56,10 +78,44 @@ def _refresh_state(session: ActiveDialogueState) -> None:
         session.choices = []
         session.finished = True
         return
+    if isinstance(session.runtime, QuickDialogueRuntime):
+        session.choices = []
+        session.can_continue = session.runtime.index < len(session.runtime.blocks)
+        session.finished = not session.can_continue
+        return
     story = _story(session)
     session.choices = [choice.text for choice in story.currentChoices]
     session.can_continue = bool(story.canContinue)
     session.finished = not session.can_continue and not session.choices
+
+
+def _parse_quick_dialogue(raw_text: str) -> tuple[str, tuple[str, ...]]:
+    lines = [line.rstrip() for line in raw_text.strip().splitlines()]
+    assert lines, "Quick dialogue cannot be empty."
+    title = "对话"
+    if lines[0].startswith("# "):
+        title = lines[0][2:].strip()
+        lines = lines[1:]
+    blocks: list[str] = []
+    current: list[str] = []
+    for line in lines:
+        if not line.strip():
+            if current:
+                blocks.append("\n".join(current).strip())
+                current.clear()
+            continue
+        current.append(line.strip())
+    if current:
+        blocks.append("\n".join(current).strip())
+    assert blocks, "Quick dialogue must contain at least one text block."
+    return title, tuple(blocks)
+
+
+def _continue_quick_dialogue(runtime: QuickDialogueRuntime, session: ActiveDialogueState) -> None:
+    if runtime.index < len(runtime.blocks):
+        session.history.append(runtime.blocks[runtime.index])
+        runtime.index += 1
+    _refresh_state(session)
 
 
 def _bind_story(story: Story, state: GameState) -> None:

@@ -82,7 +82,7 @@ def compile_encounter_program(source: str, *, source_path: str | Path | None = N
         elif declaration.kind == "on-fail":
             module.fail_effects = _eval_effect_list(declaration.value[1], runtime_env)
     metadata = module.metadata or EncounterMeta(key=(path.stem if path is not None else "encounter"), title=(path.stem if path is not None else "Encounter"), description="")
-    return CompiledEncounterProgram(
+    program = CompiledEncounterProgram(
         id=metadata.key,
         title=metadata.title,
         description=metadata.description,
@@ -95,6 +95,8 @@ def compile_encounter_program(source: str, *, source_path: str | Path | None = N
         rewards=module.rewards,
         fail_effects=module.fail_effects,
     )
+    validate_encounter_program(program)
+    return program
 
 
 def initial_store(program: CompiledEncounterProgram) -> dict[str, int | bool | str]:
@@ -156,11 +158,88 @@ def react_rule_matches(program: CompiledEncounterProgram, store: dict[str, int |
 
 def validate_encounter_program(program: CompiledEncounterProgram) -> None:
     assert program.store_specs, f"{program.id}: encounter missing state."
+    env = _runtime_env(definitions=program.definitions, store=initial_store(program), store_specs=program.store_specs)
+    _validate_all_schema_forms(program, env)
+    for name in program.definitions:
+        try:
+            value = env.lookup(name)
+            _validate_template(value)
+        except EncounterSchemeError as exc:
+            raise EncounterSchemeError(f"{program.id}: definition `{name}` has Scheme error: {exc}") from exc
+        except EncounterSchemaError as exc:
+            raise EncounterSchemaError(f"{program.id}: definition `{name}` has schema error: {exc}") from exc
+        except Exception as exc:
+            raise EncounterSchemaError(f"{program.id}: definition `{name}` is invalid: {exc}") from exc
     snapshot = render_encounter(program, initial_store(program))
     assert snapshot.root.root.title, f"{program.id}: root scene missing title."
     for clock_id, spec in program.clocks_by_id.items():
         assert clock_id in program.store_specs, f"{program.id}: clock missing store spec: {clock_id}"
         assert spec.segments >= 1, f"{program.id}: invalid clock segments: {clock_id}"
+
+
+def _validate_all_schema_forms(program: CompiledEncounterProgram, env: Environment) -> None:
+    for name, expr in program.definitions.items():
+        _validate_schema_forms(expr, env, context=f"{program.id}: definition `{name}`")
+    _validate_schema_forms(program.view_expr, env, context=f"{program.id}: root scene")
+    for rule in program.react_rules:
+        _validate_schema_forms(rule.condition_expr, env, context=f"{program.id}: react `{rule.source}` condition")
+        for effect in rule.effects:
+            assert isinstance(effect, Effect), f"{program.id}: react `{rule.source}` contains non-effect value: {effect!r}"
+
+
+def _validate_schema_forms(expr: Any, env: Environment, *, context: str) -> None:
+    if not isinstance(expr, list) or not expr:
+        return
+    head = expr[0]
+    try:
+        if head == "quote":
+            return
+        if head == "lambda":
+            return
+        if head == "action":
+            value = evaluate(expr, env)
+            assert isinstance(value, ActionTemplate), f"action form did not produce action template: {value!r}"
+            _validate_action_template(value)
+        elif head == "scene":
+            value = evaluate(expr, env)
+            assert isinstance(value, SceneTemplate), f"scene form did not produce scene template: {value!r}"
+            _validate_scene_template(value)
+        elif head == "check":
+            value = evaluate(expr, env)
+            assert isinstance(value, CheckTemplate), f"check form did not produce check template: {value!r}"
+            _build_check(value)
+        elif head == "effect":
+            value = evaluate(expr, env)
+            assert isinstance(value, Effect), f"effect form did not produce effect: {value!r}"
+    except EncounterSchemeError as exc:
+        raise EncounterSchemeError(f"{context}: {exc}") from exc
+    except EncounterSchemaError as exc:
+        raise EncounterSchemaError(f"{context}: {exc}") from exc
+    except Exception as exc:
+        raise EncounterSchemaError(f"{context}: {exc}") from exc
+    for index, item in enumerate(expr[1:]):
+        _validate_schema_forms(item, env, context=f"{context}[{index + 1}]")
+
+
+def _validate_template(value: Any) -> None:
+    if isinstance(value, ActionTemplate):
+        _validate_action_template(value)
+        return
+    if isinstance(value, SceneTemplate):
+        _validate_scene_template(value)
+        return
+
+
+def _validate_scene_template(scene: SceneTemplate) -> None:
+    for action in scene.actions:
+        _validate_action_template(action)
+    for child in scene.children:
+        _validate_scene_template(child)
+
+
+def _validate_action_template(action: ActionTemplate) -> None:
+    if action.check is not None:
+        _build_check(action.check)
 
 
 def _load_state(declarations: list[ModuleDeclaration], definitions: dict[str, Any], module: ModuleState) -> None:
@@ -183,7 +262,7 @@ def _load_state(declarations: list[ModuleDeclaration], definitions: dict[str, An
 
 
 def _eval_meta(form: Any, env: Environment) -> EncounterMeta:
-    kwargs = _keyword_args(form[1:])
+    kwargs = _keyword_args(form[1:], allowed={":key", ":title", ":desc"})
     key = _keyword_string(_eval_keyword_values(kwargs, env, keys={":key"}), ":key", allow_symbol=True)
     title = _keyword_string(_eval_keyword_values(kwargs, env, keys={":title"}), ":title")
     description = _keyword_string(_eval_keyword_values(kwargs, env, keys={":desc"}), ":desc", default="")
@@ -193,7 +272,7 @@ def _eval_meta(form: Any, env: Environment) -> EncounterMeta:
 def _eval_reacts(form: Any, env: Environment, module: ModuleState) -> None:
     for index, item in enumerate(form[1:]):
         assert _is_call(item, "react"), "reacts only supports react forms."
-        kwargs = _keyword_args(item[1:])
+        kwargs = _keyword_args(item[1:], allowed={":key", ":when", ":then"})
         condition = kwargs[":when"]
         effects = _eval_effect_list(kwargs[":then"], env)
         key_values = _eval_keyword_values(kwargs, env, keys={":key"})
@@ -308,7 +387,7 @@ def _host_values(*, store_specs: dict[str, StoreFieldSpec], store: dict[str, int
 
 
 def _builtin_clock(*args: Any) -> ClockTemplate:
-    kwargs = _keyword_args(list(args))
+    kwargs = _keyword_args(list(args), allowed={":title", ":initial", ":max", ":persist"})
     title = _keyword_string(kwargs, ":title")
     initial = int(_unwrap(kwargs[":initial"]))
     maximum = int(_unwrap(kwargs[":max"]))
@@ -318,7 +397,7 @@ def _builtin_clock(*args: Any) -> ClockTemplate:
 
 
 def _builtin_scene(args: tuple[Any, ...]) -> SceneTemplate:
-    kwargs = _keyword_args(list(args))
+    kwargs = _keyword_args(list(args), allowed={":key", ":title", ":desc", ":show-clocks", ":actions", ":children"})
     return SceneTemplate(
         key=_maybe_symbol(kwargs.get(":key")),
         title=_keyword_string(kwargs, ":title"),
@@ -330,7 +409,7 @@ def _builtin_scene(args: tuple[Any, ...]) -> SceneTemplate:
 
 
 def _builtin_action(args: tuple[Any, ...]) -> ActionTemplate:
-    kwargs = _keyword_args(list(args))
+    kwargs = _keyword_args(list(args), allowed={":key", ":title", ":desc", ":inputs", ":before", ":effects", ":check"})
     check = kwargs.get(":check")
     effects = _as_effect_tuple(kwargs.get(":effects"))
     before = _as_effect_tuple(kwargs.get(":before"))
@@ -347,7 +426,7 @@ def _builtin_action(args: tuple[Any, ...]) -> ActionTemplate:
 
 
 def _builtin_check(args: tuple[Any, ...]) -> CheckTemplate:
-    kwargs = _keyword_args(list(args))
+    kwargs = _keyword_args(list(args), allowed={":suits", ":risk", ":ok", ":partial", ":fail"})
     suits = tuple(_unwrap(item) for item in _as_list(kwargs.get(":suits")))
     risk = _keyword_string(kwargs, ":risk", allow_symbol=True)
     success = kwargs.get(":ok")
@@ -360,12 +439,18 @@ def _builtin_check(args: tuple[Any, ...]) -> CheckTemplate:
 def _builtin_effect(args: tuple[Any, ...]) -> Effect:
     assert args, "`effect` requires a kind."
     kind = _unwrap(args[0])
-    if kind == "clock+":
+    kind_aliases = {
+        "start-dialogue": "start_dialogue",
+        "start_dialogue": "start_dialogue",
+        "start-quick-dialogue": "start_quick_dialogue",
+        "start_quick_dialogue": "start_quick_dialogue",
+    }
+    if kind in kind_aliases:
+        return Effect(kind=kind_aliases[kind], value=str(_unwrap(args[1])))
+    if kind in {"clock+", "clock-"}:
         target = _clock_id(args[1])
-        return Effect(kind="advance_encounter_clock", value=f"{target}:{int(_unwrap(args[2]))}")
-    if kind == "clock-":
-        target = _clock_id(args[1])
-        return Effect(kind="damage_encounter_clock", value=f"{target}:{int(_unwrap(args[2]))}")
+        effect_kind = "advance_encounter_clock" if kind == "clock+" else "damage_encounter_clock"
+        return Effect(kind=effect_kind, value=f"{target}:{int(_unwrap(args[2]))}")
     if kind == "set":
         target = _binding_name(args[1])
         return Effect(kind="set_encounter_store", value=f"{target}:{_effect_token(args[2])}")
@@ -458,12 +543,14 @@ def _as_effect_tuple(value: Any) -> tuple[Effect, ...]:
     return tuple(item for item in items if item is not None)
 
 
-def _keyword_args(items: list[Any]) -> dict[str, Any]:
+def _keyword_args(items: list[Any], *, allowed: set[str]) -> dict[str, Any]:
     assert len(items) % 2 == 0, "Keyword arguments must come in pairs."
     result: dict[str, Any] = {}
     for index in range(0, len(items), 2):
         key = items[index]
         assert isinstance(key, str) and key.startswith(":"), f"Expected keyword argument, got: {key!r}"
+        assert key in allowed, f"Unsupported keyword: {key}"
+        assert key not in result, f"Duplicate keyword: {key}"
         result[key] = items[index + 1]
     return result
 

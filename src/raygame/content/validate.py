@@ -37,6 +37,7 @@ VALID_EFFECTS = {
     "end_run",
     "start_encounter",
     "start_dialogue",
+    "start_quick_dialogue",
     "set_encounter_store",
     "advance_encounter_clock",
     "damage_encounter_clock",
@@ -52,6 +53,8 @@ def _validate_effect(item: Effect) -> None:
     assert item.kind in VALID_EFFECTS, f"Unknown effect kind: {item.kind}"
     if item.kind == "start_dialogue":
         assert isinstance(item.value, str) and item.value in DIALOGUES_BY_ID, f"Unknown dialogue id: {item.value}"
+    if item.kind == "start_quick_dialogue":
+        assert isinstance(item.value, str) and item.value.strip(), "Quick dialogue text cannot be empty"
 
 
 def _validate_input(item: InputRequirement) -> None:

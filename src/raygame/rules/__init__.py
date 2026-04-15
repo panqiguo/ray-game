@@ -31,6 +31,7 @@ from .progression import (
     select_resource_input,
     slot_card,
     start_dialogue,
+    start_quick_dialogue,
     start_new_run,
     toggle_action_check_slot,
     toggle_action_requirement_slot,

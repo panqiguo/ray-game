@@ -1,36 +1,63 @@
-# 如何写 `.scm` 场景文件
+# SKILL: 如何撰写 `.scm` 场景文件
 
-用于 ray-game 的统一内容语言：城市与 encounter 都走同一套 Scheme 模块。
+本 skill 用于撰写 ray-game 的 `.scm` 内容脚本。  
+现在城市与 encounter 走同一套 Scheme 内容语言，统一用 `(content ...)` 作为顶层入口。
 
-## 核心原则
+目标不是“把 Python builder 翻译成 Scheme”，而是**直接用 Scheme 组织内容**。
 
-- 优先用 Scheme 组织内容，再考虑底层扩展。
-- 复用优先用 `define` 和 `lambda`，不要堆重复节点。
-- 顶层统一用 `(content ...)` 组装；
+---
 
-## 推荐文件划分
+## 一、核心原则
 
-- 一个主内容文件：定义 `meta`、`state`、`reacts`、`root`，最后 `(content ...)`。
-- 一个通用工具文件：放共享 helper，例如路径动作、时钟 helper、条件组合等高度复用的函数。
+1. 先用 Scheme 组织内容，再考虑底层扩展。
+2. 复用优先用 `define`、`lambda`、list/alist helper，不要先想着加新语法。
+3. 可见性优先用 `if / when / cond` 表达，不要把“显示/隐藏”塞进专门字段。
+4. `conditions` 只表示“可见但不可执行”。
+5. 顶层统一用 `(content ...)` 组装；只有 `meta :key` 是稳定标识。
 
-常见结构：
+---
+
+## 二、文件整体结构
+
+推荐结构：
 
 ```scheme
-(include "common.scm")
+(include "common.scm")     ; 可选
 
 (define scene-meta ...)
 (define local-state ...)
 (define local-reacts ...)
-(define world-root ...)
+(define root-node ...)
 
 (content
   :meta scene-meta
   :state local-state
   :reacts local-reacts
-  :root world-root)
+  :root root-node)
 ```
 
-## 顶层结构
+关键点：
+
+- 顶层允许 `include`
+- 顶层允许多个 `define`
+- 最终必须有一个 `(content ...)`
+- 不再写旧式顶层 `meta/state/reacts` 裸声明
+
+---
+
+## 三、推荐文件划分
+
+常见拆法：
+
+- 一个主内容文件：当前场景/任务本体
+- 一个通用工具文件：helper、时钟函数、重复动作模板
+- 一个对白文件：Ink / quick dialogue 单独放
+
+不要把所有区域、所有任务、所有对白硬塞进一个 `.scm` 文件。
+
+---
+
+## 四、顶层 `(content ...)`
 
 ```scheme
 (content
@@ -42,21 +69,46 @@
   :root node-expr)
 ```
 
-- `:meta`、`:root` 必填
-- `:state`、`:reacts`、`:on-success`、`:on-fail` 选填
+参数说明：
 
-## 常用构造
+| 参数 | 必填 | 说明 |
+|------|------|------|
+| `:meta` | ✅ | 内容元数据 |
+| `:root` | ✅ | 根节点表达式 |
+| `:state` | ❌ | 局部状态 |
+| `:reacts` | ❌ | 自动规则 |
+| `:on-success` | ❌ | encounter 成功后追加效果 |
+| `:on-fail` | ❌ | encounter 失败后追加效果 |
 
-### `meta`
+说明：
+
+- `:on-success` / `:on-fail` 更常用于 encounter；world 内容通常不需要
+- 全局初始状态仍可放 Python，不必强行脚本化
+
+---
+
+## 五、常用构造器
+
+### 1. `(meta ...)`
 
 ```scheme
-(meta :key 'escape :title "逃离这里" :desc "描述")
+(meta :key 'escape :title "逃离这里" :desc "场景描述")
 ```
 
-- 必填：`:key` `:title`
-- 选填：`:desc`
+| 参数 | 必填 | 说明 |
+|------|------|------|
+| `:key` | ✅ | 内容唯一 ID |
+| `:title` | ✅ | 标题 |
+| `:desc` | ❌ | 描述 |
 
-### `state`
+注意：
+
+- 只有 `meta` 接受 `:key`
+- `node/action/react/clock` 都不再写 `:key`
+
+---
+
+### 2. `(state ...)`
 
 ```scheme
 (state
@@ -65,19 +117,48 @@
   (east_info (clock :title "东区探索" :initial 0 :max 4)))
 ```
 
-- 每项写成 `(name value)`
-- `value` 可以是 `int / bool / string(symbol) / (clock ...)`
+每条绑定都写成：
 
-### `clock`
+```scheme
+(name value)
+```
+
+支持的 value：
+
+- `int`
+- `bool`
+- symbol / string
+- `(clock ...)`
+
+说明：
+
+- 局部状态写在 `:state`
+- 更适合“当前内容需要维护的变量”
+
+---
+
+### 3. `(clock ...)`
 
 ```scheme
 (clock :title "警觉" :initial 0 :max 4)
 ```
 
-- 必填：`:title` `:initial` `:max`
-- 不再接受 `:key` `:persist`
+| 参数 | 必填 | 说明 |
+|------|------|------|
+| `:title` | ✅ | 显示名 |
+| `:initial` | ✅ | 初始值 |
+| `:max` | ✅ | 上限 |
 
-### `node` / `scene`
+注意：
+
+- 不再接受 `:key`
+- 不再接受 `:persist`
+
+---
+
+### 4. `(node ...)` / `(scene ...)`
+
+`scene` 与 `node` 等价，推荐统一写 `node`。
 
 ```scheme
 (node
@@ -90,11 +171,26 @@
   :children (list ...))
 ```
 
-- 必填：`:title`
-- 选填：`:desc` `:position` `:show-clocks` `:conditions` `:actions` `:children`
-- `scene` 与 `node` 等价
+| 参数 | 必填 | 说明 |
+|------|------|------|
+| `:title` | ✅ | 标题 |
+| `:desc` | ❌ | 描述 |
+| `:position` | ❌ | 地图位置 |
+| `:show-clocks` | ❌ | 显示哪些时钟 |
+| `:conditions` | ❌ | 满足时才可执行 |
+| `:actions` | ❌ | 行动列表 |
+| `:children` | ❌ | 子节点列表 |
 
-### `action`
+说明：
+
+- 节点是否出现，优先用 `if / when / cond`
+- `:conditions` 不是显隐系统
+- 所有节点都可以带 `:position`
+- 所有节点都可以带 `:show-clocks`
+
+---
+
+### 5. `(action ...)`
 
 ```scheme
 (action
@@ -107,11 +203,26 @@
   :check (check ...))
 ```
 
-- 必填：`:title`
-- 选填：`:desc` `:position` `:conditions` `:inputs` `:before` `:effects` `:check`
-- `:check` 与 `:effects` 互斥
+| 参数 | 必填 | 说明 |
+|------|------|------|
+| `:title` | ✅ | 行动标题 |
+| `:desc` | ❌ | 行动描述 |
+| `:position` | ❌ | 位置 |
+| `:conditions` | ❌ | 可执行条件 |
+| `:inputs` | ❌ | 输入消耗 |
+| `:before` | ❌ | 执行前立即触发 |
+| `:effects` | ❌ | 无检定行动的结果 |
+| `:check` | ❌ | 检定结果 |
 
-### `check`
+规则：
+
+- `:check` 与 `:effects` 互斥
+- 有 `:check` 时，结果写在 `:ok / :partial / :fail`
+- `:before` 可与两者任意一种共存
+
+---
+
+### 6. `(check ...)`
 
 ```scheme
 (check
@@ -122,17 +233,32 @@
   :fail outcome)
 ```
 
-- 必填：`:suits` `:risk` `:ok` `:partial` `:fail`
+| 参数 | 必填 | 说明 |
+|------|------|------|
+| `:suits` | ✅ | 花色列表 |
+| `:risk` | ✅ | 风险等级 |
+| `:ok` | ✅ | 成功结果 |
+| `:partial` | ✅ | 中等结果 |
+| `:fail` | ✅ | 失败结果 |
+
+合法值：
+
 - `:risk`：`'low` / `'mid` / `'high`
 - `:suits`：`'reason` / `'force` / `'empathy` / `'instinct`
 
-### `outcome`
+---
+
+### 7. `(outcome ...)`
 
 ```scheme
 (outcome "结果文本" (list effect...))
 ```
 
-### `react` / `reacts`
+第一个参数是文本，第二个参数是 effect 列表。
+
+---
+
+### 8. `(react ...)` / `(reacts ...)`
 
 ```scheme
 (react
@@ -145,15 +271,25 @@
   (when cond (react ...)))
 ```
 
-- `reacts` 接受任意求值成 `react` 或 `nil` 的表达式
+规则：
 
-## `conditions` 语义
+- `react` 返回一个 react 值
+- `reacts` 接受任意求值成 `react` 或 `nil` 的表达式
+- 可以先 `define` helper，再在 `reacts` 里组合
+
+---
+
+## 六、`conditions` 的语义
+
+实际写法：
 
 ```scheme
 :conditions (list
   (has-item 'clothes 1 "需要体面的衣服")
   (field-at-least 'money 20 "需要 20 美钞"))
 ```
+
+语义：
 
 - 节点或行动已经进入树里，但 `conditions` 不满足：可见、不可执行
 - 要控制是否出现，用 `if / when / cond`
@@ -165,7 +301,11 @@
 - `(field-truthy 'hotel_pass "提示")`
 - `(condition 'clock_at_least "alert:2" "提示")`
 
-## 输入
+---
+
+## 七、输入
+
+输入只保留两类：
 
 ```scheme
 (item 'money 20 "美钞")
@@ -174,11 +314,14 @@
 (card 'negative "负面牌")
 ```
 
-- 输入只保留 `item` / `card`
-- 作为 input 的东西默认消耗
-- 不消耗的门槛写进 `conditions`
+说明：
 
-## effect
+- `item` / `card` 作为 input 时默认消耗
+- 不消耗的门槛不要写成 input，而是写进 `conditions`
+
+---
+
+## 八、effect
 
 ```scheme
 (effect 'clock+ east_info 1)
@@ -191,49 +334,61 @@
 (effect 'start-quick-dialogue "一段短对白")
 (effect 'start-encounter 'villa_infiltration)
 (effect 'finish 'success)
+(effect 'finish 'fail)
+(effect 'finish 'abort)
 (effect 'advance-day)
 (effect 'end-run 'escape_success)
 (effect 'reset-hand)
 ```
 
-## 现在可用的基础 Scheme
+说明：
 
-控制流：
+- 统一使用最准确的 effect 名称
+- 不再使用 `resource`
+- 不再使用 `start-content`
+
+---
+
+## 九、基础 Scheme 能力
+
+### 控制流
 
 - `if`
 - `when`
 - `cond`
-- `and` `or` `not`
+- `and` / `or` / `not`
 - `let`
 - `lambda`
 - `begin`
 - `quote` / `'`
 
-列表：
+### 列表
 
 - `list`
 - `car` `cdr` `cons`
 - `append`
 - `length`
 - `list?` `pair?`
-- `map` `filter`
+- `map`
+- `filter`
 - `member`
 - `reverse`
 - `apply`
 
-alist：
+### alist
 
 - `assoc`
 - `assoc-ref`
 - `assoc-set`
 - `assoc-remove`
 
-数值/比较：
+### 数值 / 比较
 
-- `+` `-` `min` `max`
+- `+` `-`
+- `min` `max`
 - `=` `<` `<=` `>` `>=`
 
-判定：
+### 判定
 
 - `null?`
 - `number?`
@@ -241,15 +396,86 @@ alist：
 - `boolean?`
 - `symbol?`
 
-## 推荐写法
+---
 
-- 用 helper 生成重复节点或动作
-- 用 alist/list 存轻量配置
-- 用 `when` 在列表里条件插入节点或动作
-- 用局部 `state` 描述当前内容需要的状态，不把全局状态搬进脚本
+## 十、推荐写法
 
-## 不推荐写法
+### 1. 用 helper 生成重复结构
 
-- 为了复用去加底层专用语法
+```scheme
+(define make-paid-relief-action
+  (lambda (title cost stress-down)
+    (action
+      :title title
+      :inputs (list (item 'money cost "美钞"))
+      :effects (list (effect 'stress (- 0 stress-down))))))
+```
+
+### 2. 用 `when` 在列表里做条件插入
+
+```scheme
+(list
+  base-action
+  (when (>= (clock-value east_info) 2) bar-node))
+```
+
+### 3. 用 alist 存轻量配置
+
+```scheme
+(define east-config
+  '((title "东区")
+    (x 120)
+    (y 80)))
+```
+
+适合：
+
+- 小型配置表
+- helper 参数较多但不想一项项平铺
+
+---
+
+## 十一、不推荐写法
+
+- 为了复用先加底层专用语法
 - 把“是否出现”写成 `conditions`
-- 在一个文件里塞太多完整区域，导致无法复用 helper
+- 继续按旧 Python builder 思路平移
+- 一个文件里塞太多完整区域，导致 helper 无法复用
+
+---
+
+## 十二、一个最小骨架
+
+```scheme
+(include "common.scm")
+
+(define my-meta
+  (meta :key 'escape :title "逃离这里"))
+
+(define my-state
+  (state
+    (day 1)
+    (intro_played false)
+    (alert (clock :title "警觉" :initial 0 :max 4))))
+
+(define my-reacts
+  (reacts
+    (when (and (>= day 2) (not intro_played))
+      (react
+        :when true
+        :then (list
+          (effect 'set intro_played true)
+          (effect 'start-dialogue 'day2_intro))))))
+
+(define root-node
+  (node
+    :title "桥洞"
+    :show-clocks (list alert)
+    :actions (list)))
+
+(content
+  :meta my-meta
+  :state my-state
+  :reacts my-reacts
+  :root root-node)
+```

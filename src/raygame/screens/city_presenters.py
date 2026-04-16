@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from raygame.content import SCENARIO
+from raygame.content.runtime import render_world
 from raygame.model.state import GameState
 from raygame.rules import action_is_visible
 
@@ -28,8 +29,9 @@ class PresentedWorldObject:
 
 
 def present_world_objects(state: GameState) -> tuple[PresentedWorldObject, ...]:
+    snapshot = render_world(SCENARIO, state)
     cards: list[PresentedWorldObject] = []
-    for presented in present_location_cards(state, SCENARIO, SCENARIO.root_location_ids):
+    for presented in present_location_cards(state, snapshot, snapshot.root_location_ids):
         assert presented.position is not None
         cards.append(
             PresentedWorldObject(
@@ -41,18 +43,18 @@ def present_world_objects(state: GameState) -> tuple[PresentedWorldObject, ...]:
                     title=presented.location.title,
                     body=presented.location.description,
                     labels=location_status_labels(presented.location_id, presented.location, state),
-                    clock_ids=SCENARIO.location_clock_ids.get(presented.location_id, ()),
+                    clock_ids=snapshot.location_clock_ids.get(presented.location_id, ()),
                     active=presented.card.active,
                     disabled=presented.card.disabled,
                     style=WORLD_CARD,
                 ),
             )
         )
-    for action_id in SCENARIO.actions_by_location[SCENARIO.world_root_id]:
-        action = SCENARIO.actions_by_id[action_id]
+    for action_id in snapshot.actions_by_location[snapshot.world_root_id]:
+        action = snapshot.actions_by_id[action_id]
         if not action_is_visible(action, state):
             continue
-        presented_action = present_action_card(state, action, SCENARIO.action_clock_ids.get(action.id, ()))
+        presented_action = present_action_card(state, action)
         assert action.position is not None, f"world action missing position: {action.id}"
         cards.append(
             PresentedWorldObject(
@@ -67,12 +69,12 @@ def present_world_objects(state: GameState) -> tuple[PresentedWorldObject, ...]:
 
 
 def present_child_location_cards(state: GameState, location_ids: tuple[str, ...]) -> tuple[PresentedLocationCard, ...]:
-    return present_location_cards(state, SCENARIO, location_ids)
+    return present_location_cards(state, render_world(SCENARIO, state), location_ids)
 
 
 def present_action_cards(state: GameState, location) -> tuple[PresentedActionCard, ...]:
-    return present_action_cards_for_location(state, SCENARIO, location)
+    return present_action_cards_for_location(state, render_world(SCENARIO, state), location)
 
 
-def present_location_clock_ids(location_id: str) -> tuple[str, ...]:
-    return SCENARIO.location_clock_ids.get(location_id, ())
+def present_location_clock_ids(state: GameState, location_id: str) -> tuple[str, ...]:
+    return render_world(SCENARIO, state).location_clock_ids.get(location_id, ())

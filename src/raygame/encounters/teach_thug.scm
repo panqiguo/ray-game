@@ -112,43 +112,35 @@
   )
   ))
 
-(meta :key 'teach_thug :title "教训一个小混混" :desc "拿人钱财，帮人把这件事办干干净净。")
-
-(on-success (list (effect 'resource 'money 80)))
-
-(state
-  (initiative (clock :title "主动权" :initial 0 :max 4))
-  (knife (clock :title "夺刀" :initial 0 :max 2))
-  (enemy_hp (clock :title "敌人血量" :initial 4 :max 4))
-  (opening (clock :title "破绽" :initial 0 :max 2))
-)
-
-(reacts
-  (react :key 'react_0 :when (<= (clock-value enemy_hp) 0) :then (list (effect 'finish success)))
-)
-
-(cond ((< (clock-value initiative) (clock-full initiative)) (if (< (clock-value knife) (clock-full knife)) (scene
-  :key 'pressure_unarmed
-  :title "徒手受压"
-  :desc "打手把你逼在墙边。你得先决定，是稳着反顶、直接狠狠干、还是冒险把折刀夺到手。"
-  :show-clocks (list initiative (when (> (clock-value knife) 0) knife))
-  :actions (list counter blunt_punch rush_knife breathe)
-) (scene
-  :key 'pressure_with_knife
-  :title "持刀逼退"
-  :desc "刀终于到了你手里。现在你可以借着这口气把主动权彻底抢回来。"
-  :show-clocks (list initiative knife)
-  :actions (list counter knife_press breathe)
-))) ((< (clock-value opening) (clock-full opening)) (scene
-  :key 'duel
-  :title "对峙"
-  :desc "对方后退半步，准备再扑上来。你可以直接狠狠干，也可以先撬开他的破绽。"
-  :show-clocks (list enemy_hp opening)
-  :actions (list heavy_punch feint knee_kick breathe)
-)) (else (scene
-  :key 'guard_open
-  :title "空门大开"
-  :desc "他的防守空档已经完全露出来了。狠狠干净地结束这场架。"
-  :show-clocks (list enemy_hp opening)
-  :actions (list finisher knee_kick breathe)
-)))
+(content
+  :meta (meta :key 'teach_thug :title "教训一个小混混" :desc "拿人钱财，帮人把这件事办干干净净。")
+  :on-success (list (effect 'add 'money 80))
+  :state (state
+    (initiative (clock :title "主动权" :initial 0 :max 4))
+    (knife (clock :title "夺刀" :initial 0 :max 2))
+    (enemy_hp (clock :title "敌人血量" :initial 4 :max 4))
+    (opening (clock :title "破绽" :initial 0 :max 2)))
+  :reacts (reacts
+    (react :when (<= (clock-value enemy_hp) 0) :then (list (effect 'finish success))))
+  :root
+  (cond ((< (clock-value initiative) (clock-full initiative)) (if (< (clock-value knife) (clock-full knife)) (scene
+    :title "徒手受压"
+    :desc "打手把你逼在墙边。你得先决定，是稳着反顶、直接狠狠干、还是冒险把折刀夺到手。"
+    :show-clocks (list initiative (when (> (clock-value knife) 0) knife))
+    :actions (list counter blunt_punch rush_knife breathe)
+  ) (scene
+    :title "持刀逼退"
+    :desc "刀终于到了你手里。现在你可以借着这口气把主动权彻底抢回来。"
+    :show-clocks (list initiative knife)
+    :actions (list counter knife_press breathe)
+  ))) ((< (clock-value opening) (clock-full opening)) (scene
+    :title "对峙"
+    :desc "对方后退半步，准备再扑上来。你可以直接狠狠干，也可以先撬开他的破绽。"
+    :show-clocks (list enemy_hp opening)
+    :actions (list heavy_punch feint knee_kick breathe)
+  )) (else (scene
+    :title "空门大开"
+    :desc "他的防守空档已经完全露出来了。狠狠干净地结束这场架。"
+    :show-clocks (list enemy_hp opening)
+    :actions (list finisher knee_kick breathe)
+  ))))

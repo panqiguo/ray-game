@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from raygame.dialogues import DIALOGUES_BY_ID
+from raygame.content.runtime import render_world
 from raygame.encounters import ENCOUNTERS_BY_ID, initial_store, render_encounter, validate_encounter_program
 from raygame.content.cards import CARD_DEFS
 from raygame.content.growth import GROWTH_DEFS
@@ -10,10 +11,11 @@ from raygame.model.defs import ActionDef, Condition, Effect, InputRequirement, L
 
 VALID_CONDITIONS = {
     "has_item",
+    "field_at_least",
+    "field_truthy",
     "inventory_below",
     "clock_at_least",
     "clock_hidden",
-    "location_visible",
     "in_encounter_act",
     "in_encounter_state",
     "encounter_flag",
@@ -21,17 +23,12 @@ VALID_CONDITIONS = {
 }
 
 VALID_EFFECTS = {
+    "set_field",
+    "add_field",
+    "shift_clock",
     "change_health",
     "change_stress",
-    "change_resource",
-    "give_item",
-    "remove_item",
     "advance_clock",
-    "reveal_location",
-    "hide_location",
-    "hide_action",
-    "show_clock",
-    "hide_clock",
     "reset_hand",
     "advance_day",
     "end_run",
@@ -55,10 +52,14 @@ def _validate_effect(item: Effect) -> None:
         assert isinstance(item.value, str) and item.value in DIALOGUES_BY_ID, f"Unknown dialogue id: {item.value}"
     if item.kind == "start_quick_dialogue":
         assert isinstance(item.value, str) and item.value.strip(), "Quick dialogue text cannot be empty"
+    if item.kind == "start_encounter":
+        assert isinstance(item.value, str) and item.value in ENCOUNTERS_BY_ID, f"Unknown encounter id: {item.value}"
+    if item.kind == "end_run":
+        assert isinstance(item.value, str) and item.value.strip(), "Ending id cannot be empty"
 
 
 def _validate_input(item: InputRequirement) -> None:
-    assert item.kind in {"card", "resource", "item"}, f"Unknown input kind: {item.kind}"
+    assert item.kind in {"card", "item"}, f"Unknown input kind: {item.kind}"
     assert item.amount >= 1, f"Input amount must be >= 1: {item}"
 
 
@@ -91,10 +92,11 @@ def validate_content() -> None:
         assert card.id == card_id
     for growth_id, growth in GROWTH_DEFS.items():
         assert growth.id == growth_id
-    for location_id, location in SCENARIO.locations_by_id.items():
+    snapshot = render_world(SCENARIO, _validation_state())
+    for location_id, location in snapshot.locations_by_id.items():
         assert location.id == location_id
         _validate_location(location)
-    for action_id, action in SCENARIO.actions_by_id.items():
+    for action_id, action in snapshot.actions_by_id.items():
         assert action.id == action_id
         _validate_action(action)
     for clock_id, spec in SCENARIO.clocks_by_id.items():
@@ -118,3 +120,17 @@ def validate_content() -> None:
 def _validate_location(location: LocationNode) -> None:
     for condition in location.conditions:
         _validate_condition(condition)
+
+
+def _validation_state():
+    from raygame.model.state import AttributeState, DeckState, GameState, ResourceState, WorldState, ProgressClockState
+    return GameState(
+        deck=DeckState(draw_pile=[]),
+        attributes=AttributeState(health=SCENARIO.initial_health, stress=SCENARIO.initial_stress),
+        resources=ResourceState(money=SCENARIO.initial_money, cigarettes=SCENARIO.initial_cigarettes),
+        world=WorldState(
+            progress_clocks={clock_id: ProgressClockState(value=0, visible=True) for clock_id in SCENARIO.clocks_by_id},
+            inventory=dict(SCENARIO.initial_inventory),
+            values=dict(SCENARIO.initial_values),
+        ),
+    )

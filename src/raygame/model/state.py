@@ -38,11 +38,10 @@ class ProgressClockState:
 
 @dataclass
 class WorldState:
-    visible_locations: set[str] = field(default_factory=set)
     fresh_locations: set[str] = field(default_factory=set)
-    hidden_actions: set[str] = field(default_factory=set)
     progress_clocks: dict[str, ProgressClockState] = field(default_factory=dict)
     inventory: dict[str, int] = field(default_factory=dict)
+    values: dict[str, int | bool | str] = field(default_factory=dict)
 
 
 @dataclass
@@ -50,7 +49,6 @@ class ActionAssemblyState:
     action_id: str | None = None
     slotted_card_id: str | None = None
     slotted_card_index: int | None = None
-    slotted_resources: dict[str, int] = field(default_factory=dict)
     slotted_items: dict[str, int] = field(default_factory=dict)
 
 
@@ -105,6 +103,8 @@ class ActiveDialogueState:
     choices: list[str] = field(default_factory=list)
     can_continue: bool = False
     finished: bool = False
+    auto_close_on_finish: bool = True
+    history_scroll: int = 0
     error: str = ""
 
 

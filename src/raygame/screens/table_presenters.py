@@ -11,6 +11,7 @@ from raygame.rules import (
     action_is_visible,
     action_ready_to_execute,
     action_slot_ready,
+    location_is_available,
     location_is_visible,
 )
 from raygame.rules.judgment import RESULT_TABLE, clamp_action_value, compute_action_value
@@ -85,7 +86,7 @@ def present_location_cards(
                     labels=location_status_labels(location_id, location, state),
                     clock_ids=clock_ids,
                     active=state.modal.kind == "location" and state.modal.primary_id == location_id,
-                    disabled=is_resolving(state),
+                    disabled=is_resolving(state) or not location_is_available(location_id, state),
                     style=TABLE_CARD,
                 ),
             )
@@ -98,15 +99,14 @@ def present_action_cards_for_location(
     content,
     location: LocationNode,
 ) -> tuple[PresentedActionCard, ...]:
-    action_clock_ids = getattr(content, "action_clock_ids", {})
     return tuple(
-        present_action_card(state, content.actions_by_id[action_id], action_clock_ids.get(action_id, ()))
+        present_action_card(state, content.actions_by_id[action_id])
         for action_id in content.actions_by_location[location.id]
         if action_is_visible(content.actions_by_id[action_id], state)
     )
 
 
-def present_action_card(state: GameState, action: ActionDef, clock_ids: tuple[str, ...] = ()) -> PresentedActionCard:
+def present_action_card(state: GameState, action: ActionDef) -> PresentedActionCard:
     active = state.assembly.action_id == action.id
     available = action_is_available(action, state)
     pending = state.pending_resolution if state.pending_resolution and state.pending_resolution.resolution.action_id == action.id else None
@@ -120,7 +120,7 @@ def present_action_card(state: GameState, action: ActionDef, clock_ids: tuple[st
             title=action.title,
             body=action.description,
             labels=action_corner_labels(action),
-            clock_ids=clock_ids,
+            clock_ids=(),
             active=active,
             disabled=not available,
             style=ACTION_CARD,
@@ -136,6 +136,7 @@ def present_action_card(state: GameState, action: ActionDef, clock_ids: tuple[st
 def _present_action_slots(state: GameState, action: ActionDef, has_pending: bool) -> tuple[ActionSlotModel, ...]:
     locked = state.pending_resolution is not None and not has_pending
     available = action_is_available(action, state)
+    executable = action.check is not None or bool(action.effects)
     slots: list[ActionSlotModel] = []
     if action.check is not None:
         slots.append(
@@ -160,7 +161,7 @@ def _present_action_slots(state: GameState, action: ActionDef, has_pending: bool
                 requirement=requirement,
             )
         )
-    if action.check is None and not action.inputs:
+    if action.check is None and not action.inputs and executable:
         slots.append(
             ActionSlotModel(
                 key="auto",
@@ -192,6 +193,8 @@ def _present_action_attachment(
             effect_text=" | ".join(resolution.effect_lines[:2]) if pending.settled and resolution.effect_lines else "",
         )
     if state.assembly.action_id != action.id:
+        return None
+    if action.check is None and not action.effects:
         return None
     if action.check is not None and state.assembly.slotted_card_id is not None:
         value = compute_action_value(state.assembly.slotted_card_id, action.check)

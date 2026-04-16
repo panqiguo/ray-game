@@ -114,9 +114,9 @@ class RenderedEncounter:
 @dataclass(frozen=True)
 class ClockTemplate:
     title: str
+    description: str
     initial: int
     maximum: int
-    persist: str = "encounter"
 
 
 @dataclass(frozen=True)
@@ -143,21 +143,23 @@ class CheckTemplate:
 
 @dataclass(frozen=True)
 class ActionTemplate:
-    key: str | None
     title: str
     description: str
+    position: tuple[int, int] | None = None
     inputs: tuple[InputRequirement, ...] = ()
     before: tuple[Effect, ...] = ()
     effects: tuple[Effect, ...] = ()
+    conditions: tuple[Any, ...] = ()
     check: CheckTemplate | None = None
 
 
 @dataclass(frozen=True)
 class SceneTemplate:
-    key: str | None
     title: str
     description: str
+    position: tuple[int, int] | None = None
     shown_clock_ids: tuple[str, ...] = ()
+    conditions: tuple[Any, ...] = ()
     actions: tuple[ActionTemplate, ...] = ()
     children: tuple["SceneTemplate", ...] = ()
 
@@ -166,13 +168,6 @@ class SceneTemplate:
 class ReactTemplate:
     condition_expr: Any
     effects: tuple[Effect, ...]
-    key: str | None = None
-
-
-@dataclass(frozen=True)
-class ModuleDeclaration:
-    kind: str
-    value: Any
 
 
 @dataclass

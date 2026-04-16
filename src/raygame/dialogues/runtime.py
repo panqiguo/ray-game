@@ -42,6 +42,7 @@ def create_quick_dialogue_session(raw_text: str) -> ActiveDialogueState:
         dialogue_id="__quick__",
         title=title,
         runtime=QuickDialogueRuntime(blocks=blocks),
+        auto_close_on_finish=False,
     )
     continue_dialogue_session(session)
     return session
@@ -92,7 +93,7 @@ def _refresh_state(session: ActiveDialogueState) -> None:
 def _parse_quick_dialogue(raw_text: str) -> tuple[str, tuple[str, ...]]:
     lines = [line.rstrip() for line in raw_text.strip().splitlines()]
     assert lines, "Quick dialogue cannot be empty."
-    title = "对话"
+    title = ""
     if lines[0].startswith("# "):
         title = lines[0][2:].strip()
         lines = lines[1:]

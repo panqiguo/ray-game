@@ -64,7 +64,7 @@ def _draw_encounter_table(font: Font | None, state: GameState, rng, rect: Rectan
     )
     draw_clock_row(
         font,
-        Rectangle(sections.header.x + 18, sections.header.y + 84, sections.header.width - 36, 26),
+        Rectangle(sections.header.x + 18, sections.header.y + 84, sections.header.width - 36, 48),
         current_encounter_clock_ids(state),
         state,
     )
@@ -94,7 +94,7 @@ def _draw_encounter_location_table(font: Font | None, state: GameState, rng) -> 
         return
     location_clock_ids = present_encounter_location_clock_ids(state, target.id)
     if location_clock_ids:
-        draw_clock_row(font, Rectangle(sections.header.x + 18, sections.header.y + 84, sections.header.width - 36, 26), location_clock_ids, state)
+        draw_clock_row(font, Rectangle(sections.header.x + 18, sections.header.y + 84, sections.header.width - 36, 48), location_clock_ids, state)
     _draw_location_contents(font, state, rng, target, sections.content, nested_locations=True)
 
 def _draw_location_contents(font: Font | None, state: GameState, rng, location, content_rect: Rectangle, *, nested_locations: bool) -> None:

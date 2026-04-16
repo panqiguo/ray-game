@@ -22,7 +22,12 @@ def _register_defaults() -> dict[str, DialogueAsset]:
             id="开篇",
             title="开篇",
             compiled_path=ASSET_DIR / "开篇.ink.json",
-        )
+        ),
+        "first_scene_doctor_office": DialogueAsset(
+            id="first_scene_doctor_office",
+            title="主治医师办公室",
+            compiled_path=ASSET_DIR / "first_scene_doctor_office.ink.json",
+        ),
     }
 
 

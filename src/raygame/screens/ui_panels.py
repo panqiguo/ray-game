@@ -18,10 +18,9 @@ from raygame.rules import (
     requirement_is_slotted,
     select_card_input,
     select_item_input,
-    select_resource_input,
 )
 
-from .ui_core import begin_layer, centered_rect, clickable, draw_frame, draw_scrim, end_layer, layout, text_button, wrap_text_lines
+from .ui_core import begin_layer, centered_rect, clickable, draw_frame, draw_scrim, end_layer, layout, mouse_point, text_button, wrap_text_lines, wrap_text_lines_any
 from .ui_tags import ITEM_LABELS, RESOURCE_LABELS
 
 
@@ -29,8 +28,24 @@ def draw_hud(font: Font | None, state: GameState) -> None:
     begin_layer("hud", interactive=(state.modal.kind in {"", "profile"}))
     hud = layout().hud
     draw_frame(hud, Color(20, 22, 29, 245))
-    _hud_block(font, Rectangle(hud.x + 18, hud.y + 10, 140, 32), "生命", f"{state.attributes.health}/{state.attributes.max_health}", Color(214, 112, 112, 255))
-    _hud_block(font, Rectangle(hud.x + 170, hud.y + 10, 140, 32), "压力", f"{state.attributes.stress}/{state.attributes.max_stress}", Color(208, 182, 108, 255))
+    _hud_meter(
+        font,
+        Rectangle(hud.x + 18, hud.y + 8, 140, 36),
+        "生命",
+        state.attributes.health,
+        state.attributes.max_health,
+        Color(214, 112, 112, 255),
+        Color(76, 40, 40, 255),
+    )
+    _hud_meter(
+        font,
+        Rectangle(hud.x + 210, hud.y + 8, 140, 36),
+        "压力",
+        state.attributes.stress,
+        state.attributes.max_stress,
+        Color(208, 182, 108, 255),
+        Color(78, 66, 34, 255),
+    )
     draw_text(font, f"第 {state.day} 天", int(hud.x + hud.width - 248), int(hud.y + 17), 18, Color(198, 198, 198, 255))
     if text_button(font, Rectangle(hud.x + hud.width - 148, hud.y + 10, 120, 34), f"档案 {state.growth_points}", 18, disabled=(state.modal.kind not in {"", "profile"})):
         if state.modal.kind == "profile":
@@ -96,8 +111,8 @@ def draw_inventory_panel(font: Font | None, rect: Rectangle, state: GameState, a
     draw_frame(rect, Color(16, 18, 24, 255), Color(76, 82, 96, 220))
     draw_text(font, "物品", int(rect.x) + 14, int(rect.y) + 10, 22, RAYWHITE)
     slots = [
-        ("resource", "money", "金币", state.resources.money),
-        ("resource", "cigarettes", "烟卷", state.resources.cigarettes),
+        ("item", "money", "金币", state.resources.money),
+        ("item", "cigarettes", "烟卷", state.resources.cigarettes),
         ("item", "clothes", "华美衣服", state.world.inventory.get("clothes", 0)),
         ("item", "car_key", "钥匙", state.world.inventory.get("car_key", 0)),
         ("item", "repair_case_item", "任务物", state.world.inventory.get("repair_case_item", 0)),
@@ -120,10 +135,7 @@ def draw_inventory_panel(font: Font | None, rect: Rectangle, state: GameState, a
             border = Color(60, 64, 74, 180)
         draw_frame(cell, fill, border)
         if not disabled and clickable(cell):
-            if kind == "resource":
-                select_resource_input(state, key)
-            else:
-                select_item_input(state, key)
+            select_item_input(state, key)
         draw_text(font, label, int(cell.x) + 10, int(cell.y) + 8, 16, RAYWHITE if not disabled else Color(110, 110, 110, 255))
         draw_text(font, str(amount), int(cell.x) + 10, int(cell.y) + 30, 18, Color(212, 196, 132, 255) if not disabled else Color(100, 100, 100, 255))
 
@@ -262,14 +274,35 @@ def draw_dialogue_modal(font: Font | None, state: GameState) -> None:
         end_layer("dialogue_modal")
         return
     history_rect = Rectangle(rect.x + 24, rect.y + 64, rect.width - 48, rect.height - 180)
+    line_height = 22
+    block_gap = 12
+    rendered_lines: list[tuple[str, bool]] = []
+    for block in state.active_dialogue.history:
+        for line in wrap_text_lines_any(font, block, history_rect.width, 18):
+            rendered_lines.append((line, False))
+        rendered_lines.append(("", True))
+    if rendered_lines and rendered_lines[-1][1]:
+        rendered_lines.pop()
+    max_visible_lines = max(1, int((history_rect.height + block_gap) // line_height))
+    max_scroll = max(0, len(rendered_lines) - max_visible_lines)
+    if check_collision_point_rec(mouse_point(), history_rect):
+        wheel = int(get_mouse_wheel_move())
+        if wheel != 0:
+            state.active_dialogue.history_scroll = max(
+                0,
+                min(max_scroll, state.active_dialogue.history_scroll - wheel * 3),
+            )
+    scroll = max(0, min(max_scroll, state.active_dialogue.history_scroll))
+    state.active_dialogue.history_scroll = scroll
+    start = max(0, len(rendered_lines) - max_visible_lines - scroll)
+    visible_lines = rendered_lines[start : start + max_visible_lines]
     y = int(history_rect.y)
-    for block in state.active_dialogue.history[-12:]:
-        for line in wrap_text_lines(font, block, history_rect.width, 18):
-            draw_text(font, line, int(history_rect.x), y, 18, LIGHTGRAY)
-            y += 22
-        y += 12
-        if y > history_rect.y + history_rect.height - 32:
-            break
+    for line, spacer in visible_lines:
+        if spacer:
+            y += block_gap
+            continue
+        draw_text(font, line, int(history_rect.x), y, 18, LIGHTGRAY)
+        y += line_height
     button_y = rect.y + rect.height - 76
     if state.active_dialogue.choices:
         x = rect.x + 24
@@ -296,6 +329,22 @@ def draw_dialogue_modal(font: Font | None, state: GameState) -> None:
 def _hud_block(font: Font | None, rect: Rectangle, label: str, value: str, color: Color) -> None:
     draw_text(font, label, int(rect.x), int(rect.y), 17, Color(170, 170, 170, 255))
     draw_text(font, value, int(rect.x), int(rect.y) + 16, 24, color)
+
+
+def _hud_meter(font: Font | None, rect: Rectangle, label: str, value: int, maximum: int, fill: Color, track: Color) -> None:
+    draw_text(font, label, int(rect.x), int(rect.y), 16, Color(170, 170, 170, 255))
+    bar = Rectangle(rect.x, rect.y + 18, rect.width, 12)
+    draw_frame(bar, Color(18, 20, 24, 255), Color(74, 78, 90, 220))
+    inner = Rectangle(bar.x + 2, bar.y + 2, max(0, bar.width - 4), max(0, bar.height - 4))
+    draw_rectangle_rec(inner, track)
+    segments = max(1, maximum)
+    gap = 2.0
+    seg_w = max(3.0, (inner.width - gap * (segments - 1)) / segments)
+    for index in range(segments):
+        seg_x = inner.x + index * (seg_w + gap)
+        seg = Rectangle(seg_x, inner.y, seg_w, inner.height)
+        draw_rectangle_rec(seg, fill if index < value else track)
+    draw_text(font, f"{value}/{maximum}", int(rect.x + rect.width + 10), int(rect.y + 11), 18, fill)
 
 
 def _find_requirement(action: ActionDef | None, kind: str, key: str) -> InputRequirement | None:

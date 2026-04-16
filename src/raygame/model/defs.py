@@ -9,6 +9,7 @@ from .enums import Risk, ScreenName, Suit
 class Condition:
     kind: str
     value: str | int | bool | tuple[str, ...] | None = None
+    label: str = ""
 
 
 @dataclass(frozen=True)
@@ -73,6 +74,7 @@ class LocationNode:
     title: str
     description: str
     position: tuple[int, int] | None = None
+    show_clock_ids: tuple[str, ...] = ()
     actions: tuple[ActionDef, ...] = ()
     children: tuple["LocationNode", ...] = ()
     conditions: tuple[Condition, ...] = ()
@@ -95,6 +97,7 @@ class ProgressClockSpec:
     id: str
     title: str
     segments: int
+    description: str = ""
     thresholds: tuple[ClockThreshold, ...] = ()
     tags: tuple[str, ...] = ()
     hidden: bool = False
@@ -119,23 +122,6 @@ class EndingDef:
 
 
 @dataclass(frozen=True)
-class ScenarioDef:
-    id: str
-    title: str
-    screen: ScreenName
-    world_root: LocationNode
-    clocks: tuple[ProgressClockSpec, ...]
-    initial_visible_locations: tuple[str, ...]
-    initial_visible_clocks: tuple[str, ...]
-    initial_health: int
-    initial_stress: int
-    initial_money: int
-    initial_cigarettes: int
-    initial_inventory: dict[str, int] = field(default_factory=dict)
-    initial_growth_choices: tuple[str, ...] = ()
-
-
-@dataclass(frozen=True)
 class CompiledScenario:
     id: str
     title: str
@@ -149,9 +135,6 @@ class CompiledScenario:
     clocks_by_id: dict[str, ProgressClockSpec]
     global_clock_ids: tuple[str, ...]
     location_clock_ids: dict[str, tuple[str, ...]]
-    action_clock_ids: dict[str, tuple[str, ...]]
-    initial_visible_locations: tuple[str, ...]
-    initial_visible_clocks: tuple[str, ...]
     initial_health: int
     initial_stress: int
     initial_money: int

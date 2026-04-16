@@ -14,6 +14,11 @@ class Procedure:
     env: "Environment"
 
 
+@dataclass(frozen=True)
+class SpecialFormProcedure:
+    func: Callable[[list[Any], "Environment"], Any]
+
+
 class Environment:
     def __init__(
         self,
@@ -162,6 +167,8 @@ def evaluate(expr: Any, env: Environment) -> Any:
         assert len(expr) == 3, "`define` is only valid at module top level."
         raise EncounterSchemeError("`define` must be handled at module load time.")
     proc = evaluate(head, env)
+    if isinstance(proc, SpecialFormProcedure):
+        return proc.func(expr[1:], env)
     args = [evaluate(item, env) for item in expr[1:]]
     return apply(proc, args)
 
@@ -197,6 +204,22 @@ def base_environment() -> Environment:
             "false": False,
             "nil": None,
             "list": lambda *items: list(items),
+            "car": _car,
+            "cdr": _cdr,
+            "cons": _cons,
+            "append": _append,
+            "length": lambda value: len(_list_value(value)),
+            "list?": lambda value: isinstance(_scalar(value), list),
+            "pair?": lambda value: isinstance(_scalar(value), list) and len(_scalar(value)) > 0,
+            "assoc": _assoc,
+            "assoc-ref": _assoc_ref,
+            "assoc-set": _assoc_set,
+            "assoc-remove": _assoc_remove,
+            "map": _map_builtin,
+            "filter": _filter_builtin,
+            "member": _member_builtin,
+            "reverse": _reverse_builtin,
+            "apply": _apply_builtin,
             "+": lambda *items: sum(int(_scalar(item)) for item in items),
             "-": _sub,
             "min": lambda *items: min(int(_scalar(item)) for item in items),
@@ -222,10 +245,111 @@ def _sub(first: Any, *rest: Any) -> int:
     return start - sum(int(_scalar(item)) for item in rest)
 
 
+def _car(value: Any) -> Any:
+    items = _list_value(value)
+    assert items, "`car` expects a non-empty list."
+    return items[0]
+
+
+def _cdr(value: Any) -> list[Any]:
+    items = _list_value(value)
+    assert items, "`cdr` expects a non-empty list."
+    return items[1:]
+
+
+def _cons(head: Any, tail: Any) -> list[Any]:
+    items = _list_value(tail)
+    return [head, *items]
+
+
+def _append(*values: Any) -> list[Any]:
+    result: list[Any] = []
+    for value in values:
+        result.extend(_list_value(value))
+    return result
+
+
+def _assoc(key: Any, alist: Any) -> Any:
+    needle = _scalar(key)
+    for entry in _list_value(alist):
+        pair = _list_value(entry)
+        assert len(pair) >= 2, "`assoc` expects an alist of `(key value ...)` entries."
+        if _scalar(pair[0]) == needle:
+            return pair
+    return None
+
+
+def _assoc_ref(alist: Any, key: Any, default: Any | None = None) -> Any:
+    entry = _assoc(key, alist)
+    if entry is None:
+        return default
+    assert len(entry) >= 2, "`assoc-ref` expects alist entries with at least key and value."
+    return entry[1]
+
+
+def _assoc_set(alist: Any, key: Any, value: Any) -> list[Any]:
+    needle = _scalar(key)
+    result: list[Any] = []
+    replaced = False
+    for entry in _list_value(alist):
+        pair = _list_value(entry)
+        assert len(pair) >= 2, "`assoc-set` expects an alist of `(key value ...)` entries."
+        if _scalar(pair[0]) == needle:
+            result.append([pair[0], value, *pair[2:]])
+            replaced = True
+        else:
+            result.append(pair)
+    if not replaced:
+        result.append([key, value])
+    return result
+
+
+def _assoc_remove(alist: Any, key: Any) -> list[Any]:
+    needle = _scalar(key)
+    result: list[Any] = []
+    for entry in _list_value(alist):
+        pair = _list_value(entry)
+        assert len(pair) >= 2, "`assoc-remove` expects an alist of `(key value ...)` entries."
+        if _scalar(pair[0]) != needle:
+            result.append(pair)
+    return result
+
+
+def _map_builtin(proc: Any, values: Any) -> list[Any]:
+    return [apply(proc, [item]) for item in _list_value(values)]
+
+
+def _filter_builtin(proc: Any, values: Any) -> list[Any]:
+    return [item for item in _list_value(values) if truthy(apply(proc, [item]))]
+
+
+def _member_builtin(value: Any, values: Any) -> Any:
+    needle = _scalar(value)
+    items = _list_value(values)
+    for index, item in enumerate(items):
+        if _scalar(item) == needle:
+            return items[index:]
+    return None
+
+
+def _reverse_builtin(values: Any) -> list[Any]:
+    return list(reversed(_list_value(values)))
+
+
+def _apply_builtin(proc: Any, values: Any) -> Any:
+    return apply(proc, list(_list_value(values)))
+
+
 def _scalar(value: Any) -> Any:
     if hasattr(value, "value") and hasattr(value, "name"):
         return getattr(value, "value")
     return value
+
+
+def _list_value(value: Any) -> list[Any]:
+    raw = _scalar(value)
+    assert isinstance(raw, list), f"Expected list, got: {raw!r}"
+    return raw
 
 
 def _quote_value(node: Any) -> Any:

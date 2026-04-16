@@ -240,7 +240,6 @@
 
 (define exposed_scene
   (scene
-    :key 'exposed
     :title "暴露撤退"
     :desc "宅子里已经乱起来了。你没能把话听完，只能先退开。"
     :show-clocks (list alert truth)
@@ -249,19 +248,16 @@
 
 (define yard_act
   (scene
-    :key 'yard_root
     :title "院墙缺口"
     :desc "深夜。你站在宅邸外墙的阴影里。第一幕的目标很简单：穿过外部警戒，摸到屋外。左边是保安巡逻的走廊，右边是看门犬守着的小径。"
     :show-clocks (list alert)
     :actions (list )
     :children (list (scene
-    :key 'left_corridor
     :title "左侧走廊"
     :desc "这是一条没有遮挡的硬路。你可以先控场，把巡逻引偏后再穿；也可以狠狠干硬闯，拿伤势和警觉度去换速度。"
     :show-clocks (list alert patrol traverse)
     :actions (list (when (clock-empty? patrol) left_start_patrol) (when (not (clock-filled? traverse)) left_berserk_rush) (when (and (= route 'left) (clock-partial? patrol) (not (clock-filled? traverse))) left_hold_position) (when (and (= route 'left) (not (clock-empty? patrol)) (not (clock-filled? traverse))) left_advance) (when (and (= route 'left) (clock-filled? patrol) (not (clock-filled? traverse))) left_fight_guard))
   ) (scene
-    :key 'right_path
     :title "右侧小径"
     :desc "这条路更偏潜行。你可以贴墙慢行，也可以先处理那条看门犬，再从树影里悄悄摸过去。"
     :show-clocks (list alert traverse)
@@ -271,19 +267,16 @@
 
 (define entry_act
   (scene
-    :key 'entry_outer
     :title "房屋外墙"
     :desc "第二幕里，你已经摸到屋外。现在的问题不是还能不能潜过去，而是你要以什么姿态进屋。正门稳一点，窗户快一点，也险一点。"
     :show-clocks (list alert)
     :actions (list )
     :children (list (scene
-    :key 'front_door
     :title "大门"
     :desc "门锁不算新，里头的人影偶尔会从门缝后晃过去。"
     :show-clocks (list alert)
     :actions (list front_pick_lock front_wait_gap)
   ) (scene
-    :key 'upper_window
     :title "窗户"
     :desc "排水管能借力，但二楼那扇窗只留了一道窄缝。"
     :show-clocks (list alert)
@@ -293,7 +286,6 @@
 
 (define bedroom_front_scene
   (scene
-    :key 'bedroom_front
     :title "卧室"
     :desc "第三幕开始了。你从正门进来，老大抬头时明显愣了一下。现在你的目标不是再潜，而是逼他说出真相。"
     :show-clocks (list alert truth)
@@ -302,7 +294,6 @@
 
 (define bedroom_window_scene
   (scene
-    :key 'bedroom_window
     :title "卧室"
     :desc "第三幕开始了。你从窗户翻进来，他看你的眼神更冷，也更警觉。你得在更高压的气氛里把真相逼出来。"
     :show-clocks (list alert truth)
@@ -312,27 +303,23 @@
 (define bedroom_act
   (if (= entry_method 'front) bedroom_front_scene bedroom_window_scene))
 
-(meta :key 'black_night :title "黑夜入宅" :desc "深夜潜入戒备森严的宅邸，只为听到一个真相。")
-
-(on-fail (list (effect 'stress 2)))
-
-(state
-  (alert (clock :title "全局警觉度" :initial 0 :max 6))
-  (patrol (clock :title "保安巡逻" :initial 0 :max 3))
-  (traverse (clock :title "穿越进度" :initial 0 :max 2))
-  (truth (clock :title "真相" :initial 0 :max 3))
-  (phase 'yard)
-  (route none)
-  (dog_state 'calm)
-  (entry_method none)
-)
-
-(reacts
-  (react :key 'react_0 :when (clock-filled? alert) :then (list (effect 'finish fail)))
-  (react :key 'react_1 :when (clock-filled? truth) :then (list (effect 'finish success)))
-  (react :key 'react_2 :when (and (= phase 'yard) (= route 'left) (clock-filled? traverse)) :then (list (effect 'set phase 'entry) (effect 'set route none) (effect 'set patrol 0) (effect 'set traverse 0)))
-  (react :key 'react_3 :when (and (= phase 'yard) (= route 'right) (clock-filled? traverse)) :then (list (effect 'set phase 'entry) (effect 'set route none) (effect 'set traverse 0)))
-  (react :key 'react_4 :when (and (= phase 'entry) (not (= entry_method none))) :then (list (effect 'set phase 'bedroom)))
-)
-
-(cond ((clock-filled? alert) exposed_scene) ((= phase 'yard) yard_act) ((= phase 'entry) entry_act) (else bedroom_act))
+(content
+  :meta (meta :key 'black_night :title "黑夜入宅" :desc "深夜潜入戒备森严的宅邸，只为听到一个真相。")
+  :on-fail (list (effect 'stress 2))
+  :state (state
+    (alert (clock :title "全局警觉度" :initial 0 :max 6))
+    (patrol (clock :title "保安巡逻" :initial 0 :max 3))
+    (traverse (clock :title "穿越进度" :initial 0 :max 2))
+    (truth (clock :title "真相" :initial 0 :max 3))
+    (phase 'yard)
+    (route none)
+    (dog_state 'calm)
+    (entry_method none))
+  :reacts (reacts
+    (react :when (clock-filled? alert) :then (list (effect 'finish fail)))
+    (react :when (clock-filled? truth) :then (list (effect 'finish success)))
+    (react :when (and (= phase 'yard) (= route 'left) (clock-filled? traverse)) :then (list (effect 'set phase 'entry) (effect 'set route none) (effect 'set patrol 0) (effect 'set traverse 0)))
+    (react :when (and (= phase 'yard) (= route 'right) (clock-filled? traverse)) :then (list (effect 'set phase 'entry) (effect 'set route none) (effect 'set traverse 0)))
+    (react :when (and (= phase 'entry) (not (= entry_method none))) :then (list (effect 'set phase 'bedroom))))
+  :root
+  (cond ((clock-filled? alert) exposed_scene) ((= phase 'yard) yard_act) ((= phase 'entry) entry_act) (else bedroom_act)))

@@ -65,10 +65,31 @@ def draw_clock_row(font: Font | None, rect: Rectangle, clock_ids: tuple[str, ...
         spec = _clock_spec(state, clock_id)
         if "action_use" in spec.tags:
             continue
-        width = max(132.0 * scale, measure_text_width(font, spec.title, max(11, int(round(16 * scale)))) + spec.segments * 18.0 * scale + 52.0 * scale)
-        chip = Rectangle(x, y, width, 24.0 * scale)
+        desc_size = max(9, int(round(12 * scale)))
+        desc_width = measure_text_width(font, spec.description, desc_size) if spec.description else 0.0
+        width = max(
+            156.0 * scale,
+            measure_text_width(font, spec.title, max(11, int(round(16 * scale)))) + spec.segments * 18.0 * scale + 52.0 * scale,
+            desc_width + 8.0 * scale,
+        )
+        chip = Rectangle(x, y, width, 42.0 * scale if spec.description else 24.0 * scale)
         draw_text(font, spec.title, int(chip.x), int(chip.y) + max(1, int(round(2 * scale))), max(11, int(round(16 * scale))), LIGHTGRAY)
-        draw_inline_clock(font, Rectangle(chip.x + 74.0 * scale, chip.y + 1.0 * scale, chip.width - 74.0 * scale, 20.0 * scale), spec.segments, _clock_value(state, clock_id), scale=scale)
+        draw_inline_clock(
+            font,
+            Rectangle(chip.x + 74.0 * scale, chip.y + 1.0 * scale, chip.width - 74.0 * scale, 20.0 * scale),
+            spec.segments,
+            _clock_value(state, clock_id),
+            scale=scale,
+        )
+        if spec.description:
+            draw_text(
+                font,
+                spec.description,
+                int(chip.x),
+                int(chip.y + 22.0 * scale),
+                desc_size,
+                Color(150, 150, 150, 255),
+            )
         x += width + 20.0 * scale
 
 
@@ -104,8 +125,18 @@ def draw_corner_labels(font: Font | None, rect: Rectangle, labels: tuple[str, ..
 def condition_labels(conditions) -> tuple[str, ...]:
     labels: list[str] = []
     for item in conditions:
+        if item.label:
+            labels.append(item.label)
+            continue
         if item.kind == "has_item" and isinstance(item.value, str):
-            labels.append(f"需要 {ITEM_LABELS.get(item.value, item.value)}")
+            key, _, raw_amount = item.value.partition(":")
+            amount = int(raw_amount) if raw_amount else 1
+            title = ITEM_LABELS.get(key, key)
+            labels.append(f"需要 {title}" if amount == 1 else f"需要 {title} x{amount}")
+        elif item.kind == "field_at_least" and isinstance(item.value, str):
+            key, raw = item.value.split(":", 1)
+            title = RESOURCE_LABELS.get(key, ITEM_LABELS.get(key, key))
+            labels.append(f"需要 {title} {raw}")
     return tuple(labels)
 
 
@@ -120,8 +151,6 @@ def requirement_labels(requirements: tuple[InputRequirement, ...]) -> tuple[str,
 def action_corner_labels(action: ActionDef) -> tuple[str, ...]:
     labels = list(condition_labels(action.conditions))
     labels.extend(requirement_labels(action.inputs))
-    if is_single_use_action(action) and not labels:
-        labels.insert(0, "单次")
     return tuple(labels)
 
 
@@ -162,12 +191,6 @@ def draw_usage_clock(center: Vector2, radius: float, value: int, segments: int) 
         angle = math.radians(start + index * step)
         tip = Vector2(center.x + math.cos(angle) * radius, center.y + math.sin(angle) * radius)
         draw_line_ex(center, tip, 1.0, Color(18, 18, 18, 210))
-
-
-def is_single_use_action(action: ActionDef) -> bool:
-    return any(item.kind == "hide_action" and item.value == action.id for item in action.effects)
-
-
 def _clock_spec(state: GameState, clock_id: str):
     return get_clock_spec_for_state(state, clock_id)
 

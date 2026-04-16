@@ -25,7 +25,7 @@ def draw_debug_panel(font: Font | None, state: GameState) -> None:
     if text_button(font, Rectangle(1248, y, 140, 30), "烟卷 +1", 18):
         state.resources.cigarettes += 1
     y += 40
-    if text_button(font, Rectangle(1096, y, 140, 30), "显露仓库", 18):
-        state.world.visible_locations.add("warehouse")
+    if text_button(font, Rectangle(1096, y, 140, 30), "钥匙 +1", 18):
+        state.world.inventory["car_key"] = state.world.inventory.get("car_key", 0) + 1
     if text_button(font, Rectangle(1248, y, 140, 30), "追击 +1", 18):
         advance_clock(state, "pursuit", 1)

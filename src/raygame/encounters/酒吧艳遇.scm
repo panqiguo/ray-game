@@ -211,7 +211,6 @@
 
 (define stage_cold
   (scene
-    :key 'bar_cold
     :title "冷淡"
     :desc "目标把自己裹在沉默里。你得先让他愿意继续说话。"
     :show-clocks (list rapport tension)
@@ -220,7 +219,6 @@
 
 (define stage_warm
   (scene
-    :key 'bar_warm
     :title "熟络"
     :desc "话题已经打开了。你要让他意识到，这次偶遇有点不一样。"
     :show-clocks (list rapport tension)
@@ -229,7 +227,6 @@
 
 (define stage_soft
   (scene
-    :key 'bar_soft
     :title "松动"
     :desc "他的防备已经松了。现在只差最后一层，情报就在那后面。"
     :show-clocks (list rapport tension)
@@ -238,46 +235,41 @@
 
 (define stage_exit
   (scene
-    :key 'bar_exit
     :title "离场"
     :desc "情报已经到手。你只剩下决定今晚怎么收尾。"
     :show-clocks (list rapport tension)
     :actions (list breathe leave_polite walk_away invite_along)
   ))
 
-(meta :key '酒吧艳遇 :title "酒吧艳遇" :desc "深夜的酒吧里，玩家要在目标关上心门之前钻进去，把情报带出来。")
-
-(on-success (list ))
-
-(state
-  (rapport (clock :title "好感" :initial 0 :max 9))
-  (tension (clock :title "警觉度" :initial 0 :max 3))
-  (attitude 'cold)
-  (ending none)
-  (cold_direct_talk_used false)
-  (cold_ask_help_used false)
-  (cold_use_room_used false)
-  (cold_leave_hook_used false)
-  (warm_interest_used false)
-  (warm_flirt_used false)
-  (warm_read_him_used false)
-  (warm_keep_distance_used false)
-  (soft_follow_lead_used false)
-  (soft_make_promise_used false)
-  (soft_tempt_used false)
-  (soft_pull_thread_used false)
-  (soft_answer_probe_used false)
-)
-
-(reacts
-  (react :key 'react_0 :when (>= (clock-value tension) (clock-full tension)) :then (list (effect 'finish fail)))
-  (react :key 'react_1 :when (>= (clock-value rapport) 3) :then (list (effect 'set attitude 'chatty)))
-  (react :key 'react_2 :when (>= (clock-value rapport) 6) :then (list (effect 'set attitude 'engaged)))
-  (react :key 'react_3 :when (>= (clock-value rapport) 9) :then (list (effect 'set attitude 'loose)))
-)
-
-(cond 
-  ((< (clock-value rapport) 3) stage_cold)
-  ((< (clock-value rapport) 6) stage_warm)
-  ((< (clock-value rapport) 9) stage_soft)
-  (else stage_exit))
+(content
+  :meta (meta :key '酒吧艳遇 :title "酒吧艳遇" :desc "深夜的酒吧里，玩家要在目标关上心门之前钻进去，把情报带出来。")
+  :on-success (list)
+  :state (state
+    (rapport (clock :title "好感" :initial 0 :max 9))
+    (tension (clock :title "警觉度" :initial 0 :max 3))
+    (attitude 'cold)
+    (ending none)
+    (cold_direct_talk_used false)
+    (cold_ask_help_used false)
+    (cold_use_room_used false)
+    (cold_leave_hook_used false)
+    (warm_interest_used false)
+    (warm_flirt_used false)
+    (warm_read_him_used false)
+    (warm_keep_distance_used false)
+    (soft_follow_lead_used false)
+    (soft_make_promise_used false)
+    (soft_tempt_used false)
+    (soft_pull_thread_used false)
+    (soft_answer_probe_used false))
+  :reacts (reacts
+    (react :when (>= (clock-value tension) (clock-full tension)) :then (list (effect 'finish fail)))
+    (react :when (>= (clock-value rapport) 3) :then (list (effect 'set attitude 'chatty)))
+    (react :when (>= (clock-value rapport) 6) :then (list (effect 'set attitude 'engaged)))
+    (react :when (>= (clock-value rapport) 9) :then (list (effect 'set attitude 'loose))))
+  :root
+  (cond 
+    ((< (clock-value rapport) 3) stage_cold)
+    ((< (clock-value rapport) 6) stage_warm)
+    ((< (clock-value rapport) 9) stage_soft)
+    (else stage_exit)))

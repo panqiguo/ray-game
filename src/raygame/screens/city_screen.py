@@ -3,6 +3,7 @@ from __future__ import annotations
 from pyray import *  # type: ignore
 
 from raygame.content import GROWTH_DEFS, SCENARIO
+from raygame.content.runtime import render_world
 from raygame.model.state import GameState
 from raygame.rules import close_modal, current_action, dismiss_pending_resolution, location_is_visible
 from raygame.screens.city_presenters import (
@@ -58,19 +59,21 @@ def draw_city_screen(font: Font | None, state: GameState, rng) -> None:
 
 
 def _draw_world_table(font: Font | None, state: GameState, rect: Rectangle, rng) -> None:
+    snapshot = render_world(SCENARIO, state)
     sections, _ = draw_table_shell(
         font,
         rect,
-        title=SCENARIO.title,
-        subtitle="地点像散在桌面上的卡，你可以从这里一层层翻开它们。",
+        title=snapshot.title,
+        subtitle="",
     )
-    draw_clock_row(font, Rectangle(sections.header.x + 18, sections.header.y + 84, sections.header.width - 36, 26), SCENARIO.global_clock_ids, state)
+    draw_clock_row(font, Rectangle(sections.header.x + 18, sections.header.y + 84, sections.header.width - 36, 48), snapshot.global_clock_ids, state)
     draw_world_objects(font, state, rng, sections.content, present_world_objects(state))
 
 
 def _draw_location_table(font: Font | None, state: GameState, rng) -> None:
     assert state.modal.primary_id is not None
-    location = SCENARIO.locations_by_id[state.modal.primary_id]
+    snapshot = render_world(SCENARIO, state)
+    location = snapshot.locations_by_id[state.modal.primary_id]
     resolving = state.pending_resolution is not None and not state.pending_resolution.settled
     rect = floating_table_rect()
     draw_scrim(layout().stage)
@@ -84,9 +87,9 @@ def _draw_location_table(font: Font | None, state: GameState, rng) -> None:
     if closed and not resolving:
         close_modal(state)
         return
-    location_clock_ids = present_location_clock_ids(location.id)
+    location_clock_ids = present_location_clock_ids(state, location.id)
     if location_clock_ids:
-        draw_clock_row(font, Rectangle(sections.header.x + 18, sections.header.y + 84, sections.header.width - 36, 26), location_clock_ids, state)
+        draw_clock_row(font, Rectangle(sections.header.x + 18, sections.header.y + 84, sections.header.width - 36, 48), location_clock_ids, state)
     child_ids = tuple(child.id for child in location.children if location_is_visible(child.id, state))
     draw_location_contents(
         font,

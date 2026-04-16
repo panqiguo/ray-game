@@ -3,6 +3,9 @@ from __future__ import annotations
 from raygame.constants import HAND_SIZE, MAX_LOG_LINES
 from raygame.content import GROWTH_DEFS, SCENARIO
 from raygame.content.cards import CARD_DEFS
+from raygame.content.runtime import next_react_rule as next_world_react_rule
+from raygame.content.runtime import react_rule_matches as world_react_rule_matches
+from raygame.content.runtime import render_world
 from raygame.dialogues import choose_dialogue_option as choose_runtime_dialogue_option
 from raygame.dialogues import continue_dialogue_session, create_dialogue_session, create_quick_dialogue_session, get_dialogue
 from raygame.encounters import MAX_REACT_STEPS, get_encounter, initial_store, next_react_rule, react_rule_matches, render_encounter
@@ -18,6 +21,7 @@ from raygame.model.state import (
     PendingResolutionState,
     ProgressClockState,
     ResourceState,
+    ModalState,
     SelectedInputState,
     WorldState,
 )
@@ -39,15 +43,15 @@ def start_new_run(seed: int) -> tuple[GameState, RandomSource]:
     rng = RandomSource(seed)
     deck = make_starting_deck(rng)
     world = WorldState(
-        visible_locations=set(SCENARIO.initial_visible_locations),
         progress_clocks={
             clock_id: ProgressClockState(
                 value=0,
-                visible=clock_id in SCENARIO.initial_visible_clocks or not spec.hidden,
+                visible=True,
             )
             for clock_id, spec in SCENARIO.clocks_by_id.items()
         },
         inventory=dict(SCENARIO.initial_inventory),
+        values=dict(SCENARIO.initial_values),
     )
     state = GameState(
         deck=deck,
@@ -74,7 +78,7 @@ def start_new_run(seed: int) -> tuple[GameState, RandomSource]:
 
 
 def get_action(action_id: str) -> ActionDef:
-    return SCENARIO.actions_by_id[action_id]
+    return render_world(SCENARIO, _runtime_projection_state()).actions_by_id[action_id]
 
 
 def get_action_for_state(state: GameState, action_id: str) -> ActionDef | None:
@@ -84,7 +88,13 @@ def get_action_for_state(state: GameState, action_id: str) -> ActionDef | None:
 def _current_content(state: GameState | None = None):
     if state is not None and state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None:
         return _encounter_snapshot(state)
-    return SCENARIO
+    assert state is not None
+    return render_world(SCENARIO, state)
+
+
+def _runtime_projection_state() -> GameState:
+    state, _ = start_new_run(0)
+    return state
 
 
 def _encounter(state: GameState):
@@ -117,34 +127,90 @@ def get_clock_spec_for_state(state: GameState, clock_id: str):
     return SCENARIO.clocks_by_id[clock_id]
 
 
+def _field_value(state: GameState, key: str) -> int | bool | str:
+    if state.active_encounter is not None and key in state.active_encounter.store:
+        return state.active_encounter.store[key]
+    if hasattr(state.attributes, key):
+        return getattr(state.attributes, key)
+    if hasattr(state.resources, key):
+        return getattr(state.resources, key)
+    if key in state.world.values:
+        return state.world.values[key]
+    return state.world.inventory.get(key, 0)
+
+
+def _set_field(state: GameState, key: str, value: int | bool | str, extra_lines: list[str] | None = None) -> None:
+    if state.active_encounter is not None and key in state.active_encounter.store:
+        current = state.active_encounter.store[key]
+        state.active_encounter.store[key] = _coerce_like(current, value)
+        return
+    if hasattr(state.attributes, key):
+        setattr(state.attributes, key, int(value))
+        if key == "health":
+            sync_trauma_cards_with_health(state)
+        return
+    if hasattr(state.resources, key):
+        setattr(state.resources, key, int(value))
+        return
+    if isinstance(value, bool) or key in state.world.values:
+        state.world.values[key] = value
+        return
+    count = int(value)
+    if count <= 0:
+        state.world.inventory.pop(key, None)
+    else:
+        state.world.inventory[key] = count
+
+
+def _add_field(state: GameState, key: str, amount: int, extra_lines: list[str] | None = None) -> None:
+    if key == "health":
+        change_health(state, amount, extra_lines)
+        return
+    if key == "stress":
+        change_stress(state, amount, extra_lines)
+        return
+    current = _field_value(state, key)
+    _set_field(state, key, int(current) + amount, extra_lines)
+
+
+def _coerce_like(current: int | bool | str, value: int | bool | str) -> int | bool | str:
+    if isinstance(current, bool):
+        return bool(value)
+    if isinstance(current, int):
+        return int(value)
+    return str(value)
+
+
 def action_is_visible(action: ActionDef, state: GameState) -> bool:
-    if state.screen != ScreenName.ENCOUNTER and action.id in state.world.hidden_actions:
+    content = _current_content(state)
+    if action.id not in content.actions_by_id:
         return False
     location_id = location_for_action(action.id, state)
     if location_id is not None and not location_is_visible(location_id, state):
         return False
-    return all_met(action.conditions, state)
+    return True
 
 
 def action_is_available(action: ActionDef, state: GameState) -> bool:
-    return action_is_visible(action, state) and requirements_affordable(action.inputs, state)
+    return action_is_visible(action, state) and all_met(action.conditions, state) and requirements_affordable(action.inputs, state)
 
 
 def location_is_visible(location_id: str, state: GameState) -> bool:
     content = _current_content(state)
-    if state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None:
-        return location_id in content.locations_by_id
-    elif location_id == SCENARIO.world_root_id:
+    if location_id not in content.locations_by_id:
+        return False
+    if location_id == content.world_root_id:
         return True
     parent_id = content.parent_by_id[location_id]
-    if parent_id is None:
-        if state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None:
-            return False
-        if location_id not in state.world.visible_locations:
-            return False
-    else:
-        if not location_is_visible(parent_id, state):
-            return False
+    if parent_id is not None and not location_is_visible(parent_id, state):
+        return False
+    return True
+
+
+def location_is_available(location_id: str, state: GameState) -> bool:
+    if not location_is_visible(location_id, state):
+        return False
+    content = _current_content(state)
     location = content.locations_by_id[location_id]
     return all_met(location.conditions, state)
 
@@ -157,7 +223,16 @@ def evaluate_condition(item, state: GameState) -> bool:
     value = item.value
     if item.kind == "has_item":
         assert isinstance(value, str)
-        return state.world.inventory.get(value, 0) > 0
+        key, _, raw = value.partition(":")
+        amount = int(raw) if raw else 1
+        return int(_field_value(state, key)) >= amount
+    if item.kind == "field_at_least":
+        assert isinstance(value, str)
+        key, raw = value.split(":", 1)
+        return int(_field_value(state, key)) >= int(raw)
+    if item.kind == "field_truthy":
+        assert isinstance(value, str)
+        return bool(_field_value(state, value))
     if item.kind == "inventory_below":
         assert isinstance(value, str)
         item_id, raw = value.split(":")
@@ -171,9 +246,6 @@ def evaluate_condition(item, state: GameState) -> bool:
         if state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None and value in _encounter(state).clocks_by_id:
             return value not in state.active_encounter.clocks
         return not state.world.progress_clocks[value].visible
-    if item.kind == "location_visible":
-        assert isinstance(value, str)
-        return value in state.world.visible_locations
     if item.kind == "in_encounter_act":
         return False
     if item.kind == "in_encounter_state":
@@ -195,11 +267,8 @@ def requirements_affordable(inputs: tuple[InputRequirement, ...], state: GameSta
                 return False
             if requirement.key == "negative" and not any(CARD_DEFS[card_id].is_negative for card_id in state.deck.hand):
                 return False
-        elif requirement.kind == "resource":
-            if getattr(state.resources, requirement.key) < requirement.amount:
-                return False
         elif requirement.kind == "item":
-            if state.world.inventory.get(requirement.key, 0) < requirement.amount:
+            if int(_field_value(state, requirement.key)) < requirement.amount:
                 return False
         else:
             raise AssertionError(f"Unsupported input kind: {requirement.kind}")
@@ -248,7 +317,8 @@ def clear_selected_input(state: GameState) -> None:
 def close_modal(state: GameState) -> None:
     dismiss_pending_resolution(state)
     if state.modal.kind == "dialogue":
-        state.active_dialogue = None
+        _clear_dialogue_modal(state)
+        return
     if state.modal.return_kind:
         state.modal.kind = state.modal.return_kind
         state.modal.primary_id = state.modal.return_primary_id
@@ -266,13 +336,6 @@ def select_card_input(state: GameState, card_id: str, card_index: int | None = N
         clear_selected_input(state)
         return
     state.selected_input = SelectedInputState(kind="card", key=card_id, index=card_index)
-
-
-def select_resource_input(state: GameState, key: str) -> None:
-    if state.selected_input.kind == "resource" and state.selected_input.key == key:
-        clear_selected_input(state)
-        return
-    state.selected_input = SelectedInputState(kind="resource", key=key)
 
 
 def select_item_input(state: GameState, key: str) -> None:
@@ -311,20 +374,36 @@ def _open_dialogue_session(state: GameState, session, *, primary_id: str) -> Non
 def continue_dialogue(state: GameState) -> None:
     if state.active_dialogue is None:
         return
+    keep_pinned = state.active_dialogue.history_scroll == 0
     continue_dialogue_session(state.active_dialogue)
+    if keep_pinned and state.active_dialogue is not None:
+        state.active_dialogue.history_scroll = 0
+    if state.active_dialogue.finished and state.active_dialogue.auto_close_on_finish:
+        finish_dialogue(state)
 
 
 def choose_dialogue_option(state: GameState, index: int) -> None:
     if state.active_dialogue is None:
         return
+    keep_pinned = state.active_dialogue.history_scroll == 0
     choose_runtime_dialogue_option(state.active_dialogue, index)
+    if keep_pinned and state.active_dialogue is not None:
+        state.active_dialogue.history_scroll = 0
+    if state.active_dialogue.finished and state.active_dialogue.auto_close_on_finish:
+        finish_dialogue(state)
 
 
 def finish_dialogue(state: GameState) -> None:
     if state.active_dialogue is None:
         return
+    _clear_dialogue_modal(state)
+
+
+def _clear_dialogue_modal(state: GameState) -> None:
     state.active_dialogue = None
-    close_modal(state)
+    state.modal = ModalState()
+    clear_assembly(state)
+    clear_selected_input(state)
 
 
 def focus_action(state: GameState, action_id: str) -> None:
@@ -349,10 +428,8 @@ def action_can_accept_selected_input(state: GameState, action: ActionDef, requir
     if check_slot:
         return _selected_card_id(state) is not None
     assert requirement is not None
-    if requirement.kind == "resource":
-        return selected.kind == "resource" and selected.key == requirement.key and getattr(state.resources, requirement.key) >= requirement.amount
     if requirement.kind == "item":
-        return selected.kind == "item" and selected.key == requirement.key and state.world.inventory.get(requirement.key, 0) >= requirement.amount
+        return selected.kind == "item" and selected.key == requirement.key and int(_field_value(state, requirement.key)) >= requirement.amount
     if requirement.kind == "card":
         card_id = _selected_card_id(state)
         if selected.kind != "card" or card_id is None:
@@ -365,7 +442,7 @@ def toggle_action_check_slot(state: GameState, action: ActionDef) -> None:
     if state.assembly.action_id == action.id and state.assembly.slotted_card_id is not None:
         state.assembly.slotted_card_id = None
         state.assembly.slotted_card_index = None
-        if not state.assembly.slotted_items and not state.assembly.slotted_resources:
+        if not state.assembly.slotted_items:
             state.assembly.action_id = None
         return
     if not action_can_accept_selected_input(state, action, check_slot=True):
@@ -380,22 +457,18 @@ def toggle_action_check_slot(state: GameState, action: ActionDef) -> None:
 
 def toggle_action_requirement_slot(state: GameState, action: ActionDef, requirement: InputRequirement) -> None:
     if state.assembly.action_id == action.id and requirement_is_slotted(state, requirement):
-        if requirement.kind == "resource":
-            state.assembly.slotted_resources.pop(requirement.key, None)
-        elif requirement.kind == "item":
+        if requirement.kind == "item":
             state.assembly.slotted_items.pop(requirement.key, None)
         elif requirement.kind == "card":
             state.assembly.slotted_card_id = None
             state.assembly.slotted_card_index = None
-        if not state.assembly.slotted_items and not state.assembly.slotted_resources and state.assembly.slotted_card_id is None:
+        if not state.assembly.slotted_items and state.assembly.slotted_card_id is None:
             state.assembly.action_id = None
         return
     if not action_can_accept_selected_input(state, action, requirement):
         return
     focus_action(state, action.id)
-    if requirement.kind == "resource":
-        state.assembly.slotted_resources[requirement.key] = requirement.amount
-    elif requirement.kind == "item":
+    if requirement.kind == "item":
         state.assembly.slotted_items[requirement.key] = requirement.amount
     elif requirement.kind == "card":
         card_id = _selected_card_id(state)
@@ -427,15 +500,10 @@ def toggle_requirement_input(state: GameState, requirement: InputRequirement) ->
     action = current_action(state)
     if action is None:
         return
-    if requirement.kind == "resource":
-        if state.assembly.slotted_resources.get(requirement.key, 0) >= requirement.amount:
-            state.assembly.slotted_resources.pop(requirement.key, None)
-        elif getattr(state.resources, requirement.key) >= requirement.amount:
-            state.assembly.slotted_resources[requirement.key] = requirement.amount
-    elif requirement.kind == "item":
+    if requirement.kind == "item":
         if state.assembly.slotted_items.get(requirement.key, 0) >= requirement.amount:
             state.assembly.slotted_items.pop(requirement.key, None)
-        elif state.world.inventory.get(requirement.key, 0) >= requirement.amount:
+        elif int(_field_value(state, requirement.key)) >= requirement.amount:
             state.assembly.slotted_items[requirement.key] = requirement.amount
 
 
@@ -445,8 +513,6 @@ def requirement_is_slotted(state: GameState, requirement: InputRequirement) -> b
             card_id = _slotted_card_id(state)
             return card_id is not None and CARD_DEFS[card_id].is_negative
         return _slotted_card_id(state) is not None
-    if requirement.kind == "resource":
-        return state.assembly.slotted_resources.get(requirement.key, 0) >= requirement.amount
     if requirement.kind == "item":
         return state.assembly.slotted_items.get(requirement.key, 0) >= requirement.amount
     raise AssertionError(f"Unsupported requirement kind: {requirement.kind}")
@@ -454,6 +520,8 @@ def requirement_is_slotted(state: GameState, requirement: InputRequirement) -> b
 
 def action_ready_to_execute(action: ActionDef, state: GameState) -> bool:
     if not action_is_available(action, state):
+        return False
+    if action.check is None and not action.effects:
         return False
     for requirement in action.inputs:
         if not requirement_is_slotted(state, requirement):
@@ -601,12 +669,8 @@ def _should_auto_dismiss_pending_resolution(
 def _consume_inputs(state: GameState, action: ActionDef) -> None:
     for requirement in action.inputs:
         assert requirement_is_slotted(state, requirement), f"Requirement not slotted: {requirement}"
-        if requirement.kind == "resource":
-            setattr(state.resources, requirement.key, getattr(state.resources, requirement.key) - requirement.amount)
-        elif requirement.kind == "item" and requirement.consume:
-            state.world.inventory[requirement.key] -= requirement.amount
-            if state.world.inventory[requirement.key] <= 0:
-                state.world.inventory.pop(requirement.key, None)
+        if requirement.kind == "item" and requirement.consume:
+            _add_field(state, requirement.key, -requirement.amount)
 
 
 def _consume_slotted_card(state: GameState) -> None:
@@ -660,65 +724,78 @@ def _apply_effects(
     derived: list[str] = [] if extra_lines is None else extra_lines
     for item in effects:
         _apply_effect(item, state, rng, derived)
-    if resolve_encounter_reacts and state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None:
-        _resolve_encounter_reacts(state, rng, derived)
+    if resolve_encounter_reacts:
+        if state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None:
+            _resolve_encounter_reacts(state, rng, derived)
+        elif state.screen == ScreenName.CITY:
+            _resolve_world_reacts(state, rng, derived)
     return tuple(derived)
 
 
 def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines: list[str]) -> None:
     value = item.value
+    if item.kind == "set_field":
+        assert isinstance(value, str)
+        key, raw = value.split(":", 1)
+        parsed: int | bool | str
+        if raw == "true":
+            parsed = True
+        elif raw == "false":
+            parsed = False
+        elif raw == "nil":
+            parsed = ""
+        else:
+            try:
+                parsed = int(raw)
+            except ValueError:
+                parsed = raw
+        _set_field(state, key, parsed, extra_lines)
+        return
+    if item.kind == "add_field":
+        assert isinstance(value, str)
+        key, raw = value.split(":", 1)
+        _add_field(state, key, int(raw), extra_lines)
+        return
+    if item.kind == "shift_clock":
+        assert isinstance(value, str)
+        key, raw = value.split(":", 1)
+        shift_clock(state, key, int(raw), extra_lines)
+        return
     if item.kind == "change_health":
         change_health(state, int(value), extra_lines)
         return
     if item.kind == "change_stress":
         change_stress(state, int(value), extra_lines)
         return
-    if item.kind == "change_resource":
-        assert isinstance(value, str)
-        key, raw = value.split(":")
-        setattr(state.resources, key, getattr(state.resources, key) + int(raw))
-        return
-    if item.kind == "give_item":
-        assert isinstance(value, str)
-        key, raw = value.split(":")
-        state.world.inventory[key] = state.world.inventory.get(key, 0) + int(raw)
-        return
-    if item.kind == "remove_item":
-        assert isinstance(value, str)
-        key, raw = value.split(":")
-        current = state.world.inventory.get(key, 0)
-        next_value = max(0, current - int(raw))
-        if next_value == 0:
-            state.world.inventory.pop(key, None)
-        else:
-            state.world.inventory[key] = next_value
-        return
     if item.kind == "advance_clock":
         assert isinstance(value, str)
         key, raw = value.split(":")
-        advance_clock(state, key, int(raw), extra_lines)
+        shift_clock(state, key, int(raw), extra_lines)
         return
     if item.kind == "advance_encounter_clock":
         assert isinstance(value, str)
         key, raw = value.split(":")
-        advance_encounter_clock(state, key, int(raw))
+        shift_clock(state, key, int(raw), extra_lines)
         return
     if item.kind == "damage_encounter_clock":
         assert isinstance(value, str)
         key, raw = value.split(":")
-        damage_encounter_clock(state, key, int(raw))
+        shift_clock(state, key, -int(raw), extra_lines)
         return
     if item.kind == "set_encounter_store":
         assert isinstance(value, str)
-        assert state.active_encounter is not None
         key, raw = value.split(":", 1)
-        current = state.active_encounter.store[key]
-        if isinstance(current, bool):
-            state.active_encounter.store[key] = raw == "true"
-        elif isinstance(current, int):
-            state.active_encounter.store[key] = int(raw)
+        parsed: int | bool | str
+        if raw == "true":
+            parsed = True
+        elif raw == "false":
+            parsed = False
         else:
-            state.active_encounter.store[key] = raw
+            try:
+                parsed = int(raw)
+            except ValueError:
+                parsed = raw
+        _set_field(state, key, parsed, extra_lines)
         return
     if item.kind == "start_encounter":
         assert isinstance(value, str)
@@ -735,34 +812,6 @@ def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines
     if item.kind == "finish_encounter":
         assert isinstance(value, str)
         finish_encounter(state, value, rng, extra_lines)
-        return
-    if item.kind == "reveal_location":
-        assert isinstance(value, str)
-        if value not in state.world.visible_locations:
-            state.world.fresh_locations.add(value)
-            _push_log(state, f"发现了新的地点：{SCENARIO.locations_by_id[value].title}")
-            extra_lines.append(f"发现地点：{SCENARIO.locations_by_id[value].title}")
-        state.world.visible_locations.add(value)
-        return
-    if item.kind == "hide_location":
-        assert isinstance(value, str)
-        if not (state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None):
-            state.world.visible_locations.discard(value)
-        return
-    if item.kind == "hide_action":
-        assert isinstance(value, str)
-        if not (state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None):
-            state.world.hidden_actions.add(value)
-        return
-    if item.kind == "show_clock":
-        assert isinstance(value, str)
-        if not (state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None and value in _encounter(state).clocks_by_id):
-            state.world.progress_clocks[value].visible = True
-        return
-    if item.kind == "hide_clock":
-        assert isinstance(value, str)
-        if not (state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None and value in _encounter(state).clocks_by_id):
-            state.world.progress_clocks[value].visible = False
         return
     if item.kind == "reset_hand":
         reset_hand(state, rng)
@@ -811,6 +860,27 @@ def _resolve_encounter_reacts(state: GameState, rng: RandomSource, extra_lines: 
             blocked_sources.discard(rule.source)
 
 
+def _resolve_world_reacts(state: GameState, rng: RandomSource, extra_lines: list[str]) -> None:
+    blocked_sources: set[str] = set()
+    steps = 0
+    while state.screen == ScreenName.CITY:
+        blocked_sources = {
+            source
+            for source in blocked_sources
+            if any(rule.source == source and world_react_rule_matches(SCENARIO, state, rule) for rule in SCENARIO.react_rules)
+        }
+        rule = next_world_react_rule(SCENARIO, state, blocked_sources)
+        if rule is None:
+            return
+        steps += 1
+        assert steps <= MAX_REACT_STEPS, f"World react did not converge: {SCENARIO.id}"
+        _apply_effects(rule.effects, state, rng, extra_lines, resolve_encounter_reacts=False)
+        if world_react_rule_matches(SCENARIO, state, rule):
+            blocked_sources.add(rule.source)
+        else:
+            blocked_sources.discard(rule.source)
+
+
 def reset_hand(state: GameState, rng: RandomSource) -> None:
     while state.deck.hand:
         state.deck.discard_pile.append(state.deck.hand.pop())
@@ -821,7 +891,7 @@ def advance_clock(state: GameState, clock_id: str, amount: int = 1, extra_lines:
     spec = SCENARIO.clocks_by_id[clock_id]
     clock_state = state.world.progress_clocks[clock_id]
     before = clock_state.value
-    clock_state.value = min(spec.segments, clock_state.value + amount)
+    clock_state.value = max(0, min(spec.segments, clock_state.value + amount))
     clock_state.visible = True
     for threshold in spec.thresholds:
         if before < threshold.at <= clock_state.value:
@@ -842,6 +912,16 @@ def damage_encounter_clock(state: GameState, clock_id: str, amount: int = 1) -> 
     state.active_encounter.store[clock_id] = max(0, current - amount)
 
 
+def shift_clock(state: GameState, clock_id: str, amount: int, extra_lines: list[str] | None = None) -> None:
+    if state.active_encounter is not None and clock_id in _encounter(state).clocks_by_id:
+        if amount >= 0:
+            advance_encounter_clock(state, clock_id, amount)
+        else:
+            damage_encounter_clock(state, clock_id, -amount)
+        return
+    advance_clock(state, clock_id, amount, extra_lines)
+
+
 def start_encounter(state: GameState, encounter_id: str) -> None:
     encounter = get_encounter(encounter_id)
     state.active_encounter = ActiveEncounterState(
@@ -856,6 +936,7 @@ def start_encounter(state: GameState, encounter_id: str) -> None:
     clear_assembly(state)
     clear_selected_input(state)
     _push_log(state, f"进入侦探任务：{encounter.title}")
+    _resolve_encounter_reacts(state, RandomSource(state.seed), [])
 
 
 def start_encounter_from_dialogue(state: GameState, encounter_id: str) -> None:
@@ -972,28 +1053,27 @@ def _describe_effects(effects: tuple[Effect, ...], action_id: str, state: GameSt
     encounter = _encounter(state) if state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None else None
     for item in effects:
         value = item.value
-        if item.kind == "change_health":
+        if item.kind == "set_field":
+            assert isinstance(value, str)
+            key, raw = value.split(":", 1)
+            lines.append(f"{_field_label(key)} = {raw}")
+        elif item.kind == "add_field":
+            assert isinstance(value, str)
+            key, raw = value.split(":", 1)
+            amount = int(raw)
+            lines.append(f"{_field_label(key)} {'+' if amount >= 0 else ''}{amount}")
+        elif item.kind == "shift_clock":
+            assert isinstance(value, str)
+            key, raw = value.split(":", 1)
+            title = encounter.clocks_by_id[key].title if encounter is not None and key in encounter.clocks_by_id else SCENARIO.clocks_by_id.get(key, None).title if key in SCENARIO.clocks_by_id else key
+            amount = int(raw)
+            lines.append(f"{title} {'+' if amount >= 0 else ''}{amount}")
+        elif item.kind == "change_health":
             amount = int(value)
             lines.append(f"生命 {'+' if amount >= 0 else ''}{amount}")
         elif item.kind == "change_stress":
             amount = int(value)
             lines.append(f"压力 {'+' if amount >= 0 else ''}{amount}")
-        elif item.kind == "change_resource":
-            assert isinstance(value, str)
-            key, raw = value.split(":")
-            amount = int(raw)
-            label = "金钱" if key == "money" else "烟卷"
-            lines.append(f"{label} {'+' if amount >= 0 else ''}{amount}")
-        elif item.kind == "give_item":
-            assert isinstance(value, str)
-            key, raw = value.split(":")
-            label = _item_label(key)
-            lines.append(f"获得 {label}" if int(raw) == 1 else f"获得 {label} x{raw}")
-        elif item.kind == "remove_item":
-            assert isinstance(value, str)
-            key, raw = value.split(":")
-            label = _item_label(key)
-            lines.append(f"失去 {label}" if int(raw) == 1 else f"失去 {label} x{raw}")
         elif item.kind == "advance_clock":
             assert isinstance(value, str)
             key, raw = value.split(":")
@@ -1025,14 +1105,6 @@ def _describe_effects(effects: tuple[Effect, ...], action_id: str, state: GameSt
             assert isinstance(value, str)
             target = get_dialogue(value)
             lines.append(f"进入对话：{target.title}")
-        elif item.kind == "reveal_location":
-            assert isinstance(value, str)
-            lines.append(f"发现地点：{SCENARIO.locations_by_id[value].title}")
-        elif item.kind == "hide_location":
-            assert isinstance(value, str)
-            lines.append(f"地点关闭：{SCENARIO.locations_by_id[value].title}")
-        elif item.kind == "hide_action" and value == action_id:
-            lines.append("此行动结束")
         elif item.kind == "reset_hand":
             lines.append("重抽手牌")
         elif item.kind == "advance_day":
@@ -1056,6 +1128,18 @@ def _item_label(item_id: str) -> str:
     if item_id == "gun":
         return "枪"
     return item_id
+
+
+def _field_label(field_id: str) -> str:
+    if field_id == "health":
+        return "生命"
+    if field_id == "stress":
+        return "压力"
+    if field_id == "money":
+        return "金钱"
+    if field_id == "cigarettes":
+        return "烟卷"
+    return _item_label(field_id)
 
 
 def claim_growth(state: GameState, growth_id: str) -> None:

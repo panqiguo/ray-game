@@ -260,9 +260,16 @@ def base_environment() -> Environment:
             "zero?": lambda value: int(_scalar(value)) == 0,
             "positive?": lambda value: int(_scalar(value)) > 0,
             "negative?": lambda value: int(_scalar(value)) < 0,
+            "log": _log_builtin,
         }
     )
 
+
+
+def _log_builtin(*items: Any) -> Any:
+    message = " ".join(str(_scalar(item)) for item in items)
+    print(message)
+    return items[-1] if items else None
 
 def _sub(first: Any, *rest: Any) -> int:
     start = int(_scalar(first))

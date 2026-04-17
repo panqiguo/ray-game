@@ -1,16 +1,14 @@
 from __future__ import annotations
 
-from raygame.encounters import get_encounter, render_encounter
 from raygame.model.defs import LocationNode
 from raygame.model.state import GameState
+from raygame.rules import current_encounter_snapshot
 
 from .table_presenters import PresentedActionCard, PresentedLocationCard, present_action_cards_for_location, present_location_cards
 
 
 def _snapshot(state: GameState):
-    assert state.active_encounter is not None
-    encounter = get_encounter(state.active_encounter.encounter_id)
-    return render_encounter(encounter, state.active_encounter.store)
+    return current_encounter_snapshot(state)
 
 
 def current_encounter_root(state: GameState) -> LocationNode:

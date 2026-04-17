@@ -4,25 +4,13 @@ import math
 
 from pyray import *  # type: ignore
 
+from raygame.labels import ITEM_LABELS
 from raygame.model.defs import ActionDef, InputRequirement
 from raygame.model.state import GameState
 from raygame.rendering import draw_text
 from raygame.rules import get_clock_spec_for_state, get_clock_value
 
 from .ui_core import draw_centered_text, draw_frame, measure_text_width
-
-
-RESOURCE_LABELS = {
-    "money": "金币",
-    "cigarettes": "烟卷",
-}
-
-ITEM_LABELS = {
-    "clothes": "华美衣服",
-    "car_key": "车钥匙",
-    "repair_case_item": "任务道具",
-    "gun": "枪",
-}
 
 
 def draw_clock_badges(
@@ -135,7 +123,7 @@ def condition_labels(conditions) -> tuple[str, ...]:
             labels.append(f"需要 {title}" if amount == 1 else f"需要 {title} x{amount}")
         elif item.kind == "field_at_least" and isinstance(item.value, str):
             key, raw = item.value.split(":", 1)
-            title = RESOURCE_LABELS.get(key, ITEM_LABELS.get(key, key))
+            title = ITEM_LABELS.get(key, key)
             labels.append(f"需要 {title} {raw}")
     return tuple(labels)
 

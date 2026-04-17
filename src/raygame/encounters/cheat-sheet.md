@@ -40,6 +40,14 @@ Encounter / World SCM 速查
 
 - 必填：`:title` `:initial` `:max`
 
+字段作用域：
+
+- world 全局字段：`day` `health` `stress` `money` `cigarettes`
+- world 还包括：world `:state` 绑定、初始 inventory 物品计数
+- encounter 局部字段：encounter `:state` 绑定
+- encounter 改全局字段时，推荐写 quoted symbol：`'money`、`'villa_job_taken`
+- `day` 是特例：修改只用 `(effect 'advance-day)`
+
 `node` / `scene`：
 
 ```scheme
@@ -141,11 +149,11 @@ Encounter / World SCM 速查
 (effect 'start-dialogue 'dialogue_id)
 (effect 'start-quick-dialogue "对白内容")
 (effect 'start-encounter 'encounter_id)
-(effect 'finish 'success)
-(effect 'finish 'fail)
-(effect 'finish 'abort)
+(effect 'end-encounter 'success)
+(effect 'end-encounter 'fail)
+(effect 'end-encounter 'abort)
 (effect 'advance-day)
-(effect 'end-run 'ending_id)
+(effect 'end-game)
 (effect 'reset-hand)
 ```
 
@@ -153,8 +161,18 @@ Encounter / World SCM 速查
 
 ```scheme
 (clock-value clock-field)
-(clock-full clock-field)
+(clock-max clock-field)
+```
+
+`common_clock_macros.scm`：
+
+```scheme
 (clock-half clock-field)
+(clock-empty? clock-field)
+(clock-filled? clock-field)
+(clock-partial? clock-field)
+(clock-at-least-half? clock-field)
+(effect-reset-clock clock-field)
 ```
 
 基础 Scheme：

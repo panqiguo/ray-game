@@ -19,7 +19,7 @@
   (action
     :title "收手离开"
     :desc "你已经听到足够多的半句真话。"
-    :before (list (effect 'finish abort))
+    :before (list (effect 'end-encounter 'abort))
   ))
 
 (define front_pick_lock
@@ -316,8 +316,8 @@
     (dog_state 'calm)
     (entry_method none))
   :reacts (reacts
-    (react :when (clock-filled? alert) :then (list (effect 'finish fail)))
-    (react :when (clock-filled? truth) :then (list (effect 'finish success)))
+    (react :when (clock-filled? alert) :then (list (effect 'end-encounter 'fail)))
+    (react :when (clock-filled? truth) :then (list (effect 'end-encounter 'success)))
     (react :when (and (= phase 'yard) (= route 'left) (clock-filled? traverse)) :then (list (effect 'set phase 'entry) (effect 'set route none) (effect 'set patrol 0) (effect 'set traverse 0)))
     (react :when (and (= phase 'yard) (= route 'right) (clock-filled? traverse)) :then (list (effect 'set phase 'entry) (effect 'set route none) (effect 'set traverse 0)))
     (react :when (and (= phase 'entry) (not (= entry_method none))) :then (list (effect 'set phase 'bedroom))))

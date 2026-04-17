@@ -2,7 +2,7 @@
 ;; scene1 拘禁室, 手被皮带捆住, 用不同的方式脱困, 填满挣脱进度钟完成脱困
 ;; scene2 二楼, 房屋往一楼走,有几条路, 不知道哪条才能到达, 每条路都有进度钟, 填满后揭晓, 有两条是死路, 有一条是通路, 到达大门
 ;; scene3 大门, 你有两个选择,第一个(地点)是进桑德堡医生的办公室,然后跟头目交谈,交谈过之后,这个选项会被替换为桑德堡被打晕的文本. 第二个选择(行动)是离开这里.
-
+(include "helper.scm")
 (include "common_clock_macros.scm")
 
 
@@ -120,14 +120,14 @@
                :desc (if path_b_revealed
                          "这条路已经被证实被死死锁住了。"
                          "右侧的通道尽头似乎隐匿着一扇门。")
-               :show-clocks (list path_b_clock alert_clock)
+               :show-clocks (list 右侧探索进度 alert_clock)
                :actions (list
                          (if path_b_revealed
                              (action :title "右侧道路 (死路) " :desc "这边的门被挂锁锁死了。" :before (list))
                              (make_cautious_path_action
                               "谨慎摸索"
                               "先停下脚步听听动静，再顺着右边的黑影慢慢蹭过去。"
-                              path_b_clock
+                              右侧探索进度
                               "你像个幽灵般推进了一段距离。"
                               "你靠得太近，风衣的下摆带倒了墙边的一个铁盘。"
                               "你还没摸清地形，皮鞋在光滑的瓷砖上打滑，发出了刺耳的摩擦声。"))
@@ -135,7 +135,7 @@
                            (make_rush_path_action
                             "迅速逼近"
                             "不再磨蹭，靠侦探的敏捷把这段路先占下来。"
-                            path_b_clock
+                            右侧探索进度
                             "你踩着节奏一口气冲到了门边。"
                             "你是冲到了尽头，但粗重的喘息声可能已经暴露了你。"
                             "你扑得太快，整个人重重地撞在了走廊的木墙板上。"))))
@@ -145,14 +145,14 @@
                :desc (if path_c_revealed
                          "这道楼梯通向一楼的大门。"
                          "正前方有一条看似通向楼梯的宽阔通道。")
-               :show-clocks (list path_c_clock alert_clock)
+               :show-clocks (list 前方探索进度 alert_clock)
                :actions (list
                          (if path_c_revealed
                              (action :title "正前道路 (通路) " :desc "这条路能通向自由。" :before (list))
                              (make_cautious_path_action
                               "借视野死角潜伏"
                               "压低身体，借着走廊立柱的死角一点点逼近前方。"
-                              path_c_clock
+                              前方探索进度
                               "你稳稳地向前推进了一截，连只老鼠都没惊动。"
                               "你虽然没暴露，但鞋底还是在地板上拖出了沙沙声。"
                               "你差点和拐角处抽烟的打手撞个正着，只能猛地退回阴影里。"))
@@ -160,7 +160,7 @@
                            (make_rush_path_action
                             "快步穿插"
                             "趁走廊现在还空着，直接从正前方大步走过去。"
-                            path_c_clock
+                            前方探索进度
                             "你几步就抢到了通道深处的楼梯口。"
                             "你冲过去了，但外套刮到了墙壁，弄出了不小的响动。"
                             "你冲得太猛，拐角那头的打手立刻警觉地转过身来拔枪。")))))))
@@ -174,7 +174,6 @@
    :desc "你顺着楼梯摸到了一楼。大门就在不远处，外面的洛杉矶夜景正向你招手。但在门旁边，桑德堡医生的办公室亮着灯，那个老狐狸肯定坐在里面。"
    :show-clocks (list alert_clock)
    :actions (list
-             rest
              ;; 选择1：处理头目 (地点/对话互动)
              (if boss_defeated
                  (action
@@ -190,7 +189,7 @@
              (action
               :title "离开这个鬼地方"
               :desc "推开那扇沉重的大门，回到属于你的冷酷街头。"
-              :before (list (effect 'finish 'success))))))
+              :before (list (effect 'end-encounter 'success))))))
 
 ;; ==========================================
 ;; 元数据与状态定义
@@ -214,9 +213,9 @@
                 :max 6))
    ;; 场景时钟
    (挣脱束缚钟 (clock :title "挣脱皮带" :initial 0 :max 4))
-   (左侧探索进度 (clock :title "探查左侧" :initial 0 :max 2))
-   (path_b_clock (clock :title "探查右侧" :initial 0 :max 2))
-   (path_c_clock (clock :title "探查正前方" :initial 0 :max 2))))
+   (左侧探索进度 (clock :title "探查左侧" :initial 0 :max 3))
+   (右侧探索进度 (clock :title "探查右侧" :initial 0 :max 3))
+   (前方探索进度 (clock :title "探查正前方" :initial 0 :max 3))))
 
 ;; ==========================================
 ;; 全局响应 (Reacts)
@@ -228,7 +227,7 @@
    (react
     :when (clock-filled? alert_clock)
     :then (list (effect 'start-quick-dialogue "狗腿子们被惊动了！\n门被粗暴地踹开，你还没来得及站稳，就被几个壮汉重新按倒在地……")
-                (effect 'finish 'fail)))
+                (effect 'end-encounter 'fail)))
    ;; 挣脱进度拉满，推进到下一个阶段
    (react
     :when (and (clock-filled? 挣脱束缚钟) (not escaped))
@@ -240,11 +239,11 @@
     :then (list (effect 'set path_a_revealed true)
                 (effect 'start-quick-dialogue "左边那条路的尽头是一排封死的重症监护室。厚重的铁门上只开着观察窗，里面偶尔传来某个可怜虫因为毒瘾发作而撞击墙壁的闷响。\n\n这是一条死路，除了绝望，什么都没有。")))
    (react
-    :when (and (clock-filled? path_b_clock) (not path_b_revealed))
+    :when (and (clock-filled? 右侧探索进度) (not path_b_revealed))
     :then (list (effect 'set path_b_revealed true)
                 (effect 'start-quick-dialogue "右边尽头的门把手上落着灰，我用力推了推，发现门被从外面用粗大的挂锁锁死了。这可能是间废弃的药房，想要破门而入发出的动静，足以吵醒半个洛杉矶的警察。\n\n此路不通，我只能原路退回。")))
    (react
-    :when (and (clock-filled? path_c_clock) (not path_c_revealed))
+    :when (and (clock-filled? 前方探索进度) (not path_c_revealed))
     :then (list (effect 'set path_c_revealed true)
                 (effect 'start-quick-dialogue "正前方的阴影并没有欺骗我。我贴着墙根摸索到了尽头，那里有一段铺着陈旧地毯的楼梯。楼下透上来一丝穿堂风，还夹杂着一楼大厅的雪茄味。\n\n这是通往一楼大门的唯一出路。离重获自由，或者吃枪子儿，只剩最后一段距离了。")))))
 
@@ -256,10 +255,12 @@
  :meta (meta :key 'first_scene :title "桑德堡的疗养院" :desc "菲利普·马洛的逃亡之夜")
  :on-success (list
               (effect 'start-quick-dialogue
-                      "# 洛杉矶的夜风\n\n你推开沉重的大门，洛杉矶夜晚的冷空气像一盆冰水，把你脑子里残存的麻醉药味冲得一干二净。\n身后的桑德堡疗养院亮着几盏惨白的灯，像个专门吞噬死人的怪物。你没有回头。你只是把手插进皱巴巴的风衣口袋，摸到了那把失而复得的左轮手枪，顺着街边的黑影快步走向马路。\n你终于又回到了这座冷酷的城市。至于桑德堡和那些黑帮的烂摊子，你发誓等弄到一杯威士忌后，会跟他们一笔一笔地算清楚。"))
+                      "# 洛杉矶的夜风\n\n你推开沉重的大门，洛杉矶夜晚的冷空气像一盆冰水，把你脑子里残存的麻醉药味冲得一干二净。\n身后的桑德堡疗养院亮着几盏惨白的灯，像个专门吞噬死人的怪物。你没有回头。你只是把手插进皱巴巴的风衣口袋，摸到了那把失而复得的左轮手枪，顺着街边的黑影快步走向马路。\n你终于又回到了这座冷酷的城市。至于桑德堡和那些黑帮的烂摊子，你发誓等弄到一杯威士忌后，会跟他们一笔一笔地算清楚。")
+              (effect 'add 'money 40))
  :on-fail (list
            (effect 'start-quick-dialogue
-                   "# 重回深渊\n\n你离出口只差最后几步，几乎能闻到外面潮湿的沥青味。\n但走廊拐角处的阴影里突然伸出一把枪管，接着是某个壮汉粗暴的闷棍。你的后脑勺一阵剧痛，地板迎面砸向你的鼻子。\n你听见有人冷笑：“马洛先生，你的疗程还没结束呢。”\n接着，黑暗像一块巨大的湿毛巾，再次死死捂住了你的脸。"))
+                   "# 重回深渊\n\n你离出口只差最后几步，几乎能闻到外面潮湿的沥青味。\n但走廊拐角处的阴影里突然伸出一把枪管，接着是某个壮汉粗暴的闷棍。你的后脑勺一阵剧痛，地板迎面砸向你的鼻子。\n你听见有人冷笑：“马洛先生，你的疗程还没结束呢。”\n接着，黑暗像一块巨大的湿毛巾，再次死死捂住了你的脸。")
+           (effect 'end-game))
  :state all-state
  :reacts all-reacts
  :root (cond

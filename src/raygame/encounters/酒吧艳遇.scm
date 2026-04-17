@@ -180,7 +180,7 @@
   (action
     :title "找借口离开"
     :desc "你编一个合理的理由，把今晚收得体面一点。"
-    :before (list (effect 'set ending 'clean) (effect 'finish success))
+    :before (list (effect 'set ending 'clean) (effect 'end-encounter 'success))
   ))
 
 (define walk_away
@@ -190,9 +190,9 @@
     :check (check
     :suits (list instinct)
     :risk high
-    :ok (outcome "你留下一点谜面，然后消失在门口。" (list (effect 'set ending 'mystery) (effect 'finish success)))
-    :partial (outcome "你走得太干脆，留下的味道有点复杂。" (list (effect 'set ending 'mystery) (effect 'clock+ tension 1) (effect 'finish success)))
-    :fail (outcome "你转身太快，连尾声都显得有点可疑。" (list (effect 'set ending 'mystery) (effect 'clock+ tension 1) (effect 'finish fail)))
+    :ok (outcome "你留下一点谜面，然后消失在门口。" (list (effect 'set ending 'mystery) (effect 'end-encounter 'success)))
+    :partial (outcome "你走得太干脆，留下的味道有点复杂。" (list (effect 'set ending 'mystery) (effect 'clock+ tension 1) (effect 'end-encounter 'success)))
+    :fail (outcome "你转身太快，连尾声都显得有点可疑。" (list (effect 'set ending 'mystery) (effect 'clock+ tension 1) (effect 'end-encounter 'fail)))
   )
   ))
 
@@ -203,9 +203,9 @@
     :check (check
     :suits (list empathy instinct)
     :risk high
-    :ok (outcome "他接受了这份延伸，故事还会继续。" (list (effect 'set ending 'continue) (effect 'finish success)))
-    :partial (outcome "他没有立刻拒绝，关系被你往前推了一点。" (list (effect 'set ending 'continue) (effect 'clock+ tension 1) (effect 'finish success)))
-    :fail (outcome "你推得太急，他一下子警觉起来。" (list (effect 'set ending 'continue) (effect 'clock+ tension 1) (effect 'finish fail)))
+    :ok (outcome "他接受了这份延伸，故事还会继续。" (list (effect 'set ending 'continue) (effect 'end-encounter 'success)))
+    :partial (outcome "他没有立刻拒绝，关系被你往前推了一点。" (list (effect 'set ending 'continue) (effect 'clock+ tension 1) (effect 'end-encounter 'success)))
+    :fail (outcome "你推得太急，他一下子警觉起来。" (list (effect 'set ending 'continue) (effect 'clock+ tension 1) (effect 'end-encounter 'fail)))
   )
   ))
 
@@ -263,7 +263,7 @@
     (soft_pull_thread_used false)
     (soft_answer_probe_used false))
   :reacts (reacts
-    (react :when (>= (clock-value tension) (clock-full tension)) :then (list (effect 'finish fail)))
+    (react :when (>= (clock-value tension) (clock-max tension)) :then (list (effect 'end-encounter 'fail)))
     (react :when (>= (clock-value rapport) 3) :then (list (effect 'set attitude 'chatty)))
     (react :when (>= (clock-value rapport) 6) :then (list (effect 'set attitude 'engaged)))
     (react :when (>= (clock-value rapport) 9) :then (list (effect 'set attitude 'loose))))

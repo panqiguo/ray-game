@@ -149,7 +149,9 @@ def _remove_item(state: GameState, item_id: str, amount: int) -> None:
 
 
 def _change_money(state: GameState, amount: int) -> None:
-    state.resources.money = max(0, state.resources.money + amount)
+    state.world.inventory["money"] = max(0, state.world.inventory.get("money", 0) + amount)
+    if state.world.inventory["money"] == 0:
+        state.world.inventory.pop("money", None)
 
 
 def _change_health(state: GameState, amount: int) -> None:

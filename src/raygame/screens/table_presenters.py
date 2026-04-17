@@ -113,7 +113,7 @@ def present_action_card(state: GameState, action: ActionDef) -> PresentedActionC
     metadata: tuple[str, ...] = ()
     if action.check is not None:
         suits = " / ".join(SUIT_LABELS[suit] for suit in action.check.suits)
-        metadata = (f"契合 {suits}", f"风险 {RISK_LABELS[action.check.risk]}")
+        metadata = (suits, RISK_LABELS[action.check.risk])
     return PresentedActionCard(
         action=action,
         card=TableCardModel(
@@ -219,4 +219,7 @@ def _present_action_attachment(
 
 
 def _slot_label(requirement: InputRequirement) -> str:
-    return requirement.label or requirement.key
+    label = requirement.label or requirement.key
+    if requirement.kind == "item" and requirement.amount > 1:
+        return f"{label} {requirement.amount}"
+    return label

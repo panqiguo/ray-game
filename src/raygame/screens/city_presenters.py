@@ -2,10 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from raygame.content import SCENARIO
-from raygame.content.runtime import render_world
 from raygame.model.state import GameState
-from raygame.rules import action_is_visible
+from raygame.rules import action_is_visible, current_world_snapshot
 
 from .table_presenters import (
     PresentedActionCard,
@@ -29,7 +27,7 @@ class PresentedWorldObject:
 
 
 def present_world_objects(state: GameState) -> tuple[PresentedWorldObject, ...]:
-    snapshot = render_world(SCENARIO, state)
+    snapshot = current_world_snapshot(state)
     cards: list[PresentedWorldObject] = []
     for presented in present_location_cards(state, snapshot, snapshot.root_location_ids):
         assert presented.position is not None
@@ -69,12 +67,12 @@ def present_world_objects(state: GameState) -> tuple[PresentedWorldObject, ...]:
 
 
 def present_child_location_cards(state: GameState, location_ids: tuple[str, ...]) -> tuple[PresentedLocationCard, ...]:
-    return present_location_cards(state, render_world(SCENARIO, state), location_ids)
+    return present_location_cards(state, current_world_snapshot(state), location_ids)
 
 
 def present_action_cards(state: GameState, location) -> tuple[PresentedActionCard, ...]:
-    return present_action_cards_for_location(state, render_world(SCENARIO, state), location)
+    return present_action_cards_for_location(state, current_world_snapshot(state), location)
 
 
 def present_location_clock_ids(state: GameState, location_id: str) -> tuple[str, ...]:
-    return render_world(SCENARIO, state).location_clock_ids.get(location_id, ())
+    return current_world_snapshot(state).location_clock_ids.get(location_id, ())

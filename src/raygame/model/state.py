@@ -24,12 +24,6 @@ class AttributeState:
 
 
 @dataclass
-class ResourceState:
-    money: int = 0
-    cigarettes: int = 0
-
-
-@dataclass
 class ProgressClockState:
     value: int = 0
     visible: bool = False
@@ -109,10 +103,19 @@ class ActiveDialogueState:
 
 
 @dataclass
+class RenderCacheState:
+    revision: int = 0
+    world_revision: int = -1
+    world_snapshot: Any | None = None
+    encounter_revision: int = -1
+    encounter_id: str = ""
+    encounter_snapshot: Any | None = None
+
+
+@dataclass
 class GameState:
     deck: DeckState
     attributes: AttributeState = field(default_factory=AttributeState)
-    resources: ResourceState = field(default_factory=ResourceState)
     world: WorldState = field(default_factory=WorldState)
     screen: ScreenName = ScreenName.CITY
     day: int = 1
@@ -130,5 +133,9 @@ class GameState:
     ending_id: str | None = None
     ending_title: str = ""
     ending_body: str = ""
+    pending_game_over: bool = False
+    pending_game_over_title: str = ""
+    pending_game_over_body: str = ""
     debug_open: bool = False
     seed: int = 0
+    render_cache: RenderCacheState = field(default_factory=RenderCacheState)

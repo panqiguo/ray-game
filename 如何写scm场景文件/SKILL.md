@@ -156,7 +156,94 @@
 
 ---
 
-### 4. `(node ...)` / `(scene ...)`
+### 4. 字段作用域：全局 vs 局部
+
+这条很重要：
+
+- world 脚本里的 `:state` 绑定，是**本次 run 的全局状态**
+- encounter 脚本里的 `:state` 绑定，是**当前任务的局部状态**
+
+#### world 里的全局字段
+
+固定可读字段：
+
+- `day`
+- `health`
+- `stress`
+- `money`
+- `cigarettes`
+
+除此之外，下面这些也属于 world 全局字段：
+
+- 当前 world `:state` 里定义的所有绑定
+- Python 初始 inventory 里的物品计数  
+  当前主场景是：`clothes`、`gun`、`hotel_pass`、`lockpick`
+
+例如在 world 里可以直接写：
+
+```scheme
+(effect 'add money 20)
+(effect 'set villa_job_taken true)
+(effect 'add clothes 1)
+```
+
+#### encounter 里的局部字段
+
+encounter `:state` 里定义的字段，只属于当前任务：
+
+```scheme
+(state
+  (escaped false)
+  (local_score 0)
+  (alert (clock :title "警觉" :initial 0 :max 6)))
+```
+
+这里的：
+
+- `escaped`
+- `local_score`
+- `alert`
+
+都只是这个 encounter 的局部字段。
+
+所以可以直接写：
+
+```scheme
+(effect 'add local_score 10)
+(effect 'set escaped true)
+(effect 'clock+ alert 1)
+```
+
+#### 在 encounter 里改全局字段
+
+如果 encounter 里要改全局字段，推荐显式写 quoted symbol：
+
+```scheme
+(effect 'add 'money 80)
+(effect 'set 'villa_job_taken true)
+```
+
+这样不会和 encounter 局部绑定混淆。
+
+#### `day` 是特例
+
+`day` 虽然是全局字段，但不要把它当普通 `add/set` 字段。  
+推进日期只用：
+
+```scheme
+(effect 'advance-day)
+```
+
+不要写：
+
+```scheme
+(effect 'add day 1)
+(effect 'set day 2)
+```
+
+---
+
+### 5. `(node ...)` / `(scene ...)`
 
 `scene` 与 `node` 等价，推荐统一写 `node`。
 
@@ -190,7 +277,7 @@
 
 ---
 
-### 5. `(action ...)`
+### 6. `(action ...)`
 
 ```scheme
 (action
@@ -222,7 +309,7 @@
 
 ---
 
-### 6. `(check ...)`
+### 7. `(check ...)`
 
 ```scheme
 (check
@@ -248,7 +335,7 @@
 
 ---
 
-### 7. `(outcome ...)`
+### 8. `(outcome ...)`
 
 ```scheme
 (outcome "结果文本" (list effect...))
@@ -333,11 +420,11 @@
 (effect 'start-dialogue 'intro)
 (effect 'start-quick-dialogue "一段短对白")
 (effect 'start-encounter 'villa_infiltration)
-(effect 'finish 'success)
-(effect 'finish 'fail)
-(effect 'finish 'abort)
+(effect 'end-encounter 'success)
+(effect 'end-encounter 'fail)
+(effect 'end-encounter 'abort)
 (effect 'advance-day)
-(effect 'end-run 'escape_success)
+(effect 'end-game)
 (effect 'reset-hand)
 ```
 

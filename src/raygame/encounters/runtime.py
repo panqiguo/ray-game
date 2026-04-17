@@ -38,6 +38,26 @@ from .lispy import Environment, _MISSING, base_environment, evaluate, expand_inc
 
 
 MAX_REACT_STEPS = 64
+ENCOUNTER_ACTION_EFFECTS = frozenset({
+    "set_field",
+    "add_field",
+    "shift_clock",
+    "reset_hand",
+    "start_dialogue",
+    "start_quick_dialogue",
+    "end_encounter",
+})
+ENCOUNTER_COMPLETION_EFFECTS = frozenset({
+    "set_field",
+    "add_field",
+    "shift_clock",
+    "reset_hand",
+    "advance_day",
+    "end_game",
+    "start_encounter",
+    "start_dialogue",
+    "start_quick_dialogue",
+})
 
 
 def compile_encounter_program(source: str, *, source_path: str | Path | None = None) -> CompiledEncounterProgram:
@@ -163,9 +183,17 @@ def validate_encounter_program(program: CompiledEncounterProgram) -> None:
             raise EncounterSchemaError(f"{program.id}: definition `{name}` is invalid: {exc}") from exc
     snapshot = render_encounter(program, initial_store(program))
     assert snapshot.root.root.title, f"{program.id}: root scene missing title."
+    for action in snapshot.actions_by_id.values():
+        _assert_effects_allowed(action.effects, allowed=ENCOUNTER_ACTION_EFFECTS, context=f"{program.id}: action `{action.title}`")
+        if action.check is not None:
+            for outcome_name, outcome in (("ok", action.check.success), ("partial", action.check.cost), ("fail", action.check.fail)):
+                _assert_effects_allowed(outcome.effects, allowed=ENCOUNTER_ACTION_EFFECTS, context=f"{program.id}: action `{action.title}` {outcome_name}")
+    for rule in program.react_rules:
+        _assert_effects_allowed(rule.effects, allowed=ENCOUNTER_ACTION_EFFECTS, context=f"{program.id}: react `{rule.source}`")
     for clock_id, spec in program.clocks_by_id.items():
         assert clock_id in program.store_specs, f"{program.id}: clock missing store spec: {clock_id}"
         assert spec.segments >= 1, f"{program.id}: invalid clock segments: {clock_id}"
+    _validate_completion_effects(program)
 
 
 def _validate_all_schema_forms(program: CompiledEncounterProgram, env: Environment) -> None:
@@ -242,6 +270,22 @@ def _state_resolver(name: str, *, store: dict[str, int | bool | str], store_spec
         spec = store_specs[name]
         return StateBindingValue(name=name, spec=spec, value=store.get(name, spec.initial))
     return _MISSING
+
+
+def _validate_completion_effects(program: CompiledEncounterProgram) -> None:
+    for bucket_name, effects in {"on-success": program.rewards, "on-fail": program.fail_effects}.items():
+        _assert_effects_allowed(effects, allowed=ENCOUNTER_COMPLETION_EFFECTS, context=f"{program.id}: {bucket_name}")
+        for effect in effects:
+            if effect.kind in {"set_field", "add_field", "shift_clock"}:
+                assert isinstance(effect.value, str), f"{program.id}: {bucket_name} effect payload must be string"
+                key, _, _ = effect.value.partition(":")
+                assert key not in program.store_specs, f"{program.id}: {bucket_name} cannot target encounter-local field `{key}`"
+            assert effect.kind != "end_encounter", f"{program.id}: {bucket_name} cannot contain end-encounter effect"
+
+
+def _assert_effects_allowed(effects: tuple[Effect, ...], *, allowed: frozenset[str], context: str) -> None:
+    for effect in effects:
+        assert effect.kind in allowed, f"{context} uses disallowed effect `{effect.kind}`"
 
 
 def _is_call(node: Any, name: str) -> bool:

@@ -23,6 +23,7 @@ from raygame.screens.widgets import (
     draw_message_feed,
     draw_profile_modal,
     draw_scrim,
+    draw_selected_card_curve_overlay,
     draw_table_shell,
     end_layer,
     layout,
@@ -51,6 +52,7 @@ def draw_encounter_screen(font: Font | None, state: GameState, rng) -> None:
         end_layer("encounter_location_table")
     draw_profile_modal(font, state)
     draw_dialogue_modal(font, state)
+    draw_selected_card_curve_overlay(state)
 
 
 def _draw_encounter_table(font: Font | None, state: GameState, rng, rect: Rectangle) -> None:

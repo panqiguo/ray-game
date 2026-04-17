@@ -22,23 +22,47 @@ VALID_CONDITIONS = {
     "encounter_clock_at_least",
 }
 
-VALID_EFFECTS = {
+WORLD_EFFECTS = {
     "set_field",
     "add_field",
     "shift_clock",
-    "change_health",
-    "change_stress",
-    "advance_clock",
     "reset_hand",
     "advance_day",
-    "end_run",
+    "end_game",
     "start_encounter",
     "start_dialogue",
     "start_quick_dialogue",
+}
+
+ENCOUNTER_EFFECTS = {
+    "set_field",
+    "add_field",
+    "shift_clock",
+    "reset_hand",
+    "start_dialogue",
+    "start_quick_dialogue",
+    "end_encounter",
+}
+
+ENCOUNTER_COMPLETION_EFFECTS = {
+    "set_field",
+    "add_field",
+    "shift_clock",
+    "reset_hand",
+    "advance_day",
+    "end_game",
+    "start_encounter",
+    "start_dialogue",
+    "start_quick_dialogue",
+}
+
+LEGACY_EFFECTS = {
+    "change_health",
+    "change_stress",
+    "advance_clock",
     "set_encounter_store",
     "advance_encounter_clock",
     "damage_encounter_clock",
-    "finish_encounter",
 }
 
 
@@ -46,16 +70,22 @@ def _validate_condition(item: Condition) -> None:
     assert item.kind in VALID_CONDITIONS, f"Unknown condition kind: {item.kind}"
 
 
-def _validate_effect(item: Effect) -> None:
-    assert item.kind in VALID_EFFECTS, f"Unknown effect kind: {item.kind}"
+def _validate_effect(item: Effect, *, context: str) -> None:
+    allowed = {
+        "world": WORLD_EFFECTS,
+        "encounter": ENCOUNTER_EFFECTS,
+        "encounter_completion": ENCOUNTER_COMPLETION_EFFECTS,
+        "legacy": LEGACY_EFFECTS,
+    }[context]
+    assert item.kind in allowed, f"Effect `{item.kind}` is not allowed in {context} context"
     if item.kind == "start_dialogue":
         assert isinstance(item.value, str) and item.value in DIALOGUES_BY_ID, f"Unknown dialogue id: {item.value}"
     if item.kind == "start_quick_dialogue":
         assert isinstance(item.value, str) and item.value.strip(), "Quick dialogue text cannot be empty"
     if item.kind == "start_encounter":
         assert isinstance(item.value, str) and item.value in ENCOUNTERS_BY_ID, f"Unknown encounter id: {item.value}"
-    if item.kind == "end_run":
-        assert isinstance(item.value, str) and item.value.strip(), "Ending id cannot be empty"
+    if item.kind == "end_game":
+        assert item.value is True, "end_game should not carry a payload"
 
 
 def _validate_input(item: InputRequirement) -> None:
@@ -63,17 +93,17 @@ def _validate_input(item: InputRequirement) -> None:
     assert item.amount >= 1, f"Input amount must be >= 1: {item}"
 
 
-def _validate_action(action: ActionDef) -> None:
+def _validate_action(action: ActionDef, *, context: str) -> None:
     for condition in action.conditions:
         _validate_condition(condition)
     for item in action.inputs:
         _validate_input(item)
     for effect in action.effects:
-        _validate_effect(effect)
+        _validate_effect(effect, context=context)
     if action.check is not None:
         for outcome in (action.check.success, action.check.cost, action.check.fail):
             for effect in outcome.effects:
-                _validate_effect(effect)
+                _validate_effect(effect, context=context)
 
 
 def _validate_clock(spec: ProgressClockSpec) -> None:
@@ -84,7 +114,7 @@ def _validate_clock(spec: ProgressClockSpec) -> None:
         assert threshold.at > last, f"Thresholds must be increasing: {spec.id}"
         last = threshold.at
         for effect in threshold.effects:
-            _validate_effect(effect)
+            _validate_effect(effect, context="legacy")
 
 
 def validate_content() -> None:
@@ -98,7 +128,7 @@ def validate_content() -> None:
         _validate_location(location)
     for action_id, action in snapshot.actions_by_id.items():
         assert action.id == action_id
-        _validate_action(action)
+        _validate_action(action, context="world")
     for clock_id, spec in SCENARIO.clocks_by_id.items():
         assert spec.id == clock_id
         _validate_clock(spec)
@@ -111,10 +141,14 @@ def validate_content() -> None:
             _validate_location(location)
         for action_id, action in snapshot.actions_by_id.items():
             assert action.id == action_id
-            _validate_action(action)
+            _validate_action(action, context="encounter")
         for clock_id, spec in encounter.clocks_by_id.items():
             assert spec.id == clock_id
             _validate_clock(spec)
+        for effect in encounter.rewards:
+            _validate_effect(effect, context="encounter_completion")
+        for effect in encounter.fail_effects:
+            _validate_effect(effect, context="encounter_completion")
 
 
 def _validate_location(location: LocationNode) -> None:
@@ -123,14 +157,17 @@ def _validate_location(location: LocationNode) -> None:
 
 
 def _validation_state():
-    from raygame.model.state import AttributeState, DeckState, GameState, ResourceState, WorldState, ProgressClockState
+    from raygame.model.state import AttributeState, DeckState, GameState, WorldState, ProgressClockState
     return GameState(
         deck=DeckState(draw_pile=[]),
         attributes=AttributeState(health=SCENARIO.initial_health, stress=SCENARIO.initial_stress),
-        resources=ResourceState(money=SCENARIO.initial_money, cigarettes=SCENARIO.initial_cigarettes),
         world=WorldState(
             progress_clocks={clock_id: ProgressClockState(value=0, visible=True) for clock_id in SCENARIO.clocks_by_id},
-            inventory=dict(SCENARIO.initial_inventory),
+            inventory={
+                **dict(SCENARIO.initial_inventory),
+                "money": SCENARIO.initial_money,
+                "cigarettes": SCENARIO.initial_cigarettes,
+            },
             values=dict(SCENARIO.initial_values),
         ),
     )

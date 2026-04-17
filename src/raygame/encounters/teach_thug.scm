@@ -121,9 +121,9 @@
     (enemy_hp (clock :title "敌人血量" :initial 4 :max 4))
     (opening (clock :title "破绽" :initial 0 :max 2)))
   :reacts (reacts
-    (react :when (<= (clock-value enemy_hp) 0) :then (list (effect 'finish success))))
+    (react :when (<= (clock-value enemy_hp) 0) :then (list (effect 'end-encounter 'success))))
   :root
-  (cond ((< (clock-value initiative) (clock-full initiative)) (if (< (clock-value knife) (clock-full knife)) (scene
+  (cond ((< (clock-value initiative) (clock-max initiative)) (if (< (clock-value knife) (clock-max knife)) (scene
     :title "徒手受压"
     :desc "打手把你逼在墙边。你得先决定，是稳着反顶、直接狠狠干、还是冒险把折刀夺到手。"
     :show-clocks (list initiative (when (> (clock-value knife) 0) knife))
@@ -133,7 +133,7 @@
     :desc "刀终于到了你手里。现在你可以借着这口气把主动权彻底抢回来。"
     :show-clocks (list initiative knife)
     :actions (list counter knife_press breathe)
-  ))) ((< (clock-value opening) (clock-full opening)) (scene
+  ))) ((< (clock-value opening) (clock-max opening)) (scene
     :title "对峙"
     :desc "对方后退半步，准备再扑上来。你可以直接狠狠干，也可以先撬开他的破绽。"
     :show-clocks (list enemy_hp opening)

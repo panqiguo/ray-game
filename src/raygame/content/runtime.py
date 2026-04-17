@@ -15,7 +15,7 @@ from raygame.content_lang.runtime_core import (
     validate_scene_template as _validate_scene_template,
 )
 from raygame.encounters.defs import ActionTemplate, ClockTemplate, EncounterMeta, EncounterSchemaError, EncounterSchemeError, ReactRule, ReactTemplate, SceneTemplate, StateBindingValue, StoreFieldSpec
-from raygame.encounters.lispy import Environment, _MISSING, base_environment, evaluate, expand_includes
+from raygame.encounters.lispy import Environment, _MISSING, base_environment, evaluate, expand_includes, truthy
 from raygame.model.defs import CompiledScenario, Effect, LocationNode, ProgressClockSpec
 from raygame.model.enums import ScreenName
 from raygame.model.state import GameState, ProgressClockState
@@ -39,6 +39,19 @@ class CompiledWorldProgram:
     initial_inventory: dict[str, int]
     initial_values: dict[str, int | bool | str]
     initial_growth_choices: tuple[str, ...] = ()
+
+
+WORLD_EFFECTS = frozenset({
+    "set_field",
+    "add_field",
+    "shift_clock",
+    "reset_hand",
+    "advance_day",
+    "end_game",
+    "start_encounter",
+    "start_dialogue",
+    "start_quick_dialogue",
+})
 
 
 def compile_world_program(
@@ -169,8 +182,14 @@ def validate_world_program(program: CompiledWorldProgram) -> None:
     for location in snapshot.locations_by_id.values():
         assert location.title, f"{program.id}: location missing title."
     for action in snapshot.actions_by_id.values():
+        _assert_effects_allowed(action.effects, context=f"{program.id}: action `{action.title}`")
+        if action.check is not None:
+            for outcome_name, outcome in (("ok", action.check.success), ("partial", action.check.cost), ("fail", action.check.fail)):
+                _assert_effects_allowed(outcome.effects, context=f"{program.id}: action `{action.title}` {outcome_name}")
         for condition in action.conditions:
             assert condition.kind, f"{program.id}: action contains malformed condition: {condition!r}"
+    for rule in program.react_rules:
+        _assert_effects_allowed(rule.effects, context=f"{program.id}: react `{rule.source}`")
 
 
 def _validate_world_schema_forms(expr: Any, env: Environment, *, context: str) -> None:
@@ -178,7 +197,7 @@ def _validate_world_schema_forms(expr: Any, env: Environment, *, context: str) -
 
 
 def react_rule_matches(program: CompiledWorldProgram, state: GameState, rule: ReactRule) -> bool:
-    return bool(evaluate(rule.condition_expr, _world_env(program, state)))
+    return truthy(evaluate(rule.condition_expr, _world_env(program, state)))
 
 
 def next_react_rule(program: CompiledWorldProgram, state: GameState, blocked_sources: set[str]) -> ReactRule | None:
@@ -296,7 +315,7 @@ def _world_resolver(name: str, program: CompiledWorldProgram, state: GameState) 
     if name in {"health", "stress"}:
         return StateBindingValue(name=name, spec=StoreFieldSpec(id=name, kind="value", initial=0, persist="run"), value=getattr(state.attributes, name))
     if name in {"money", "cigarettes"}:
-        return StateBindingValue(name=name, spec=StoreFieldSpec(id=name, kind="value", initial=0, persist="run"), value=getattr(state.resources, name))
+        return StateBindingValue(name=name, spec=StoreFieldSpec(id=name, kind="value", initial=0, persist="run"), value=state.world.inventory.get(name, 0))
     if name in state.world.values:
         return StateBindingValue(name=name, spec=StoreFieldSpec(id=name, kind="value", initial=state.world.values[name], persist="run"), value=state.world.values[name])
     if name in program.initial_values:
@@ -309,16 +328,24 @@ def _world_resolver(name: str, program: CompiledWorldProgram, state: GameState) 
         return StateBindingValue(name=name, spec=StoreFieldSpec(id=name, kind="value", initial=0, persist="run"), value=state.world.inventory[name])
     return _MISSING
 def _dummy_state(program: CompiledWorldProgram) -> GameState:
-    from raygame.model.state import AttributeState, DeckState, GameState, ResourceState, WorldState
+    from raygame.model.state import AttributeState, DeckState, GameState, WorldState
 
     return GameState(
         deck=DeckState(draw_pile=[]),
         attributes=AttributeState(health=program.initial_health, stress=program.initial_stress),
-        resources=ResourceState(money=program.initial_money, cigarettes=program.initial_cigarettes),
         world=WorldState(
             progress_clocks={clock_id: ProgressClockState(value=0, visible=True) for clock_id in program.clocks_by_id},
-            inventory=dict(program.initial_inventory),
+            inventory={
+                **dict(program.initial_inventory),
+                "money": program.initial_money,
+                "cigarettes": program.initial_cigarettes,
+            },
             values=dict(program.initial_values),
         ),
         screen=ScreenName.CITY,
     )
+
+
+def _assert_effects_allowed(effects: tuple[Effect, ...], *, context: str) -> None:
+    for effect in effects:
+        assert effect.kind in WORLD_EFFECTS, f"{context} uses disallowed effect `{effect.kind}`"

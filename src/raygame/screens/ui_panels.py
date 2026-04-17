@@ -3,6 +3,7 @@ from __future__ import annotations
 from pyray import *  # type: ignore
 
 from raygame.content import CARD_DEFS, GROWTH_DEFS
+from raygame.labels import ITEM_LABELS
 from raygame.model.defs import ActionDef, InputRequirement
 from raygame.model.enums import ResultType, SUIT_LABELS
 from raygame.model.state import GameState
@@ -20,9 +21,7 @@ from raygame.rules import (
     select_item_input,
 )
 
-from .ui_core import begin_layer, centered_rect, clickable, draw_frame, draw_scrim, end_layer, layout, mouse_point, text_button, wrap_text_lines, wrap_text_lines_any
-from .ui_tags import ITEM_LABELS, RESOURCE_LABELS
-
+from .ui_core import begin_layer, centered_rect, clickable, draw_frame, draw_scrim, end_layer, layout, measure_text_width, mouse_point, text_button, wrap_text_lines, wrap_text_lines_any
 
 def draw_hud(font: Font | None, state: GameState) -> None:
     begin_layer("hud", interactive=(state.modal.kind in {"", "profile"}))
@@ -99,25 +98,93 @@ def draw_compact_card(font: Font | None, rect: Rectangle, card_id: str, selected
         border = Color(201, 165, 88, 255)
     clicked = clickable(rect) if interactive else False
     draw_frame(rect, fill, border)
-    draw_text(font, card.title, int(rect.x) + 12, int(rect.y) + 12, 22, RAYWHITE)
-    draw_text(font, SUIT_LABELS[card.suit], int(rect.x) + 12, int(rect.y) + 44, 18, LIGHTGRAY)
-    draw_text(font, f"点数 {card.points}", int(rect.x) + 12, int(rect.y) + 68, 18, Color(212, 196, 132, 255))
+    _draw_hand_card_head(font, rect, card)
+    _draw_hand_card_suit(font, rect, card)
     if card.is_negative:
-        draw_text(font, "负面", int(rect.x) + 96, int(rect.y) + 68, 18, Color(210, 126, 110, 255))
+        draw_text(font, "负面", int(rect.x) + 12, int(rect.y) + 68, 16, Color(210, 126, 110, 255))
     return clicked
+
+
+def _draw_hand_card_head(font: Font | None, rect: Rectangle, card) -> None:
+    name = _hand_card_style_label(card.title)
+    number_text = str(card.points)
+    number_color = Color(212, 196, 132, 255) if not card.is_negative else Color(210, 126, 110, 255)
+    text_size = 28
+    suffix_size = 18
+    x = int(rect.x) + 12
+    y = int(rect.y) + 12
+    draw_text(font, number_text, x, y, text_size, number_color)
+    draw_text(font, name, x + int(measure_text_width(font, number_text, text_size)) + 6, y + 1, suffix_size, LIGHTGRAY)
+
+
+def _draw_hand_card_suit(font: Font | None, rect: Rectangle, card) -> None:
+    suit_label = SUIT_LABELS[card.suit]
+    suit_color = Color(205, 205, 205, 255) if not card.is_negative else Color(170, 170, 170, 255)
+    draw_text(font, suit_label, int(rect.x) + 12, int(rect.y) + 44, 18, suit_color)
+
+
+def _hand_card_style_label(title: str) -> str:
+    if "·" not in title:
+        return title
+    head, tail = title.split("·", 1)
+    return head
+
+
+def _draw_selected_card_curve(rect: Rectangle) -> None:
+    start = Vector2(rect.x + rect.width * 0.5, rect.y + 8)
+    end = mouse_point()
+    draw_line_bezier(start, end, 6.0, Color(84, 68, 46, 180))
+    draw_line_bezier(start, end, 3.0, Color(212, 196, 132, 235))
+    draw_circle_v(end, 4.0, Color(212, 196, 132, 220))
+
+
+def draw_selected_card_curve_overlay(state: GameState) -> None:
+    if state.selected_input.kind == "card" and state.selected_input.index is not None:
+        hand = layout().hand
+        x = int(hand.x) + 18
+        y = int(hand.y) + 48
+        for index, _card_id in enumerate(state.deck.hand):
+            if index == state.selected_input.index:
+                _draw_selected_card_curve(Rectangle(x, y, 150, 106))
+                return
+            x += 162
+            if x > hand.x + hand.width - 260:
+                return
+    if state.selected_input.kind == "item":
+        rect = _selected_inventory_rect(state)
+        if rect is not None:
+            _draw_selected_card_curve(rect)
+
+
+def _selected_inventory_rect(state: GameState) -> Rectangle | None:
+    key = state.selected_input.key
+    if not key:
+        return None
+    hand = layout().hand
+    inventory_rect = Rectangle(hand.x + hand.width - 226, hand.y + 10, 214, hand.height - 20)
+    slots = _inventory_slots(state)
+    match_index = next(
+        (index for index, (kind, slot_key, _label, _amount) in enumerate(slots) if kind == state.selected_input.kind and slot_key == key),
+        None,
+    )
+    if match_index is None:
+        return None
+    cell_w = (inventory_rect.width - 38) * 0.5
+    cell_h = 58
+    col = match_index % 2
+    row = match_index // 2
+    return Rectangle(
+        inventory_rect.x + 14 + col * (cell_w + 10),
+        inventory_rect.y + 42 + row * (cell_h + 10),
+        cell_w,
+        cell_h,
+    )
 
 
 def draw_inventory_panel(font: Font | None, rect: Rectangle, state: GameState, action: ActionDef | None) -> None:
     draw_frame(rect, Color(16, 18, 24, 255), Color(76, 82, 96, 220))
     draw_text(font, "物品", int(rect.x) + 14, int(rect.y) + 10, 22, RAYWHITE)
-    slots = [
-        ("item", "money", "金币", state.resources.money),
-        ("item", "cigarettes", "烟卷", state.resources.cigarettes),
-        ("item", "clothes", "华美衣服", state.world.inventory.get("clothes", 0)),
-        ("item", "car_key", "钥匙", state.world.inventory.get("car_key", 0)),
-        ("item", "repair_case_item", "任务物", state.world.inventory.get("repair_case_item", 0)),
-        ("item", "gun", "枪", state.world.inventory.get("gun", 0)),
-    ]
+    slots = _inventory_slots(state)
     cell_w = (rect.width - 38) * 0.5
     cell_h = 58
     for index, (kind, key, label, amount) in enumerate(slots):
@@ -138,6 +205,25 @@ def draw_inventory_panel(font: Font | None, rect: Rectangle, state: GameState, a
             select_item_input(state, key)
         draw_text(font, label, int(cell.x) + 10, int(cell.y) + 8, 16, RAYWHITE if not disabled else Color(110, 110, 110, 255))
         draw_text(font, str(amount), int(cell.x) + 10, int(cell.y) + 30, 18, Color(212, 196, 132, 255) if not disabled else Color(100, 100, 100, 255))
+
+
+def _inventory_slots(state: GameState) -> list[tuple[str, str, str, int]]:
+    slots: list[tuple[str, str, str, int]] = [
+        ("item", "money", ITEM_LABELS["money"], state.world.inventory.get("money", 0)),
+        ("item", "cigarettes", ITEM_LABELS["cigarettes"], state.world.inventory.get("cigarettes", 0)),
+    ]
+    preferred_items = ("clothes", "hotel_pass", "car_key", "repair_case_item", "gun")
+    seen: set[str] = set()
+    for key in preferred_items:
+        amount = state.world.inventory.get(key, 0)
+        if amount > 0 or key in ITEM_LABELS:
+            slots.append(("item", key, ITEM_LABELS.get(key, key), amount))
+            seen.add(key)
+    for key, amount in sorted(state.world.inventory.items()):
+        if key in seen:
+            continue
+        slots.append(("item", key, ITEM_LABELS.get(key, key), amount))
+    return slots
 
 
 def draw_result_strip(font: Font | None, rect: Rectangle, row: tuple[ResultType, ...], scale: float = 1.0) -> None:

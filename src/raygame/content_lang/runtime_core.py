@@ -21,6 +21,7 @@ from raygame.encounters.defs import (
     StoreFieldSpec,
 )
 from raygame.encounters.lispy import Environment, SpecialFormProcedure, evaluate
+from raygame.labels import lookup_input_label
 from raygame.model.defs import ActionDef, CheckDef, Condition, Effect, InputRequirement, LocationNode, OutcomeDef
 from raygame.model.enums import Risk, ScreenName, Suit
 
@@ -69,6 +70,12 @@ def validate_scene_template(scene: SceneTemplate) -> None:
 def validate_action_template(action: ActionTemplate) -> None:
     for condition in action.conditions:
         assert isinstance(condition, Condition), f"action contains non-condition value: {condition!r}"
+    for item in action.inputs:
+        assert isinstance(item, InputRequirement), f"action contains non-input value: {item!r}"
+    for effect in action.before:
+        assert isinstance(effect, Effect), f"action contains non-effect before value: {effect!r}"
+    for effect in action.effects:
+        assert isinstance(effect, Effect), f"action contains non-effect value: {effect!r}"
     if action.check is not None:
         build_check(action.check)
 
@@ -134,13 +141,13 @@ def validate_schema_forms(
         )
 
 
-def render_scene(program: Any, scene: SceneTemplate, *, scene_path: tuple[str, ...]) -> RenderedScene:
-    scene_key = _hash_key(scene.title, scene_path, "scene")
+def render_scene(program: Any, scene: SceneTemplate, *, scene_path: tuple[str, ...], source_index: int = 0) -> RenderedScene:
+    scene_key = _hash_key(scene.title, (*scene_path, f"slot:{source_index}"), "scene")
     path = (*scene_path, scene_key)
     rendered_actions: list[RenderedAction] = []
     for source_index, action in enumerate(scene.actions):
         rendered_actions.append(_render_action(program, action, scene_path=path, source_index=source_index))
-    rendered_children = tuple(render_scene(program, child, scene_path=path) for child in scene.children)
+    rendered_children = tuple(render_scene(program, child, scene_path=path, source_index=index) for index, child in enumerate(scene.children))
     root = LocationNode(
         id=scene_key,
         title=scene.title,
@@ -214,8 +221,7 @@ def host_values(*, store_specs: dict[str, StoreFieldSpec], store: dict[str, int 
         "item": builtin_item_input,
         "card": builtin_card_input,
         "clock-value": lambda value: clock_metric(value, "value"),
-        "clock-full": lambda value: clock_metric(value, "maximum"),
-        "clock-half": lambda value: (clock_metric(value, "maximum") + 1) // 2,
+        "clock-max": lambda value: clock_metric(value, "maximum"),
     }
 
 
@@ -360,12 +366,13 @@ def builtin_effect(args: tuple[Any, ...]) -> Effect:
         return Effect(kind="add_field", value=f"stress:{int(unwrap(args[1]))}")
     if kind == "start-encounter":
         return Effect(kind="start_encounter", value=str(unwrap(args[1])))
-    if kind == "finish":
-        return Effect(kind="finish_encounter", value=str(unwrap(args[1])))
+    if kind == "end-encounter":
+        return Effect(kind="end_encounter", value=str(unwrap(args[1])))
     if kind == "advance-day":
         return Effect(kind="advance_day", value=True)
-    if kind == "end-run":
-        return Effect(kind="end_run", value=str(unwrap(args[1])))
+    if kind == "end-game":
+        assert len(args) == 1, "`end-game` does not take parameters."
+        return Effect(kind="end_game", value=True)
     if kind == "reset-hand":
         return Effect(kind="reset_hand", value=True)
     raise EncounterSchemaError(f"Unsupported encounter effect kind: {kind}")
@@ -373,7 +380,8 @@ def builtin_effect(args: tuple[Any, ...]) -> Effect:
 
 def builtin_item_input(key: Any, amount: Any = 1, label: Any | None = None) -> InputRequirement:
     key_value = str(unwrap(key))
-    return InputRequirement(kind="item", key=key_value, amount=int(unwrap(amount)), label=(key_value if label is None else str(unwrap(label))), consume=True)
+    resolved_label = lookup_input_label(key_value) if label is None else str(unwrap(label))
+    return InputRequirement(kind="item", key=key_value, amount=int(unwrap(amount)), label=resolved_label, consume=True)
 
 
 def builtin_card_input(key: Any, label: Any | None = None) -> InputRequirement:

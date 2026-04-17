@@ -34,7 +34,7 @@ class ScreenName(str, Enum):
 SUIT_LABELS = {
     Suit.REASON: "理性",
     Suit.INSTINCT: "直觉",
-    Suit.EMPATHY: "共情",
+    Suit.EMPATHY: "感知",
     Suit.FORCE: "强硬",
     Suit.WOUND: "流血",
     Suit.SHOCK: "惊悸",

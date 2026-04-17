@@ -33,10 +33,10 @@ from .ui_panels import (
     draw_pile_button,
     draw_profile_modal,
     draw_result_strip,
+    draw_selected_card_curve_overlay,
 )
 from .ui_tags import (
     ITEM_LABELS,
-    RESOURCE_LABELS,
     action_corner_labels,
     condition_labels,
     draw_action_corner_clocks,
@@ -51,7 +51,6 @@ from .ui_tags import (
 __all__ = [
     "ACTION_CARD",
     "ITEM_LABELS",
-    "RESOURCE_LABELS",
     "StageLayout",
     "TABLE_CARD",
     "TableCardStyle",
@@ -82,6 +81,7 @@ __all__ = [
     "draw_pile_button",
     "draw_profile_modal",
     "draw_result_strip",
+    "draw_selected_card_curve_overlay",
     "draw_scrim",
     "draw_slot_chip",
     "draw_table_card",

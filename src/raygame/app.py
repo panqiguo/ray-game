@@ -8,6 +8,7 @@ import sys
 from pyray import *  # type: ignore
 
 from raygame.constants import TARGET_FPS, WINDOW_HEIGHT, WINDOW_WIDTH
+from raygame.content.hot_reload import HOT_RELOADER
 from raygame.dialogue_compile import compile_dialogues
 from raygame.content.validate import validate_content
 from raygame.rendering import configure_gui_theme, draw_text, load_ui_font
@@ -36,6 +37,7 @@ class GameApp:
         self.state, self.rng = start_new_run(seed)
 
     def update(self) -> None:
+        HOT_RELOADER.reload_if_changed(self.state)
         if is_key_pressed(KEY_F1):
             self.state.debug_open = not self.state.debug_open
         if is_key_pressed(KEY_F5):

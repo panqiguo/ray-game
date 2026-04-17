@@ -11,6 +11,8 @@ from .progression import (
     close_modal,
     continue_dialogue,
     current_action,
+    current_encounter_snapshot,
+    current_world_snapshot,
     dismiss_pending_resolution,
     finish_dialogue,
     focus_action,

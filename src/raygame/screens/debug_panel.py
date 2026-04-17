@@ -16,14 +16,14 @@ def draw_debug_panel(font: Font | None, state: GameState) -> None:
     draw_text(font, "调试", 1096, 104, 24, RAYWHITE)
     y = 142
     if text_button(font, Rectangle(1096, y, 140, 30), "加钱 +20", 18):
-        state.resources.money += 20
+        state.world.inventory["money"] = state.world.inventory.get("money", 0) + 20
     if text_button(font, Rectangle(1248, y, 140, 30), "压力 +2", 18):
         change_stress(state, 2)
     y += 40
     if text_button(font, Rectangle(1096, y, 140, 30), "生命 -1", 18):
         change_health(state, -1)
     if text_button(font, Rectangle(1248, y, 140, 30), "烟卷 +1", 18):
-        state.resources.cigarettes += 1
+        state.world.inventory["cigarettes"] = state.world.inventory.get("cigarettes", 0) + 1
     y += 40
     if text_button(font, Rectangle(1096, y, 140, 30), "钥匙 +1", 18):
         state.world.inventory["car_key"] = state.world.inventory.get("car_key", 0) + 1

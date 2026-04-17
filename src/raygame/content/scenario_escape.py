@@ -23,4 +23,28 @@ def build_escape_scenario() -> CompiledWorldProgram:
     )
 
 
-SCENARIO = build_escape_scenario()
+class ScenarioProxy:
+    def __init__(self, program: CompiledWorldProgram) -> None:
+        self._program = program
+
+    def get_program(self) -> CompiledWorldProgram:
+        return self._program
+
+    def set_program(self, program: CompiledWorldProgram) -> None:
+        self._program = program
+
+    def __getattr__(self, name: str):
+        return getattr(self._program, name)
+
+
+SCENARIO = ScenarioProxy(build_escape_scenario())
+
+
+def replace_escape_scenario(program: CompiledWorldProgram) -> None:
+    SCENARIO.set_program(program)
+
+
+def reload_escape_scenario() -> CompiledWorldProgram:
+    program = build_escape_scenario()
+    replace_escape_scenario(program)
+    return program

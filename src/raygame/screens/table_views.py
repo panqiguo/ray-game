@@ -19,7 +19,7 @@ from raygame.rules import (
 
 from .city_presenters import PresentedWorldObject
 from .table_presenters import ActionSlotModel, PresentedActionCard, PresentedLocationCard
-from .ui_core import draw_frame, layout, pill, wrap_text_lines
+from .ui_core import draw_frame, layout, pill, wrap_text_lines, wrap_text_lines_any
 from .ui_cards import draw_table_card
 from .ui_panels import draw_result_strip
 from .widgets import draw_note_block, draw_scrim, draw_slot_chip, draw_table_shell
@@ -27,6 +27,9 @@ from .widgets import draw_note_block, draw_scrim, draw_slot_chip, draw_table_she
 
 MESSAGE_SIDEBAR_GAP = 14.0
 MESSAGE_SIDEBAR_WIDTH = 300.0
+LOCATION_CARD_WIDTH = 188.0
+LOCATION_CARD_MIN_HEIGHT = 96.0
+LOCATION_CARD_MAX_HEIGHT = 156.0
 
 
 def split_desktop_area(stage: Rectangle) -> tuple[Rectangle, Rectangle]:
@@ -59,7 +62,7 @@ def draw_location_grid(
     columns: int,
     nested: bool = False,
 ) -> None:
-    laid_out = layout_location_cards(rect, cards, columns)
+    laid_out = layout_location_cards(font, rect, cards, columns)
     for presented, (card, scale) in zip(cards, laid_out):
         if draw_table_card(font, card, state, presented.card, scale=scale):
             clear_assembly(state)
@@ -71,8 +74,8 @@ def draw_location_grid(
 
 
 def draw_world_objects(font: Font | None, state: GameState, rng, rect: Rectangle, cards: tuple[PresentedWorldObject, ...]) -> None:
-    laid_out = layout_world_objects(rect, cards)
-    for presented, (card, scale) in laid_out:
+    laid_out = layout_world_objects(font, rect, cards)
+    for presented, card, scale in laid_out:
         if presented.kind == "location":
             if draw_table_card(font, card, state, presented.card, scale=scale):
                 clear_assembly(state)
@@ -128,7 +131,8 @@ def draw_action_card(font: Font | None, state: GameState, presented: PresentedAc
     pending = state.pending_resolution if state.pending_resolution and state.pending_resolution.resolution.action_id == action.id else None
     draw_table_card(font, rect, state, presented.card, scale=scale)
 
-    slot_y = rect.y + 124.0 * scale
+    metadata_rows = max(0, len(presented.card.metadata) - 1)
+    slot_y = rect.y + (124.0 + metadata_rows * 18.0) * scale
     slot_x = rect.x + 14.0 * scale
     for slot in presented.slots:
         if draw_slot_chip(
@@ -325,14 +329,36 @@ def fit_absolute_world_objects(rect: Rectangle, cards: tuple[PresentedWorldObjec
     return laid_out
 
 
-def layout_world_objects(rect: Rectangle, cards: tuple[PresentedWorldObject, ...]) -> list[tuple[PresentedWorldObject, tuple[Rectangle, float]]]:
-    return fit_absolute_world_objects(rect, cards) if all_positioned(card.position for card in cards) else []
-
-
-def layout_location_cards(rect: Rectangle, cards: tuple[PresentedLocationCard, ...], columns: int) -> list[tuple[Rectangle, float]]:
+def layout_world_objects(
+    font: Font | None,
+    rect: Rectangle,
+    cards: tuple[PresentedWorldObject, ...],
+) -> list[tuple[PresentedWorldObject, Rectangle, float]]:
+    if not cards:
+        return []
     if all_positioned(card.position for card in cards):
-        return fit_absolute_card_positions(rect, cards, lambda item: item.position, lambda item: item.card.style.width, lambda item: item.card.style.height)
-    return fit_grid_cards(rect, len(cards), 188.0, 96.0, 18.0, 18.0, columns)
+        laid_out = fit_absolute_card_positions(
+            rect,
+            cards,
+            lambda item: item.position,
+            lambda item: item.card.style.width,
+            lambda item: preferred_world_object_height(font, item),
+        )
+        return [(presented, card, scale) for presented, (card, scale) in zip(cards, laid_out)]
+    return []
+
+
+def layout_location_cards(font: Font | None, rect: Rectangle, cards: tuple[PresentedLocationCard, ...], columns: int) -> list[tuple[Rectangle, float]]:
+    if all_positioned(card.position for card in cards):
+        return fit_absolute_card_positions(
+            rect,
+            cards,
+            lambda item: item.position,
+            lambda item: item.card.style.width,
+            lambda item: preferred_location_height(font, item),
+        )
+    card_h = max(preferred_location_height(font, card) for card in cards) if cards else LOCATION_CARD_MIN_HEIGHT
+    return fit_grid_cards(rect, len(cards), LOCATION_CARD_WIDTH, card_h, 18.0, 18.0, columns)
 
 
 def layout_action_cards(rect: Rectangle, cards: tuple[PresentedActionCard, ...], columns: int) -> list[tuple[Rectangle, float]]:
@@ -344,6 +370,24 @@ def layout_action_cards(rect: Rectangle, cards: tuple[PresentedActionCard, ...],
 def all_positioned(positions) -> bool:
     positions = tuple(positions)
     return bool(positions) and all(position is not None for position in positions)
+
+
+def preferred_location_height(font: Font | None, card: PresentedLocationCard) -> float:
+    return _preferred_card_height(font, card.card.body, card.card.style.body_size, card.card.style.width)
+
+
+def preferred_world_object_height(font: Font | None, card: PresentedWorldObject) -> float:
+    if card.kind == "location":
+        return _preferred_card_height(font, card.card.body, card.card.style.body_size, card.card.style.width)
+    return card.card.style.height
+
+
+def _preferred_card_height(font: Font | None, body: str, body_size: int, width: float) -> float:
+    body_w = max(1.0, width - 28.0)
+    body_lines = wrap_text_lines_any(font, body, body_w, body_size)
+    line_h = max(12, int(round(body_size + 2)))
+    height = 42.0 + len(body_lines) * line_h + 12.0
+    return max(LOCATION_CARD_MIN_HEIGHT, min(LOCATION_CARD_MAX_HEIGHT, height))
 
 
 def fit_absolute_card_positions(rect: Rectangle, cards, position_getter, width_getter, height_getter) -> list[tuple[Rectangle, float]]:

@@ -94,6 +94,22 @@ def expand_includes(source: str, *, source_path: Path | None, include_stack: tup
     return expanded
 
 
+def module_dependency_paths(source_path: Path, include_stack: tuple[Path, ...] = ()) -> tuple[Path, ...]:
+    source_path = source_path.resolve()
+    forms = parse_program(source_path.read_text(encoding="utf-8"))
+    discovered: list[Path] = [source_path]
+    for form in forms:
+        if isinstance(form, list) and form and form[0] == "include":
+            target = form[1]
+            assert isinstance(target, StringAtom), "`include` path must be a string literal."
+            include_path = (source_path.parent / target.value).resolve()
+            if include_path in include_stack:
+                raise EncounterModuleError(f"Cyclic include detected: {include_path}")
+            discovered.extend(module_dependency_paths(include_path, include_stack=(*include_stack, include_path)))
+    # keep stable order while deduplicating
+    return tuple(dict.fromkeys(discovered))
+
+
 def evaluate(expr: Any, env: Environment) -> Any:
     if isinstance(expr, StringAtom):
         return expr.value
@@ -222,9 +238,16 @@ def base_environment() -> Environment:
             "apply": _apply_builtin,
             "+": lambda *items: sum(int(_scalar(item)) for item in items),
             "-": _sub,
+            "*": _mul,
+            "/": _div,
+            "abs": lambda value: abs(int(_scalar(value))),
+            "mod": _mod,
+            "remainder": _mod,
             "min": lambda *items: min(int(_scalar(item)) for item in items),
             "max": lambda *items: max(int(_scalar(item)) for item in items),
             "=": lambda left, right: _scalar(left) == _scalar(right),
+            "eq?": lambda left, right: _scalar(left) == _scalar(right),
+            "equal?": lambda left, right: _scalar(left) == _scalar(right),
             "<": lambda left, right: _scalar(left) < _scalar(right),
             "<=": lambda left, right: _scalar(left) <= _scalar(right),
             ">": lambda left, right: _scalar(left) > _scalar(right),
@@ -234,6 +257,9 @@ def base_environment() -> Environment:
             "string?": lambda value: isinstance(_scalar(value), str),
             "boolean?": lambda value: isinstance(_scalar(value), bool),
             "symbol?": lambda value: isinstance(_scalar(value), str),
+            "zero?": lambda value: int(_scalar(value)) == 0,
+            "positive?": lambda value: int(_scalar(value)) > 0,
+            "negative?": lambda value: int(_scalar(value)) < 0,
         }
     )
 
@@ -243,6 +269,30 @@ def _sub(first: Any, *rest: Any) -> int:
     if not rest:
         return start
     return start - sum(int(_scalar(item)) for item in rest)
+
+
+def _mul(*items: Any) -> int:
+    result = 1
+    for item in items:
+        result *= int(_scalar(item))
+    return result
+
+
+def _div(first: Any, *rest: Any) -> int:
+    start = int(_scalar(first))
+    assert rest, "`/` expects at least two operands."
+    result = start
+    for item in rest:
+        divisor = int(_scalar(item))
+        assert divisor != 0, "Division by zero."
+        result //= divisor
+    return result
+
+
+def _mod(left: Any, right: Any) -> int:
+    divisor = int(_scalar(right))
+    assert divisor != 0, "Modulo by zero."
+    return int(_scalar(left)) % divisor
 
 
 def _car(value: Any) -> Any:

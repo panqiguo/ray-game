@@ -20,7 +20,6 @@ from raygame.model.state import (
     GameState,
     PendingResolutionState,
     ProgressClockState,
-    ResourceState,
     ModalState,
     SelectedInputState,
     WorldState,
@@ -50,7 +49,11 @@ def start_new_run(seed: int) -> tuple[GameState, RandomSource]:
             )
             for clock_id, spec in SCENARIO.clocks_by_id.items()
         },
-        inventory=dict(SCENARIO.initial_inventory),
+        inventory={
+            **dict(SCENARIO.initial_inventory),
+            "money": SCENARIO.initial_money,
+            "cigarettes": SCENARIO.initial_cigarettes,
+        },
         values=dict(SCENARIO.initial_values),
     )
     state = GameState(
@@ -61,10 +64,6 @@ def start_new_run(seed: int) -> tuple[GameState, RandomSource]:
             stress=SCENARIO.initial_stress,
             max_stress=8,
         ),
-        resources=ResourceState(
-            money=SCENARIO.initial_money,
-            cigarettes=SCENARIO.initial_cigarettes,
-        ),
         world=world,
         screen=ScreenName.CITY,
         pending_growth_choices=list(SCENARIO.initial_growth_choices),
@@ -74,11 +73,12 @@ def start_new_run(seed: int) -> tuple[GameState, RandomSource]:
     sync_trauma_cards_with_health(state)
     start_city_day(state.deck, rng, HAND_SIZE)
     _push_log(state, "你从一场暴打里活了下来，但还没真正脱身。")
+    _resolve_world_reacts(state, rng, [])
     return state, rng
 
 
 def get_action(action_id: str) -> ActionDef:
-    return render_world(SCENARIO, _runtime_projection_state()).actions_by_id[action_id]
+    return current_world_snapshot(_runtime_projection_state()).actions_by_id[action_id]
 
 
 def get_action_for_state(state: GameState, action_id: str) -> ActionDef | None:
@@ -87,9 +87,9 @@ def get_action_for_state(state: GameState, action_id: str) -> ActionDef | None:
 
 def _current_content(state: GameState | None = None):
     if state is not None and state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None:
-        return _encounter_snapshot(state)
+        return current_encounter_snapshot(state)
     assert state is not None
-    return render_world(SCENARIO, state)
+    return current_world_snapshot(state)
 
 
 def _runtime_projection_state() -> GameState:
@@ -104,11 +104,38 @@ def _encounter(state: GameState):
 
 def _encounter_snapshot(state: GameState):
     assert state.active_encounter is not None
-    return render_encounter(_encounter(state), state.active_encounter.store)
+    return current_encounter_snapshot(state)
 
 
 def _current_encounter_root_id(state: GameState) -> str:
     return _encounter_snapshot(state).root.root.id
+
+
+def current_world_snapshot(state: GameState):
+    cache = state.render_cache
+    if cache.world_revision == cache.revision and cache.world_snapshot is not None:
+        return cache.world_snapshot
+    snapshot = render_world(SCENARIO, state)
+    cache.world_snapshot = snapshot
+    cache.world_revision = cache.revision
+    return snapshot
+
+
+def current_encounter_snapshot(state: GameState):
+    assert state.active_encounter is not None
+    cache = state.render_cache
+    encounter_id = state.active_encounter.encounter_id
+    if cache.encounter_revision == cache.revision and cache.encounter_id == encounter_id and cache.encounter_snapshot is not None:
+        return cache.encounter_snapshot
+    snapshot = render_encounter(_encounter(state), state.active_encounter.store)
+    cache.encounter_snapshot = snapshot
+    cache.encounter_revision = cache.revision
+    cache.encounter_id = encounter_id
+    return snapshot
+
+
+def _mark_content_dirty(state: GameState) -> None:
+    state.render_cache.revision += 1
 
 
 def get_clock_value(state: GameState, clock_id: str) -> int:
@@ -132,8 +159,6 @@ def _field_value(state: GameState, key: str) -> int | bool | str:
         return state.active_encounter.store[key]
     if hasattr(state.attributes, key):
         return getattr(state.attributes, key)
-    if hasattr(state.resources, key):
-        return getattr(state.resources, key)
     if key in state.world.values:
         return state.world.values[key]
     return state.world.inventory.get(key, 0)
@@ -143,23 +168,24 @@ def _set_field(state: GameState, key: str, value: int | bool | str, extra_lines:
     if state.active_encounter is not None and key in state.active_encounter.store:
         current = state.active_encounter.store[key]
         state.active_encounter.store[key] = _coerce_like(current, value)
+        _mark_content_dirty(state)
         return
     if hasattr(state.attributes, key):
         setattr(state.attributes, key, int(value))
         if key == "health":
             sync_trauma_cards_with_health(state)
-        return
-    if hasattr(state.resources, key):
-        setattr(state.resources, key, int(value))
+        _mark_content_dirty(state)
         return
     if isinstance(value, bool) or key in state.world.values:
         state.world.values[key] = value
+        _mark_content_dirty(state)
         return
     count = int(value)
     if count <= 0:
         state.world.inventory.pop(key, None)
     else:
         state.world.inventory[key] = count
+    _mark_content_dirty(state)
 
 
 def _add_field(state: GameState, key: str, amount: int, extra_lines: list[str] | None = None) -> None:
@@ -195,11 +221,17 @@ def action_is_available(action: ActionDef, state: GameState) -> bool:
     return action_is_visible(action, state) and all_met(action.conditions, state) and requirements_affordable(action.inputs, state)
 
 
+def _root_location_id(content) -> str:
+    if hasattr(content, "world_root_id"):
+        return content.world_root_id
+    return content.root.root.id
+
+
 def location_is_visible(location_id: str, state: GameState) -> bool:
     content = _current_content(state)
     if location_id not in content.locations_by_id:
         return False
-    if location_id == content.world_root_id:
+    if location_id == _root_location_id(content):
         return True
     parent_id = content.parent_by_id[location_id]
     if parent_id is not None and not location_is_visible(parent_id, state):
@@ -397,6 +429,12 @@ def finish_dialogue(state: GameState) -> None:
     if state.active_dialogue is None:
         return
     _clear_dialogue_modal(state)
+    if state.pending_game_over:
+        _apply_game_over(
+            state,
+            title=state.pending_game_over_title,
+            body=state.pending_game_over_body,
+        )
 
 
 def _clear_dialogue_modal(state: GameState) -> None:
@@ -404,6 +442,32 @@ def _clear_dialogue_modal(state: GameState) -> None:
     state.modal = ModalState()
     clear_assembly(state)
     clear_selected_input(state)
+
+
+def _apply_game_over(state: GameState, *, title: str, body: str) -> None:
+    state.pending_game_over = False
+    state.pending_game_over_title = ""
+    state.pending_game_over_body = ""
+    state.ending_id = "game_over"
+    state.ending_title = title
+    state.ending_body = body
+    state.screen = ScreenName.ENDING
+    state.active_encounter = None
+    state.active_dialogue = None
+    state.pending_resolution = None
+    state.modal = ModalState()
+    clear_assembly(state)
+    clear_selected_input(state)
+    _mark_content_dirty(state)
+
+
+def end_game(state: GameState, *, title: str = "游戏结束", body: str = "") -> None:
+    if state.active_dialogue is not None:
+        state.pending_game_over = True
+        state.pending_game_over_title = title
+        state.pending_game_over_body = body
+        return
+    _apply_game_over(state, title=title, body=body)
 
 
 def focus_action(state: GameState, action_id: str) -> None:
@@ -809,7 +873,7 @@ def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines
         assert isinstance(value, str)
         start_quick_dialogue(state, value)
         return
-    if item.kind == "finish_encounter":
+    if item.kind == "end_encounter":
         assert isinstance(value, str)
         finish_encounter(state, value, rng, extra_lines)
         return
@@ -818,18 +882,10 @@ def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines
         return
     if item.kind == "advance_day":
         state.day += 1
+        _mark_content_dirty(state)
         return
-    if item.kind == "end_run":
-        assert isinstance(value, str)
-        if value == "caught":
-            state.ending_id = value
-            state.ending_title = "被追上了"
-            state.ending_body = "你每晚都在争时间，但脚步声终究还是追上了你。"
-        else:
-            state.ending_id = value
-            state.ending_title = "离开这里"
-            state.ending_body = "钥匙终于发动了这辆车。你不知道前方是不是更好，但至少已经离开了这里。"
-        state.screen = ScreenName.ENDING
+    if item.kind == "end_game":
+        end_game(state)
         return
     raise AssertionError(f"Unsupported effect kind: {item.kind}")
 
@@ -893,6 +949,7 @@ def advance_clock(state: GameState, clock_id: str, amount: int = 1, extra_lines:
     before = clock_state.value
     clock_state.value = max(0, min(spec.segments, clock_state.value + amount))
     clock_state.visible = True
+    _mark_content_dirty(state)
     for threshold in spec.thresholds:
         if before < threshold.at <= clock_state.value:
             _apply_effects(threshold.effects, state, RandomSource(state.seed), extra_lines)
@@ -904,12 +961,14 @@ def advance_encounter_clock(state: GameState, clock_id: str, amount: int = 1) ->
     spec = encounter.clocks_by_id[clock_id]
     current = int(state.active_encounter.store[clock_id])
     state.active_encounter.store[clock_id] = min(spec.segments, current + amount)
+    _mark_content_dirty(state)
 
 
 def damage_encounter_clock(state: GameState, clock_id: str, amount: int = 1) -> None:
     assert state.active_encounter is not None
     current = int(state.active_encounter.store[clock_id])
     state.active_encounter.store[clock_id] = max(0, current - amount)
+    _mark_content_dirty(state)
 
 
 def shift_clock(state: GameState, clock_id: str, amount: int, extra_lines: list[str] | None = None) -> None:
@@ -935,6 +994,7 @@ def start_encounter(state: GameState, encounter_id: str) -> None:
     state.modal.return_primary_id = None
     clear_assembly(state)
     clear_selected_input(state)
+    _mark_content_dirty(state)
     _push_log(state, f"进入侦探任务：{encounter.title}")
     _resolve_encounter_reacts(state, RandomSource(state.seed), [])
 
@@ -956,6 +1016,7 @@ def finish_encounter(state: GameState, outcome: str, rng: RandomSource, extra_li
     state.modal.return_primary_id = None
     clear_assembly(state)
     clear_selected_input(state)
+    _mark_content_dirty(state)
     if outcome == "success":
         _apply_effects(encounter.rewards, state, rng, extra_lines)
         _push_log(state, f"{encounter.title}：完成。")
@@ -974,6 +1035,7 @@ def finish_encounter_from_dialogue(state: GameState, outcome: str) -> None:
 def change_health(state: GameState, amount: int, extra_lines: list[str] | None = None) -> None:
     state.attributes.health = max(0, min(state.attributes.max_health, state.attributes.health + amount))
     sync_trauma_cards_with_health(state)
+    _mark_content_dirty(state)
     if state.attributes.health <= 0:
         state.ending_id = "collapse"
         state.ending_title = "倒下了"
@@ -984,9 +1046,11 @@ def change_health(state: GameState, amount: int, extra_lines: list[str] | None =
 def change_stress(state: GameState, amount: int, extra_lines: list[str] | None = None) -> None:
     if amount <= 0:
         state.attributes.stress = max(0, state.attributes.stress + amount)
+        _mark_content_dirty(state)
         return
     before = state.attributes.stress
     state.attributes.stress = min(state.attributes.max_stress, state.attributes.stress + amount)
+    _mark_content_dirty(state)
     if before >= state.attributes.max_stress or state.attributes.stress >= state.attributes.max_stress:
         if extra_lines is not None:
             extra_lines.append("压力已满，生命 -1")
@@ -1095,8 +1159,8 @@ def _describe_effects(effects: tuple[Effect, ...], action_id: str, state: GameSt
             # Encounter store writes drive dynamic scene changes, but most of them
             # are internal authoring facts rather than player-facing outcomes.
             continue
-        elif item.kind == "finish_encounter":
-            lines.append("处境结束")
+        elif item.kind == "end_encounter":
+            lines.append("任务结束")
         elif item.kind == "start_encounter":
             assert isinstance(value, str)
             target = get_encounter(value)
@@ -1109,8 +1173,8 @@ def _describe_effects(effects: tuple[Effect, ...], action_id: str, state: GameSt
             lines.append("重抽手牌")
         elif item.kind == "advance_day":
             lines.append("进入下一天")
-        elif item.kind == "end_run":
-            lines.append("达成结局")
+        elif item.kind == "end_game":
+            lines.append("游戏结束")
     deduped: list[str] = []
     for line in lines:
         if line not in deduped:

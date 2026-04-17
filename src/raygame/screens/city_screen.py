@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from pyray import *  # type: ignore
 
-from raygame.content import GROWTH_DEFS, SCENARIO
-from raygame.content.runtime import render_world
+from raygame.content import GROWTH_DEFS
 from raygame.model.state import GameState
-from raygame.rules import close_modal, current_action, dismiss_pending_resolution, location_is_visible
+from raygame.rules import close_modal, current_action, current_world_snapshot, dismiss_pending_resolution, location_is_visible
 from raygame.screens.city_presenters import (
     present_action_cards,
     present_child_location_cards,
@@ -28,6 +27,7 @@ from raygame.screens.widgets import (
     draw_message_feed,
     draw_profile_modal,
     draw_scrim,
+    draw_selected_card_curve_overlay,
     draw_table_shell,
     end_layer,
     layout,
@@ -56,10 +56,11 @@ def draw_city_screen(font: Font | None, state: GameState, rng) -> None:
         end_layer("location_table")
     draw_profile_modal(font, state, GROWTH_DEFS)
     draw_dialogue_modal(font, state)
+    draw_selected_card_curve_overlay(state)
 
 
 def _draw_world_table(font: Font | None, state: GameState, rect: Rectangle, rng) -> None:
-    snapshot = render_world(SCENARIO, state)
+    snapshot = current_world_snapshot(state)
     sections, _ = draw_table_shell(
         font,
         rect,
@@ -72,7 +73,7 @@ def _draw_world_table(font: Font | None, state: GameState, rect: Rectangle, rng)
 
 def _draw_location_table(font: Font | None, state: GameState, rng) -> None:
     assert state.modal.primary_id is not None
-    snapshot = render_world(SCENARIO, state)
+    snapshot = current_world_snapshot(state)
     location = snapshot.locations_by_id[state.modal.primary_id]
     resolving = state.pending_resolution is not None and not state.pending_resolution.settled
     rect = floating_table_rect()

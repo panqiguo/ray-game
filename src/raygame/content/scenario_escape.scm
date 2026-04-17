@@ -1,3 +1,4 @@
+(include "../encounters/helper.scm")
 (include "../encounters/common_clock_macros.scm")
 
 (define make-scout-action
@@ -39,7 +40,7 @@
         "在贝城的阴影里打探"
         "弄清谁在卖禁酒，谁在替黑帮盯梢，还有谁会在你转身买烟的时候给你后腰来一刀。"
         east_info
-        (list 'instinct 'reason)
+        (list 直觉)
         'mid
         "你避开了几个麻烦的暗警，并从一个老线人嘴里撬出了点真东西。"
         "你摸到了一点边缘消息，但今晚还不够深入。"
@@ -57,7 +58,7 @@
         "在灯红酒绿中摸底"
         "顺着夜总会、破旅馆和黑诊所的门牌，一点点把这里的落脚点理出来。"
         west_info
-        (list 'reason 'empathy)
+        (list 感知)
         'low
         "你给门童塞了点小费，从酒鬼的胡话里拼出了几条可靠线索。"
         "你听到了一些风声，但全都是些还需要验证的废话。"
@@ -80,8 +81,7 @@
                            (action
                             :title "上桌赌一把"
                             :desc "把二十块拍在绿呢桌面上，看看今晚命运这个婊子站不站在你这边。"
-                            :conditions (list (field-at-least 'money 20 "需要 20 美钞"))
-                            :inputs (list (item 'money 20 "美钞"))
+                            :inputs (list (item 'money 20))
                             :check (check
                                     :suits (list 'instinct 'reason)
                                     :risk 'mid
@@ -91,10 +91,9 @@
               )
    :actions (list
              (action
-              :title "点一杯双份波旁"
+              :title "点一杯双份波旁s"
               :desc "花点钱，让辛辣的酒精烧掉你脑子里那些发作的刺痛。"
-              :conditions (list (field-at-least 'money 15 "需要 15 美钞"))
-              :inputs (list (item 'money 15 "美钞"))
+              :inputs (list (item 'money 10))
               :effects (list (effect 'add stress -2)))
              (when (not (clock-filled? bar_rumor))
                (action
@@ -102,7 +101,7 @@
                 :desc "请旁边的家伙喝杯便宜货，顺便把消息从他喉咙里钓出来。"
                 :before (list (effect 'clock+ bar_rumor 1))
                 :check (check
-                        :suits (list 'empathy 'reason)
+                        :suits (list 感知)
                         :risk 'mid
                         :ok (outcome "你几口酒下肚，套出了地下赌局的具体门牌号。" (list (effect 'clock+ bar_rumor 1)))
                         :partial (outcome "你听到了点模棱两可的风声，但还不够摸上门去。" (list))
@@ -133,16 +132,16 @@
     :position '(266 184)
     :actions (list
       (action
-        :title "拍下钞票买钥匙"
+        :title "预定房间"
         :desc "买下今晚的房间门卡，证明你暂时还不是个流落街头的流浪汉。"
-        :conditions (list (field-at-least 'money 25 "需要 25 美钞"))
-        :inputs (list (item 'money 25 "美钞"))
+        ;; :conditions (list (field-at-least 'money 15 "需要 25 美钞"))
+        :inputs (list (item 'money 10))
         :effects (list (effect 'add hotel_pass 1)))
       (action
-        :title "锁上门和衣而睡"
+        :title "睡上一觉"
         :desc "把配枪压在枕头底下闭上眼睛。这床硬得像铁板，但总归是个庇护所。"
-        :conditions (list (has-item 'hotel_pass 1 "需要先买一晚使用权"))
-        :inputs (list (item 'hotel_pass 1 "一晚使用权"))
+        :conditions (list (has-item 'hotel_pass 1 "需要房卡"))
+        :inputs (list (item 'hotel_pass 1))
         :effects (list
           (effect 'reset-hand)
           (effect 'clock+ pursuit 1)
@@ -152,16 +151,32 @@
 
 (define clinic
   (node
-    :title "黑市诊所"
-    :desc "隐蔽在干洗店后门的诊所。这里的庸医对你是怎么中的枪毫无兴趣，他们只认富兰克林的头像。"
-    :position '(474 188)
-    :actions (list
-      (action
-        :title "买些止痛药和缝针"
-        :desc "掏出现金，让医生把你身上正在渗血的口子像补破麻袋一样缝上。"
-        :conditions (list (field-at-least 'money 35 "需要 35 美钞"))
-        :inputs (list (item 'money 35 "美钞"))
-        :effects (list (effect 'add health 1))))))
+   :title "黑市诊所"
+   :desc "隐蔽在干洗店后门的诊所. 他们对你是怎么中的枪毫无兴趣，他们只认富兰克林的头像。"
+   :position '(474 188)
+   :show-clocks (list (when clinic_treatment_started clinic_treatment_progress))
+   :actions (list
+             (action
+              :title "付钱开疗程"
+              :desc "让医生给你排一个完整疗程。治疗2点健康。"
+              ;; :conditions (list (field-truthy clinic_treatment_started))
+              :inputs (list (item 'money 20))
+              :effects (list
+                        (effect 'set clinic_treatment_started true)))
+             (when (and clinic_treatment_started (not (clock-filled? clinic_treatment_progress)))
+               (action
+                :title "做一次疗程"
+                :desc "按医生的安排处理伤口、换药、缝合。这次能不能特别顺利另说，但总得把这一步熬过去。"
+                :check (check
+                        :suits (list 'reason 'empathy)
+                        :risk 'low
+                        :ok (outcome "你咬牙熬过了这一轮，医生居然还算像样地把伤口收拾整齐了。"
+                                     (list (effect 'clock+ clinic_treatment_progress 1)))
+                        :partial (outcome "这一轮处理又疼又慢，但总归还是完成了。"
+                                          (list (effect 'clock+ clinic_treatment_progress 1)))
+                        :fail (outcome "医生手忙脚乱，你也被折腾得满头冷汗，只能勉强稳住伤口。"
+                                       (list (effect 'clock+ clinic_treatment_progress 1) (effect 'add stress 1))))))
+             )))
 
 (define residential_area
   (node
@@ -191,19 +206,19 @@
         :title "买一件像样的粗花呢风衣"
         :desc "一套干净的行头，能让你在骗过门卫时省掉成吨的废话。"
         :conditions (list (field-at-least 'money 80 "需要 80 美钞"))
-        :inputs (list (item 'money 80 "美钞"))
+        :inputs (list (item 'money 80 ))
         :effects (list (effect 'add clothes 1)))
       (action
         :title "弄一套万能开锁工具"
         :desc "不管多漂亮的门，只要它上了锁，就是在邀请你打开它。"
         :conditions (list (field-at-least 'money 45 "需要 45 美钞"))
-        :inputs (list (item 'money 45 "美钞"))
+        :inputs (list (item 'money 45 ))
         :effects (list (effect 'add lockpick 1)))
       (action
         :title "买一把柯尔特.38左轮"
         :desc "跟这座腐烂的城市讲道理时，枪口往往是最好的标点符号。"
         :conditions (list (field-at-least 'money 120 "需要 120 美钞"))
-        :inputs (list (item 'money 120 "美钞"))
+        :inputs (list (item 'money 120 ))
         :effects (list (effect 'add gun 1))))))
 
 (define bulletin_board
@@ -244,8 +259,10 @@
         :title "掏出 300 美钞买辆没挂牌的福特"
         :desc "这价格跟当街抢劫没区别，但要想彻底甩掉追兵，你需要这台能把油门踩到底的V8引擎。"
         :conditions (list (field-at-least 'money 300 "需要 300 美钞"))
-        :inputs (list (item 'money 300 "美钞"))
-        :effects (list (effect 'end-run 'escape_success)))
+        :inputs (list (item 'money 300 ))
+        :effects (list
+          (effect 'start-quick-dialogue "# 发动引擎\n\n钥匙拧下去的那一刻，发动机发出一声沙哑却结实的低吼。你把那三百块脏兮兮的钞票留在了修车厂，踩下油门，让这辆没挂牌的福特冲进洛杉矶还没亮透的清晨。\n\n后视镜里的街区一点点缩小。你不知道前方是不是更好的地方，但至少，你已经离开了这里。")
+          (effect 'end-game)))
       (when
         (not villa_job_taken)
         (action
@@ -260,27 +277,38 @@
 (define escape-meta
   (meta
     :key 'escape
-    :title "天使之城的下水道"
+    :title "天使之城"
     :desc "你被困在洛杉矶的阴暗面里。每多待一天，桑德堡医生的仇家和黑警就会离你更近一步。"))
 
 (define world-state
   (state
+   (被追杀已触发 false)
     (pursuit (clock :title "黑白两道的追捕" :desc "每次过夜都会推进。当时钟填满，你就会被重新套上麻袋扔进海里。" :initial 0 :max 6))
-    (east_info (clock :title "打通贝城暗线" :desc "东边的酒馆、海岸和地下买卖都埋在深不见底的黑幕中。" :initial 0 :max 4))
-    (west_info (clock :title "打通好莱坞暗线" :desc "西边的破旅馆和黑诊所必须先用时间去探明。" :initial 0 :max 4))
+    (east_info (clock :title "贝城地图" :desc "东边的酒馆、海岸和地下买卖都埋在深不见底的黑幕中。" :initial 0 :max 4))
+    (west_info (clock :title "了解好莱坞" :desc "西边的破旅馆和黑诊所必须先用时间去探明。" :initial 0 :max 4))
+    (clinic_treatment_started false)
+    (clinic_treatment_progress (clock :title "诊所疗程" :desc "付钱开启后，需要完成四轮治疗，才能真正把伤势稳定下来。" :initial 0 :max 4))
     (bar_rumor (clock :title "酒馆线报" :desc "关于地下高额牌局的风声。" :initial 0 :max 4))
     (residential_info (clock :title "打探富人区门路" :desc "那些看似优雅的别野区里，同样藏着下水道般的暗门。" :initial 0 :max 4))
     (residential_intro_played false)
     (villa_job_taken false)))
 
-
 (define world-reacts
   (reacts
-    (react
-      :when (and (>= day 2) (not residential_intro_played))
-      :then (list
-        (effect 'set residential_intro_played true)
-        (effect 'start-quick-dialogue "# 次日清晨\n\n你刚从充满宿醉和冷汗的浅眠中醒来，就敏锐地察觉到街上的风向变了。昨晚还只是隐秘的传闻，今天街头已经响起了黑警粗暴的查问声。\n\n桑德堡的人正在拿着你的照片到处打听——包括你昨晚是在哪个破桥洞底下缩着身子。你不能再只混迹于贫民窟了，得赶紧弄身体面的衣服，去富人区找找别的出路。")))))
+   ;; (react-once-until 被追杀已触发 (effect 'start-encounter 'first_scene))
+   (react
+    :when (and clinic_treatment_started (clock-filled? clinic_treatment_progress))
+    :then (list
+           (effect 'set clinic_treatment_started false)
+           (effect-reset-clock clinic_treatment_progress)
+           (effect 'add 'health 2)
+           (effect 'start-quick-dialogue "# 疗程结束\n\n第四次回到那间黑诊所时，医生总算像个真正干过几年活的人，把你身上的口子一一收拾妥当。酒精、碘酒和陈旧止痛药的味道让人反胃，但至少，你终于不再像一只勉强缝起来的破麻袋了。")))
+   (react-once-until 被追杀已触发 (effect 'add 'money 40))
+   (react
+    :when (and (>= day 2) (not residential_intro_played))
+    :then (list
+           (effect 'set residential_intro_played true)
+           (effect 'start-quick-dialogue "# 次日清晨\n\n你刚从充满宿醉和冷汗的浅眠中醒来，就敏锐地察觉到街上的风向变了。昨晚还只是隐秘的传闻，今天街头已经响起了黑警粗暴的查问声。\n\n桑德堡的人正在拿着你的照片到处打听——包括你昨晚是在哪个破桥洞底下缩着身子。你不能再只混迹于贫民窟了，得赶紧弄身体面的衣服，去富人区找找别的出路。")))))
 
 (content
  :meta escape-meta

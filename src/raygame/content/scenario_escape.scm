@@ -108,21 +108,21 @@
                         :fail (outcome "他们只把你当成另一个想蹭酒的无聊醉鬼。" (list (effect 'add stress 1)))))))))
 
 (define river_landmark
-  (node
-    :title "太平洋海岸线"
-    :desc "太平洋的水面黑得像一张破旧的黑胶唱片。只有猛烈的海风吹过来时，你才能短暂忘掉这座城市的狐臭味。"
-    :position '(862 170)
-    :actions (list
-      (action
-        :title "沿海岸慢慢走一圈"
-        :desc "点根烟，丢一张牌进去，让自己像个正常人那样喘口气。"
-        :inputs (list (card 'any))
-        :check (check
-          :suits (list 'instinct)
-          :risk 'low
-          :ok (outcome "单调的潮水声让你的太阳穴终于不再像打鼓一样乱跳了。" (list (effect 'add stress -2)))
-          :partial (outcome "你吹了一阵冷风，但心里那股火还是没压下去。" (list))
-          :fail (outcome "海风只是把烟灰吹进了你的眼睛，你还是那个倒霉蛋。" (list)))))))
+  (begin (log "test") (node
+           :title "太平洋海岸线"
+           :desc "太平洋的水面黑得像一张破旧的黑胶唱片。只有猛烈的海风吹过来时，你才能短暂忘掉这座城市的狐臭味。"
+           :position '(862 170)
+           :actions (list
+                     (action
+                      :title "沿海岸慢慢走一圈"
+                      :desc "点根烟，丢一张牌进去，让自己像个正常人那样喘口气。"
+                      :inputs (list (card 'any))
+                      :check (check
+                              :suits (list 'instinct)
+                              :risk 'low
+                              :ok (outcome "单调的潮水声让你的太阳穴终于不再像打鼓一样乱跳了。" (list (effect 'add stress -2)))
+                              :partial (outcome "你吹了一阵冷风，但心里那股火还是没压下去。" (list))
+                              :fail (outcome "海风只是把烟灰吹进了你的眼睛，你还是那个倒霉蛋。" (list))))))))
 
 
 (define hotel
@@ -189,7 +189,7 @@
         "在富人区外围兜圈子"
         "观察送奶工、邮差和园丁的路线，看阔太太们的私会情人都在走哪扇后门。"
         residential_info
-        (list 'reason 'empathy)
+        (list 理性)
         'low
         "你看穿了体面表象下的漏洞，找到了几个关键的入口。"
         "你摸清了一部分安保规律，但还没法直接潜入。"

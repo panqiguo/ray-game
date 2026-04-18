@@ -6,7 +6,7 @@ from typing import Literal
 from pyray import *  # type: ignore
 
 from raygame.constants import HAND_HEIGHT, HUD_HEIGHT, WINDOW_HEIGHT, WINDOW_WIDTH
-from raygame.rendering import draw_text
+from raygame.rendering import draw_text, font_cache_key, measure_text_width as render_measure_text_width
 
 
 @dataclass(frozen=True)
@@ -211,11 +211,11 @@ def draw_centered_text(font: Font | None, text: str, rect: Rectangle, size: int,
 
 
 def measure_text_width(font: Font | None, text: str, size: int) -> float:
-    key = (_font_cache_key(font), text, size)
+    key = (_font_cache_key(font, size), text, size)
     cached = _TEXT_WIDTH_CACHE.get(key)
     if cached is not None:
         return cached
-    width = measure_text_ex(font, text, float(size), 1.0).x if font is not None else float(measure_text(text, size))
+    width = render_measure_text_width(font, text, size)
     _bounded_cache_store(_TEXT_WIDTH_CACHE, key, width)
     return width
 
@@ -273,18 +273,12 @@ def wrap_text_lines_any(font: Font | None, text: str, max_width: float, size: in
     return wrapped
 
 
-def _font_cache_key(font: Font | None) -> int:
-    if font is None:
-        return 0
-    texture = getattr(font, "texture", None)
-    texture_id = getattr(texture, "id", None)
-    if isinstance(texture_id, int):
-        return texture_id
-    return id(font)
+def _font_cache_key(font: Font | None, size: int) -> int:
+    return font_cache_key(font, size)
 
 
 def _wrap_cache_key(mode: Literal["words", "chars"], font: Font | None, text: str, max_width: float, size: int) -> tuple[str, int, str, int, int]:
-    return (mode, _font_cache_key(font), text, int(round(max_width * 100.0)), size)
+    return (mode, _font_cache_key(font, size), text, int(round(max_width * 100.0)), size)
 
 
 def _bounded_cache_store(cache: dict, key, value) -> None:

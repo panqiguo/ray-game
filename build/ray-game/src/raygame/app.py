@@ -11,7 +11,7 @@ from raygame.constants import TARGET_FPS, WINDOW_HEIGHT, WINDOW_WIDTH
 from raygame.content.hot_reload import HOT_RELOADER
 from raygame.dialogue_compile import compile_dialogues
 from raygame.content.validate import validate_content
-from raygame.rendering import configure_gui_theme, draw_text, load_ui_font
+from raygame.rendering import configure_gui_theme, draw_text, load_ui_font, unload_ui_font
 from raygame.rules.progression import advance_pending_resolution, start_new_run
 from raygame.screens import draw_current_screen
 from raygame.screens.debug_panel import draw_debug_panel
@@ -92,7 +92,7 @@ class GameApp:
 
     def stop(self) -> None:
         if self.ui_font is not None:
-            unload_font(self.ui_font)
+            unload_ui_font(self.ui_font)
             self.ui_font = None
 
     def run(self) -> None:

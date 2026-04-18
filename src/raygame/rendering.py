@@ -1,17 +1,21 @@
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from raylib import ffi
 from pyray import *  # type: ignore
+from pyray import measure_text as rl_measure_text
+from pyray import measure_text_ex as rl_measure_text_ex
 from pyray import draw_text as rl_draw_text
 from pyray import draw_text_ex as rl_draw_text_ex
 
 
-FONT_SIZE = 36
+DEFAULT_FONT_SIZE = 18
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 LOCAL_FONT_FILE = PROJECT_ROOT / "font.ttf"
 TEXT_SOURCE_SUFFIXES = {".py", ".scm", ".ink", ".json"}
+TEXT_SPACING = 1.0
 
 
 def _color_u32(color: Color) -> int:
@@ -70,20 +74,91 @@ def _iter_project_text():
                     yield path.read_text(encoding="utf-8")
 
 
-def load_ui_font() -> Font | None:
+@dataclass
+class UIFont:
+    source_path: Path
+    codepoints: tuple[int, ...]
+    default_size: int = DEFAULT_FONT_SIZE
+    _fonts: dict[int, Font] = field(default_factory=dict)
+
+    def font_for_size(self, size: int) -> Font:
+        normalized_size = int(round(size))
+        assert normalized_size > 0, f"Font size must be positive: {size}"
+        font = self._fonts.get(normalized_size)
+        if font is None:
+            font = _load_font_at_size(self.source_path, normalized_size, self.codepoints)
+            self._fonts[normalized_size] = font
+        return font
+
+    def default_font(self) -> Font:
+        return self.font_for_size(self.default_size)
+
+    def unload(self) -> None:
+        for font in self._fonts.values():
+            unload_font(font)
+        self._fonts.clear()
+
+
+def load_ui_font() -> UIFont:
     assert LOCAL_FONT_FILE.exists(), f"Missing required font file: {LOCAL_FONT_FILE}"
-    codepoints_array = ffi.new("int[]", _build_codepoints())
-    codepoints = ffi.cast("int *", codepoints_array)
-    try:
-        font = load_font_ex(str(LOCAL_FONT_FILE), FONT_SIZE, codepoints, len(codepoints_array))
-    except Exception as exc:
-        raise RuntimeError(f"Failed to load font from {LOCAL_FONT_FILE}") from exc
-    gui_set_font(font)
+    font = UIFont(LOCAL_FONT_FILE, tuple(_build_codepoints()))
+    gui_set_font(font.default_font())
     return font
 
 
-def draw_text(font: Font | None, text: str, x: int, y: int, size: int, color: Color) -> None:
+def unload_ui_font(font: UIFont | Font | None) -> None:
+    if font is None:
+        return
+    if isinstance(font, UIFont):
+        font.unload()
+        return
+    unload_font(font)
+
+
+def draw_text(font: UIFont | Font | None, text: str, x: int, y: int, size: int, color: Color) -> None:
     if font is None:
         rl_draw_text(text, x, y, size, color)
         return
-    rl_draw_text_ex(font, text, Vector2(float(x), float(y)), float(size), 1.0, color)
+    selected_font = _select_font(font, size)
+    rl_draw_text_ex(selected_font, text, Vector2(float(x), float(y)), float(size), TEXT_SPACING, color)
+
+
+def measure_text_width(font: UIFont | Font | None, text: str, size: int) -> float:
+    if font is None:
+        return float(rl_measure_text(text, size))
+    selected_font = _select_font(font, size)
+    return float(rl_measure_text_ex(selected_font, text, float(size), TEXT_SPACING).x)
+
+
+def font_cache_key(font: UIFont | Font | None, size: int) -> int:
+    if font is None:
+        return 0
+    if isinstance(font, UIFont):
+        return (id(font) << 16) ^ int(round(size))
+    return _font_texture_id(font)
+
+
+def _load_font_at_size(source_path: Path, size: int, codepoints_tuple: tuple[int, ...]) -> Font:
+    codepoints_array = ffi.new("int[]", codepoints_tuple)
+    codepoints = ffi.cast("int *", codepoints_array)
+    try:
+        font = load_font_ex(str(source_path), size, codepoints, len(codepoints_array))
+    except Exception as exc:
+        raise RuntimeError(f"Failed to load font from {source_path} at {size}px") from exc
+    assert is_font_valid(font), f"Invalid font loaded from {source_path} at {size}px"
+    set_texture_filter(font.texture, TEXTURE_FILTER_POINT)
+    return font
+
+
+def _select_font(font: UIFont | Font, size: int) -> Font:
+    if isinstance(font, UIFont):
+        return font.font_for_size(size)
+    return font
+
+
+def _font_texture_id(font: Font) -> int:
+    texture = getattr(font, "texture", None)
+    texture_id = getattr(texture, "id", None)
+    if isinstance(texture_id, int):
+        return texture_id
+    return id(font)

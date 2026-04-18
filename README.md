@@ -20,9 +20,10 @@ uv run ray-game
 make web
 make web-serve
 make web-package
+make web-upload ITCH_USER=<itch-user> ITCH_GAME=<itch-game>
 ```
 
-然后打开 `http://localhost:8000/`。
+然后打开 `http://127.0.0.1:8000/`。
 
 说明：
 
@@ -30,6 +31,7 @@ make web-package
 - 这样可以避免把 `.venv`、本机 `.so`、构建缓存和设计文档误打进 Web 包里
 - 当前 Web 包会包含 `main.py`、`font.ttf` 和 `src/raygame`
 - itch.io 最终上传包会生成到 `build/ray-game-itch.zip`
+- 上传 itch.io 需要先安装并登录 `butler`；`make web-upload` 会先重新构建并打包，再上传到 `<itch-user>/<itch-game>:html5`
 
 ## 环境
 

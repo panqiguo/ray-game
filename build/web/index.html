@@ -6,7 +6,7 @@ Loading ray-game from ray-game.apk
     Template Version : 0.9.3
     Python  : 3.12
     CDN URL : https://pygame-web.github.io/cdn/0.9.3/
-    Screen  : 1280x720
+    Screen  : 1440x900
     Title   : ray-game
     Folder  : ray-game
     Authors : pgw
@@ -23,7 +23,7 @@ from pathlib import Path
 # do not rename
 async def custom_site():
     import embed
-    platform.document.body.style.background = "#7f7f7f"
+    platform.document.body.style.background = "#0a0c10"
 
     platform.window.transfer.hidden = true
     platform.window.canvas.style.visibility = "visible"
@@ -148,7 +148,7 @@ config = {
     _sdl2 : "canvas",
     user_canvas : 0,
     user_canvas_managed : 0,
-    gui_divider : 2,
+    gui_divider : 1,
     ume_block : 1,
     can_close : 0,
     archive : "ray-game",
@@ -157,8 +157,8 @@ config = {
     autorun : 0,
     PYBUILD : "3.12",
     fb_ar   :  1.77,
-    fb_width : "1280",
-    fb_height : "720"
+    fb_width : "1440",
+    fb_height : "900"
 }
 
 function show_infobox() {
@@ -222,25 +222,36 @@ function show_infobox() {
         canvas.emscripten {
             border: 0px none;
             background-color: transparent;
-            width: 100%;
-            height: 100%;
+            width: 1440px;
+            height: 900px;
             z-index: 5;
 
             padding: 0;
-            margin: 0 auto;
+            margin: 0;
 
             position: absolute;
             top: 0;
-            bottom: 0;
             left: 0;
-            right: 0;
+            right: auto;
+            bottom: auto;
+            transform: none;
         }
 
         body {
             font-family: arial;
             margin: 0;
-            padding: none;
-            background-color:powderblue;
+            padding: 0;
+            background-color: #0a0c10;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0a0c10;
         }
 
         .topright{
@@ -301,14 +312,14 @@ function show_infobox() {
 
 
     <canvas class="emscripten" id="canvas"
-width="1px"
-height="1px"
+width="1440"
+height="900"
     oncontextmenu="event.preventDefault()" tabindex=1>
     </canvas>
 
     <canvas class="emscripten" id="canvas3d"
-width="1280px"
-height="720px"
+width="1440"
+height="900"
     oncontextmenu="event.preventDefault()" tabindex=1 hidden>
     </canvas>
 

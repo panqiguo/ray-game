@@ -1,0 +1,9 @@
+from __future__ import annotations
+
+WINDOW_WIDTH = 1440
+WINDOW_HEIGHT = 900
+HUD_HEIGHT = 72
+HAND_HEIGHT = 200
+TARGET_FPS = 60
+HAND_SIZE = 5
+MAX_LOG_LINES = 10

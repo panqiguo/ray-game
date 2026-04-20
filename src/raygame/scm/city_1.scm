@@ -43,7 +43,7 @@
         "在贝城的阴影里打探"
         "弄清谁在卖禁酒，谁在替黑帮盯梢，还有谁会在你转身买烟的时候给你后腰来一刀。"
         east_info
-        (list 直觉)
+        (list 感知)
         'mid
         "你避开了几个麻烦的暗警，并从一个老线人嘴里撬出了点真东西。"
         "你摸到了一点边缘消息，但今晚还不够深入。"
@@ -86,7 +86,7 @@
                             :desc "一场赌局，可能赢钱，也可能输钱。"
                             :inputs (list (item 'money 10))
                             :check (check
-                                    :suits (list 'instinct 'reason)
+                                    :suits (list 感知 逻辑)
                                     :risk 'mid
                                     :ok (outcome "今晚骰子爱你。筹码像听话的狗一样朝你这边滑了过来。" (list (effect 'add money 60)))
                                     :partial (outcome "你没赢走大头，但至少没让桌上那些老千把你当成肥羊。" (list (effect 'add money 25)))
@@ -123,7 +123,7 @@
               :desc "点根烟，丢一张牌进去，让自己像个正常人那样喘口气。"
               ;; :inputs (list (card 'any))
               :check (check
-                      :suits (list 'instinct)
+                      :suits (list 感知)
                       :risk 'low
                       :ok (outcome "单调的潮水声让你的太阳穴终于不再像打鼓一样乱跳了。" (list (effect 'add stress -2)))
                       :partial (outcome "你吹了一阵冷风，但心里那股火还是没压下去。" (list))
@@ -179,7 +179,7 @@
                            (effect-reset-clock clinic_treatment_progress)
                            ))
                 :check (check
-                        :suits (list 理性)
+                        :suits (list 逻辑)
                         :risk 'low
                         :ok (outcome "你咬牙熬过了这一轮，医生居然还算像样地把伤口收拾整齐了。"
                                      (list (effect 'clock+ clinic_treatment_progress 2)))
@@ -200,7 +200,7 @@
         "在富人区外围兜圈子"
         "观察送奶工、邮差和园丁的路线，看阔太太们的私会情人都在走哪扇后门。"
         residential_info
-        (list 理性)
+        (list 逻辑)
         'low
         "你看穿了体面表象下的漏洞，找到了几个关键的入口。"
         "你摸清了一部分安保规律，但还没法直接潜入。"
@@ -257,7 +257,7 @@
         :title "帮着拆卸黑市赃车"
         :desc "忍着废气和机油干点体力活，换点干净的钞票。"
         :check (check
-          :suits (list 强硬)
+          :suits (list 意志)
           :risk 'mid
           :ok (outcome "你熟练地把一辆偷来的福特拆成了零件，老板嘟囔着把钱拍在了引擎盖上。" (list (effect 'add money 45)))
           :partial (outcome "活儿干完了，但刺耳的电钻声和满手洗不掉的油污让你烦躁得想打人。" (list (effect 'add money 30) (effect 'add stress 1)))

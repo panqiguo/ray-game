@@ -113,6 +113,12 @@ class RenderCacheState:
 
 
 @dataclass
+class CardHintFlashState:
+    action_id: str = ""
+    until_monotonic: float = 0.0
+
+
+@dataclass
 class GameState:
     deck: DeckState
     attributes: AttributeState = field(default_factory=AttributeState)
@@ -139,3 +145,4 @@ class GameState:
     debug_open: bool = False
     seed: int = 0
     render_cache: RenderCacheState = field(default_factory=RenderCacheState)
+    card_hint_flash: CardHintFlashState = field(default_factory=CardHintFlashState)

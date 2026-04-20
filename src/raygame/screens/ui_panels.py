@@ -11,9 +11,12 @@ from raygame.model.enums import ResultType, SUIT_LABELS
 from raygame.model.state import GameState
 from raygame.rendering import draw_text
 from raygame.rules import (
+    card_hint_flash_active,
+    card_matches_action_check,
     claim_growth,
     choose_dialogue_option,
     close_modal,
+    count_spirit_cards,
     continue_dialogue,
     finish_dialogue,
     open_modal,
@@ -76,7 +79,8 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
         rect = Rectangle(x, y, 150, 106)
         selected = state.selected_input.kind == "card" and state.selected_input.index == index
         slotted = state.assembly.slotted_card_index == index
-        if draw_compact_card(font, rect, card_id, selected or slotted):
+        hinted = card_hint_flash_active(state, action) and card_matches_action_check(action, card_id)
+        if draw_compact_card(font, rect, card_id, selected or slotted, hinted=hinted):
             select_card_input(state, card_id, index)
         x += 162
         if x > hand.x + hand.width - 260:
@@ -101,14 +105,26 @@ def draw_pile_button(font: Font | None, rect: Rectangle, label: str, count: int,
             open_modal(state, modal_kind)
 
 
-def draw_compact_card(font: Font | None, rect: Rectangle, card_id: str, selected: bool, interactive: bool = True) -> bool:
+def draw_compact_card(
+    font: Font | None,
+    rect: Rectangle,
+    card_id: str,
+    selected: bool,
+    interactive: bool = True,
+    *,
+    hinted: bool = False,
+) -> bool:
     card = CARD_DEFS[card_id]
     fill = Color(62, 43, 40, 255) if card.is_negative else Color(29, 33, 40, 255)
     border = Color(146, 86, 78, 255) if card.is_negative else Color(95, 99, 107, 220)
     if selected:
         border = Color(201, 165, 88, 255)
+    elif hinted:
+        border = Color(230, 206, 126, 255)
     clicked = clickable(rect) if interactive else False
     draw_frame(rect, fill, border)
+    if hinted and not selected:
+        draw_rectangle_rounded_lines_ex(rect, 0.03, 8, 2.0, Color(230, 206, 126, 190))
     _draw_hand_card_head(font, rect, card)
     _draw_hand_card_suit(font, rect, card)
     if card.is_negative:
@@ -343,7 +359,7 @@ def draw_profile_modal(font: Font | None, state: GameState, growth_defs=GROWTH_D
         return
     header_y = int(rect.y) + 64
     draw_text(font, f"成长点数 {state.growth_points}", int(rect.x) + 20, header_y, stats_style.size, stats_style.color)
-    draw_text(font, f"已拥有 {len(state.unlocked_growths)} 项成长", int(rect.x) + 175, header_y, meta_style.size, meta_style.color)
+    draw_text(font, "每完成一个侦探任务获得 1 点。", int(rect.x) + 175, header_y, meta_style.size, meta_style.color)
 
     content_y = int(rect.y) + 96
     content_h = int(rect.height) - 118
@@ -351,39 +367,42 @@ def draw_profile_modal(font: Font | None, state: GameState, growth_defs=GROWTH_D
     right = Rectangle(rect.x + 330, content_y, rect.width - 350, content_h)
     draw_frame(left, Color(18, 20, 26, 240), Color(78, 84, 96, 210))
     draw_frame(right, Color(18, 20, 26, 240), Color(78, 84, 96, 210))
-    draw_text(font, "可选成长", int(left.x) + 12, int(left.y) + 10, section_style.size, section_style.color)
-    draw_text(font, "已拥有成长", int(right.x) + 12, int(right.y) + 10, section_style.size, section_style.color)
+    draw_text(font, "精神调整", int(left.x) + 12, int(left.y) + 10, section_style.size, section_style.color)
+    draw_text(font, "当前精神牌", int(right.x) + 12, int(right.y) + 10, section_style.size, section_style.color)
 
     choice_y = int(left.y) + 38
-    if state.pending_growth_choices:
-        for growth_id in state.pending_growth_choices:
-            growth = growth_defs[growth_id]
-            can_claim = state.growth_points > 0
-            card_rect = Rectangle(left.x + 10, choice_y, left.width - 20, 92)
-            draw_frame(card_rect, Color(24, 27, 34, 255), Color(92, 96, 104, 220) if can_claim else Color(70, 72, 78, 180))
-            draw_text(font, growth.title, int(card_rect.x) + 12, int(card_rect.y) + 10, section_style.size, section_style.color if can_claim else ui_text_color("disabled"))
-            body_lines = wrap_text_lines_any(font, growth.description, card_rect.width - 24, body_style.size)
-            body_y = int(card_rect.y) + 34
-            for line in body_lines[:2]:
-                draw_text(font, line, int(card_rect.x) + 12, body_y, body_style.size, body_style.color)
-                body_y += body_style.line_height - 2
-            button_label = "解锁" if can_claim else "点数不足"
-            if text_button(font, Rectangle(card_rect.x + card_rect.width - 92, card_rect.y + card_rect.height - 28, 80, 20), button_label, ui_text_size("body_sm"), disabled=not can_claim):
-                claim_growth(state, growth_id)
-                end_layer("profile")
-                return
-            choice_y += 102
-    else:
-        draw_text(font, "当前没有新的成长可选。", int(left.x) + 12, choice_y + 6, meta_style.size, faint_style.color)
+    counts = count_spirit_cards(state)
+    removable = {
+        "remove_logic": counts["logic"] > 0,
+        "remove_perception": counts["perception"] > 0,
+        "remove_willpower": counts["willpower"] > 0,
+    }
+    for growth_id in ("add_logic", "remove_logic", "add_perception", "remove_perception", "add_willpower", "remove_willpower"):
+        growth = growth_defs[growth_id]
+        can_claim = state.growth_points > 0 and removable.get(growth_id, True)
+        card_rect = Rectangle(left.x + 10, choice_y, left.width - 20, 92)
+        draw_frame(card_rect, Color(24, 27, 34, 255), Color(92, 96, 104, 220) if can_claim else Color(70, 72, 78, 180))
+        draw_text(font, growth.title, int(card_rect.x) + 12, int(card_rect.y) + 10, section_style.size, section_style.color if can_claim else ui_text_color("disabled"))
+        body_lines = wrap_text_lines_any(font, growth.description, card_rect.width - 24, body_style.size)
+        body_y = int(card_rect.y) + 34
+        for line in body_lines[:2]:
+            draw_text(font, line, int(card_rect.x) + 12, body_y, body_style.size, body_style.color)
+            body_y += body_style.line_height - 2
+        if growth_id in removable and not removable[growth_id]:
+            draw_text(font, "当前没有可移除的基础牌。", int(card_rect.x) + 12, int(card_rect.y + card_rect.height) - 24, body_style.size, faint_style.color)
+        button_label = "确认" if can_claim else "不可用"
+        if text_button(font, Rectangle(card_rect.x + card_rect.width - 92, card_rect.y + card_rect.height - 28, 80, 20), button_label, ui_text_size("body_sm"), disabled=not can_claim):
+            claim_growth(state, growth_id)
+            end_layer("profile")
+            return
+        choice_y += 102
 
     owned_y = int(right.y) + 40
-    if state.unlocked_growths:
-        for growth_id in sorted(state.unlocked_growths):
-            growth = growth_defs[growth_id]
-            draw_text(font, f"· {growth.title}", int(right.x) + 12, owned_y, meta_style.size, meta_style.color)
-            owned_y += 24
-    else:
-        draw_text(font, "暂无已拥有成长。", int(right.x) + 12, owned_y + 6, meta_style.size, faint_style.color)
+    for label, key in (("逻辑", "logic"), ("感知", "perception"), ("意志", "willpower")):
+        draw_text(font, f"· {label} {counts[key]} 张", int(right.x) + 12, owned_y, meta_style.size, meta_style.color)
+        owned_y += 24
+    owned_y += 16
+    draw_text(font, "只能移除基础精神牌。创伤与其他污染牌不会被这类成长点移除。", int(right.x) + 12, owned_y, faint_style.size, faint_style.color)
     end_layer("profile")
 
 

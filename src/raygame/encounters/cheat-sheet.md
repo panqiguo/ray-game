@@ -86,7 +86,7 @@ Encounter / World SCM 速查
 
 ```scheme
 (check
-  :suits (list 'reason 'instinct)
+  :suits (list 'logic 'perception)
   :risk 'mid
   :ok outcome
   :partial outcome
@@ -94,7 +94,8 @@ Encounter / World SCM 速查
 ```
 
 - `:risk`：`'low` `'mid` `'high`
-- `:suits`：`'reason` `'force` `'empathy` `'instinct`
+- `:suits`：`'logic` `'perception` `'willpower`
+- 不写 `:suits` 或写空列表时，表示三种精神牌都可用
 
 `outcome`：
 

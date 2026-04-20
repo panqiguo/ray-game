@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import time
+
 from raygame.constants import HAND_SIZE, MAX_LOG_LINES
 from raygame.content import GROWTH_DEFS, SCENARIO
 from raygame.content.cards import CARD_DEFS
@@ -16,6 +18,7 @@ from raygame.model.state import (
     ActionAssemblyState,
     ActionResolution,
     AttributeState,
+    CardHintFlashState,
     DeckState,
     GameState,
     PendingResolutionState,
@@ -27,10 +30,10 @@ from raygame.model.state import (
 from raygame.rules.deck import draw_cards, make_starting_deck, reshuffle, start_city_day
 from raygame.rules.judgment import compute_action_value, roll_result
 from raygame.rules.rng import RandomSource
+from raygame.model.enums import Suit
 
 
 TRAUMA_CARD_ID = "trauma"
-TRAUMA_HEALTH_STEP = 2
 
 
 def _push_log(state: GameState, text: str) -> None:
@@ -340,6 +343,32 @@ def clear_selected_input(state: GameState) -> None:
     state.selected_input = SelectedInputState()
 
 
+def trigger_card_hint_flash(state: GameState, action: ActionDef, *, duration: float = 0.75) -> None:
+    if action.check is None:
+        return
+    state.card_hint_flash = CardHintFlashState(
+        action_id=action.id,
+        until_monotonic=time.monotonic() + duration,
+    )
+
+
+def card_hint_flash_active(state: GameState, action: ActionDef | None = None) -> bool:
+    flash = state.card_hint_flash
+    if flash.until_monotonic <= time.monotonic():
+        if flash.action_id or flash.until_monotonic:
+            state.card_hint_flash = CardHintFlashState()
+        return False
+    if action is None:
+        return bool(flash.action_id)
+    return flash.action_id == action.id
+
+
+def card_matches_action_check(action: ActionDef | None, card_id: str) -> bool:
+    if action is None or action.check is None:
+        return False
+    return _card_matches_check(card_id, action.check)
+
+
 def close_modal(state: GameState) -> None:
     dismiss_pending_resolution(state)
     if state.modal.kind == "dialogue":
@@ -484,7 +513,8 @@ def action_can_accept_selected_input(state: GameState, action: ActionDef, requir
     if not selected.kind:
         return False
     if check_slot:
-        return _selected_card_id(state) is not None
+        card_id = _selected_card_id(state)
+        return card_id is not None and action.check is not None and _card_matches_check(card_id, action.check)
     assert requirement is not None
     if requirement.kind == "item":
         return selected.kind == "item" and selected.key == requirement.key and int(_field_value(state, requirement.key)) >= requirement.amount
@@ -504,6 +534,8 @@ def toggle_action_check_slot(state: GameState, action: ActionDef) -> None:
             state.assembly.action_id = None
         return
     if not action_can_accept_selected_input(state, action, check_slot=True):
+        focus_action(state, action.id)
+        trigger_card_hint_flash(state, action)
         return
     focus_action(state, action.id)
     card_id = _selected_card_id(state)
@@ -545,6 +577,8 @@ def slot_card(state: GameState, card_id: str) -> None:
         return
     if requirement is not None and requirement.key == "negative" and not CARD_DEFS[card_id].is_negative:
         return
+    if action.check is not None and not _card_matches_check(card_id, action.check):
+        return
     if state.assembly.slotted_card_id == card_id and state.assembly.slotted_card_index is not None:
         state.assembly.slotted_card_id = None
         state.assembly.slotted_card_index = None
@@ -584,8 +618,10 @@ def action_ready_to_execute(action: ActionDef, state: GameState) -> bool:
     for requirement in action.inputs:
         if not requirement_is_slotted(state, requirement):
             return False
-    if action.check is not None and _slotted_card_id(state) is None:
-        return False
+    if action.check is not None:
+        card_id = _slotted_card_id(state)
+        if card_id is None or not _card_matches_check(card_id, action.check):
+            return False
     return True
 
 
@@ -871,6 +907,14 @@ def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines
         assert isinstance(value, str)
         finish_encounter(state, value, rng, extra_lines)
         return
+    if item.kind == "add_base_card":
+        assert isinstance(value, str)
+        _add_base_card(state, value, extra_lines)
+        return
+    if item.kind == "remove_base_card":
+        assert isinstance(value, str)
+        _remove_base_card(state, value, extra_lines)
+        return
     if item.kind == "reset_hand":
         reset_hand(state, rng)
         return
@@ -1013,10 +1057,12 @@ def finish_encounter(state: GameState, outcome: str, rng: RandomSource, extra_li
     _mark_content_dirty(state)
     if outcome == "success":
         _apply_effects(encounter.rewards, state, rng, extra_lines)
-        _push_log(state, f"{encounter.title}：完成。")
+        state.growth_points += 1
+        _push_log(state, f"{encounter.title}：完成，获得 1 点成长。")
     elif outcome == "fail":
         _apply_effects(encounter.fail_effects, state, rng, extra_lines)
-        _push_log(state, f"{encounter.title}：失败。")
+        state.growth_points += 1
+        _push_log(state, f"{encounter.title}：失败，但你还是得到了 1 点成长。")
     else:
         _push_log(state, f"{encounter.title}：中断。")
 
@@ -1054,7 +1100,7 @@ def change_stress(state: GameState, amount: int, extra_lines: list[str] | None =
 
 def sync_trauma_cards_with_health(state: GameState) -> None:
     missing = state.attributes.max_health - state.attributes.health
-    target_trauma = missing // TRAUMA_HEALTH_STEP
+    target_trauma = min(missing, _count_base_spirit_cards(state))
     current = _count_card(state, TRAUMA_CARD_ID)
     if current < target_trauma:
         for _ in range(target_trauma - current):
@@ -1065,6 +1111,10 @@ def sync_trauma_cards_with_health(state: GameState) -> None:
 
 def _count_card(state: GameState, card_id: str) -> int:
     return sum(pile.count(card_id) for pile in (state.deck.hand, state.deck.draw_pile, state.deck.discard_pile))
+
+
+def _count_base_spirit_cards(state: GameState) -> int:
+    return sum(count_spirit_cards(state).values())
 
 
 def _remove_specific_cards(state: GameState, card_id: str, amount: int) -> None:
@@ -1080,6 +1130,51 @@ def _remove_specific_cards(state: GameState, card_id: str, amount: int) -> None:
         if remaining == 0:
             return
     assert remaining == 0, f"failed to remove enough {card_id}: {remaining}"
+
+
+def _card_matches_check(card_id: str, check) -> bool:
+    card = CARD_DEFS[card_id]
+    if not check.suits:
+        return card.suit in {Suit.LOGIC, Suit.PERCEPTION, Suit.WILLPOWER}
+    return card.suit is not None and card.suit in check.suits
+
+
+def _base_spirit_card_id(spirit: str) -> str:
+    assert spirit in {"logic", "perception", "willpower"}, f"Unknown spirit card: {spirit}"
+    return spirit
+
+
+def _add_base_card(state: GameState, spirit: str, extra_lines: list[str] | None = None) -> None:
+    card_id = _base_spirit_card_id(spirit)
+    state.deck.discard_pile.append(card_id)
+    if extra_lines is not None:
+        extra_lines.append(f"加入 {_field_label(card_id)}")
+
+
+def _remove_base_card(state: GameState, spirit: str, extra_lines: list[str] | None = None) -> None:
+    card_id = _base_spirit_card_id(spirit)
+    removed = _remove_first_matching_base_card(state, card_id)
+    assert removed, f"No base card left to remove: {card_id}"
+    if extra_lines is not None:
+        extra_lines.append(f"移除 {_field_label(card_id)}")
+
+
+def _remove_first_matching_base_card(state: GameState, card_id: str) -> bool:
+    for pile in (state.deck.hand, state.deck.discard_pile, state.deck.draw_pile):
+        for index, existing in enumerate(pile):
+            if existing == card_id:
+                pile.pop(index)
+                return True
+    return False
+
+
+def count_spirit_cards(state: GameState) -> dict[str, int]:
+    counts = {"logic": 0, "perception": 0, "willpower": 0}
+    for pile in (state.deck.hand, state.deck.draw_pile, state.deck.discard_pile):
+        for card_id in pile:
+            if card_id in counts:
+                counts[card_id] += 1
+    return counts
 
 
 def _check_endings(state: GameState) -> None:
@@ -1169,6 +1264,12 @@ def _describe_effects(effects: tuple[Effect, ...], action_id: str, state: GameSt
             lines.append("进入下一天")
         elif item.kind == "end_game":
             lines.append("游戏结束")
+        elif item.kind == "add_base_card":
+            assert isinstance(value, str)
+            lines.append(f"加入 {_field_label(value)}")
+        elif item.kind == "remove_base_card":
+            assert isinstance(value, str)
+            lines.append(f"移除 {_field_label(value)}")
     deduped: list[str] = []
     for line in lines:
         if line not in deduped:
@@ -1197,15 +1298,22 @@ def _field_label(field_id: str) -> str:
         return "金钱"
     if field_id == "cigarettes":
         return "烟卷"
+    if field_id == "logic":
+        return "逻辑"
+    if field_id == "perception":
+        return "感知"
+    if field_id == "willpower":
+        return "意志"
     return _item_label(field_id)
 
 
 def claim_growth(state: GameState, growth_id: str) -> None:
+    if state.growth_points <= 0:
+        return
     growth = GROWTH_DEFS[growth_id]
     _apply_effects(growth.effects, state, RandomSource(state.seed))
-    state.unlocked_growths.add(growth_id)
     state.growth_points = max(0, state.growth_points - 1)
-    state.pending_growth_choices.clear()
+    _push_log(state, f"成长调整：{growth.title}")
     close_modal(state)
 
 

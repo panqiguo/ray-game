@@ -28,17 +28,21 @@ from raygame.model.enums import Risk, ScreenName, Suit
 
 RISK_BY_NAME = {"low": Risk.LOW, "mid": Risk.MID, "high": Risk.HIGH}
 SUIT_BY_NAME = {
-    "reason": Suit.REASON,
-    "force": Suit.FORCE,
-    "empathy": Suit.EMPATHY,
-    "instinct": Suit.INSTINCT,
+    "logic": Suit.LOGIC,
+    "reason": Suit.LOGIC,
+    "perception": Suit.PERCEPTION,
+    "empathy": Suit.PERCEPTION,
+    "instinct": Suit.PERCEPTION,
+    "willpower": Suit.WILLPOWER,
+    "force": Suit.WILLPOWER,
 }
 
 
 def build_check(check: CheckTemplate) -> CheckDef:
     assert check.risk in RISK_BY_NAME, f"Unknown risk: {check.risk}"
+    suits = tuple(dict.fromkeys(SUIT_BY_NAME[item] for item in check.suits))
     return CheckDef(
-        suits=tuple(SUIT_BY_NAME[item] for item in check.suits),
+        suits=suits,
         risk=RISK_BY_NAME[check.risk],
         success=OutcomeDef(text=check.success.text, effects=check.success.effects),
         cost=OutcomeDef(text=check.cost.text, effects=check.cost.effects),

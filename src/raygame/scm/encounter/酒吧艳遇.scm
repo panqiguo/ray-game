@@ -5,7 +5,7 @@
     :title "直白搭话"
     :desc "你没有铺垫，直接把话扔到他面前。"
     :check (check
-    :suits (list empathy reason)
+    :suits (list 感知 逻辑)
     :risk low
     :ok (outcome "他抬眼看了你一眼，开始愿意接话。" (list (effect 'clock+ rapport 2)))
     :partial (outcome "他回了你一句，话匣子松了一点。" (list (effect 'clock+ rapport 1)))
@@ -25,7 +25,7 @@
     :title "寻求帮助"
     :desc "你借一个无害的小问题，把自己的目的藏进请教里。"
     :check (check
-    :suits (list reason empathy)
+    :suits (list 逻辑 感知)
     :risk low
     :ok (outcome "他很自然地开始解释，戒心松了一层。" (list (effect 'clock+ rapport 2)))
     :partial (outcome "他给了个简短答案，但没有彻底关门。" (list (effect 'clock+ rapport 1)))
@@ -38,7 +38,7 @@
     :title "借环境起头"
     :desc "你拿酒吧里的动静做引子，把他拉到同一条观察线上。"
     :check (check
-    :suits (list empathy instinct)
+    :suits (list 感知)
     :risk mid
     :ok (outcome "他顺着你的目光看过去，开始把你当成同类。" (list (effect 'clock+ rapport 2)))
     :partial (outcome "他跟着扫了一眼，嗯了一声。" (list (effect 'clock+ rapport 1)))
@@ -51,7 +51,7 @@
     :title "留个钩子"
     :desc "你故意停在半句上，让他忍不住追问。"
     :check (check
-    :suits (list reason instinct)
+    :suits (list 逻辑 感知)
     :risk mid
     :ok (outcome "他果然追了上来，主动权开始往你手里滑。" (list (effect 'clock+ rapport 2)))
     :partial (outcome "他没追问，但眼神明显被你钩住了。" (list (effect 'clock+ rapport 1)))
@@ -64,7 +64,7 @@
     :title "引起兴趣"
     :desc "你抛出一个他没想到的观点，让这段聊天开始有重量。"
     :check (check
-    :suits (list reason empathy)
+    :suits (list 逻辑 感知)
     :risk mid
     :ok (outcome "他往前倾了一点，开始认真听你说话。" (list (effect 'clock+ rapport 2)))
     :partial (outcome "他表示认同，话题顺势延续。" (list (effect 'clock+ rapport 1)))
@@ -77,7 +77,7 @@
     :title "制造暧昧"
     :desc "你把语气往模糊的地方轻轻一推。"
     :check (check
-    :suits (list empathy instinct)
+    :suits (list 感知)
     :risk mid
     :ok (outcome "他接住了那点模糊，氛围一下子变软了。" (list (effect 'clock+ rapport 2)))
     :partial (outcome "他有些犹豫，但还是没有退开。" (list (effect 'clock+ rapport 1)))
@@ -90,7 +90,7 @@
     :title "展示判断力"
     :desc "你说出他没说出口的那半句，让他知道你听懂了。"
     :check (check
-    :suits (list reason empathy)
+    :suits (list 逻辑 感知)
     :risk mid
     :ok (outcome "他愣了一下，防备明显松了。" (list (effect 'clock+ rapport 2)))
     :partial (outcome "他嘴上没承认，但表情已经出卖了他。" (list (effect 'clock+ rapport 1)))
@@ -103,7 +103,7 @@
     :title "留一点距离"
     :desc "你在他靠近的时候轻轻退半步，让他意识到你不是唾手可得。"
     :check (check
-    :suits (list empathy instinct)
+    :suits (list 感知)
     :risk low
     :ok (outcome "他反而更想往前一步，兴趣被你勾起来了。" (list (effect 'clock+ rapport 2)))
     :partial (outcome "他有点不确定，但没有失去耐心。" (list (effect 'clock+ rapport 1)))
@@ -116,7 +116,7 @@
     :title "接住主动"
     :desc "他主动抛出一句话，你只负责顺着接住，不打断也不评判。"
     :check (check
-    :suits (list empathy instinct)
+    :suits (list 感知)
     :risk low
     :ok (outcome "他越说越顺，口风开始往外松。" (list (effect 'clock+ rapport 2)))
     :partial (outcome "他说了一些，但还留着最后半句。" (list (effect 'clock+ rapport 1)))
@@ -129,7 +129,7 @@
     :title "许诺"
     :desc "你给他一个理由，相信继续说是值得的。"
     :check (check
-    :suits (list reason empathy)
+    :suits (list 逻辑 感知)
     :risk mid
     :ok (outcome "他决定相信你，话明显多了起来。" (list (effect 'clock+ rapport 2)))
     :partial (outcome "他半信半疑，但已经开始松口。" (list (effect 'clock+ rapport 1)))
@@ -142,7 +142,7 @@
     :title "诱惑"
     :desc "你让他看到，说出来会得到某种隐秘的好处。"
     :check (check
-    :suits (list empathy instinct)
+    :suits (list 感知)
     :risk mid
     :ok (outcome "他被你说动了，继续聊下去的欲望压过了防备。" (list (effect 'clock+ rapport 2)))
     :partial (outcome "他靠近了一点，但还没真正开口。" (list (effect 'clock+ rapport 1)))
@@ -155,7 +155,7 @@
     :title "顺势套话"
     :desc "你抓住他刚刚那句无心的话，从口子里继续往里切。"
     :check (check
-    :suits (list reason instinct)
+    :suits (list 逻辑 感知)
     :risk mid
     :ok (outcome "情报浮了出来，他已经挡不住这条线了。" (list (effect 'clock+ rapport 2)))
     :partial (outcome "他只吐出了一半，还差一步。" (list (effect 'clock+ rapport 1)))
@@ -168,7 +168,7 @@
     :title "回应试探"
     :desc "他在测试你，你的回答决定他会不会把最后那层门打开。"
     :check (check
-    :suits (list reason empathy)
+    :suits (list 逻辑 感知)
     :risk high
     :ok (outcome "你通过了他的测试，他最后的防线松开了。" (list (effect 'clock+ rapport 2)))
     :partial (outcome "你稳稳接住了试探，局面没有散。" (list (effect 'clock+ rapport 1)))
@@ -188,7 +188,7 @@
     :title "头也不回地离开"
     :desc "你什么也不解释，起身就走。"
     :check (check
-    :suits (list instinct)
+    :suits (list 感知)
     :risk high
     :ok (outcome "你留下一点谜面，然后消失在门口。" (list (effect 'set ending 'mystery) (effect 'end-encounter 'success)))
     :partial (outcome "你走得太干脆，留下的味道有点复杂。" (list (effect 'set ending 'mystery) (effect 'clock+ tension 1) (effect 'end-encounter 'success)))
@@ -201,7 +201,7 @@
     :title "邀请共度一晚"
     :desc "你把话题往更近的地方推了一步。"
     :check (check
-    :suits (list empathy instinct)
+    :suits (list 感知)
     :risk high
     :ok (outcome "他接受了这份延伸，故事还会继续。" (list (effect 'set ending 'continue) (effect 'end-encounter 'success)))
     :partial (outcome "他没有立刻拒绝，关系被你往前推了一点。" (list (effect 'set ending 'continue) (effect 'clock+ tension 1) (effect 'end-encounter 'success)))

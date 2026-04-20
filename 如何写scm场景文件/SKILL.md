@@ -313,7 +313,7 @@ encounter `:state` 里定义的字段，只属于当前任务：
 
 ```scheme
 (check
-  :suits (list 'reason 'instinct)
+  :suits (list 'logic 'perception)
   :risk 'mid
   :ok outcome
   :partial outcome
@@ -331,7 +331,8 @@ encounter `:state` 里定义的字段，只属于当前任务：
 合法值：
 
 - `:risk`：`'low` / `'mid` / `'high`
-- `:suits`：`'reason` / `'force` / `'empathy` / `'instinct`
+- `:suits`：`'logic` / `'perception` / `'willpower`
+- 不写 `:suits` 或写空列表时，三种基础精神都可以放
 
 ---
 

@@ -4,10 +4,9 @@ from enum import Enum
 
 
 class Suit(str, Enum):
-    REASON = "reason"
-    INSTINCT = "instinct"
-    EMPATHY = "empathy"
-    FORCE = "force"
+    LOGIC = "logic"
+    PERCEPTION = "perception"
+    WILLPOWER = "willpower"
     WOUND = "wound"
     SHOCK = "shock"
 
@@ -32,10 +31,9 @@ class ScreenName(str, Enum):
 
 
 SUIT_LABELS = {
-    Suit.REASON: "理性",
-    Suit.INSTINCT: "直觉",
-    Suit.EMPATHY: "感知",
-    Suit.FORCE: "强硬",
+    Suit.LOGIC: "逻辑",
+    Suit.PERCEPTION: "感知",
+    Suit.WILLPOWER: "意志",
     Suit.WOUND: "流血",
     Suit.SHOCK: "惊悸",
 }

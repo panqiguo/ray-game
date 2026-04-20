@@ -10,8 +10,8 @@ def build_city_1() -> CompiledWorldProgram:
     return compile_world_program(
         path.read_text(encoding="utf-8"),
         source_path=path,
-        initial_health=5,
-        initial_stress=2,
+        initial_health=10,
+        initial_stress=0,
         initial_money=0,
         initial_cigarettes=0,
         initial_inventory={

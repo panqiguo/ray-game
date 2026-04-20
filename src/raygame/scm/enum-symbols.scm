@@ -4,13 +4,17 @@
 
 (define high 'high)
 
-(define reason 'reason)
+(define logic 'logic)
 
-(define force 'force)
+(define perception 'perception)
 
-(define empathy 'empathy)
+(define willpower 'willpower)
 
-(define instinct 'instinct)
+(define 逻辑 'logic)
+
+(define 感知 'perception)
+
+(define 意志 'willpower)
 
 (define success 'success)
 

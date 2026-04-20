@@ -4,9 +4,6 @@ from raygame.content.cards import CARD_DEFS
 from raygame.model.defs import CheckDef
 from raygame.model.enums import ResultType, Suit
 
-
-MATCH_BONUS = 1
-
 RESULT_TABLE: dict[int, tuple[ResultType, ...]] = {
     1: (ResultType.FAIL, ResultType.FAIL, ResultType.FAIL, ResultType.COST, ResultType.COST, ResultType.COST),
     2: (ResultType.FAIL, ResultType.FAIL, ResultType.FAIL, ResultType.COST, ResultType.COST, ResultType.SUCCESS),
@@ -24,10 +21,9 @@ def compute_action_value(card_id: str | None, check: CheckDef, wildcard_suit: Su
         return 0
     card = CARD_DEFS[card_id]
     suit = wildcard_suit or card.suit
-    value = card.points
-    if suit is not None and suit in check.suits:
-        value += MATCH_BONUS
-    return clamp_action_value(value)
+    if suit is None or suit not in check.suits:
+        return 0
+    return clamp_action_value(card.points)
 
 
 def roll_result(action_value: int, die_roll: int) -> ResultType:

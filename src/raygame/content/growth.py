@@ -4,29 +4,40 @@ from raygame.model.defs import Effect, GrowthDef
 
 
 GROWTH_DEFS: dict[str, GrowthDef] = {
-    "calm_habit": GrowthDef(
-        id="calm_habit",
-        title="冷静习惯",
-        description="Stress 上限 +2。",
-        effects=(Effect("increase_stress_cap", 2),),
+    "add_logic": GrowthDef(
+        id="add_logic",
+        title="增加逻辑",
+        description="向牌组加入 1 张基础·逻辑。",
+        effects=(Effect("add_base_card", "logic"),),
     ),
-    "casebook": GrowthDef(
-        id="casebook",
-        title="记案本",
-        description="每天结束时可保留 1 张手牌到次日。",
-        effects=(Effect("enable_casebook", True),),
+    "remove_logic": GrowthDef(
+        id="remove_logic",
+        title="移除逻辑",
+        description="从牌组中移除 1 张基础·逻辑。",
+        effects=(Effect("remove_base_card", "logic"),),
     ),
-    "old_scars": GrowthDef(
-        id="old_scars",
-        title="老伤钝化",
-        description="任务中首次受到 Health 伤害时不塞物理负面牌。",
-        effects=(Effect("enable_old_scars", True),),
+    "add_perception": GrowthDef(
+        id="add_perception",
+        title="增加感知",
+        description="向牌组加入 1 张基础·感知。",
+        effects=(Effect("add_base_card", "perception"),),
     ),
-    "paranoid_reason": GrowthDef(
-        id="paranoid_reason",
-        title="偏执专长·理性",
-        description="将 1 张理性基础牌永久升级为 1 点。",
-        effects=(Effect("upgrade_card", "reason"),),
+    "remove_perception": GrowthDef(
+        id="remove_perception",
+        title="移除感知",
+        description="从牌组中移除 1 张基础·感知。",
+        effects=(Effect("remove_base_card", "perception"),),
+    ),
+    "add_willpower": GrowthDef(
+        id="add_willpower",
+        title="增加意志",
+        description="向牌组加入 1 张基础·意志。",
+        effects=(Effect("add_base_card", "willpower"),),
+    ),
+    "remove_willpower": GrowthDef(
+        id="remove_willpower",
+        title="移除意志",
+        description="从牌组中移除 1 张基础·意志。",
+        effects=(Effect("remove_base_card", "willpower"),),
     ),
 }
-

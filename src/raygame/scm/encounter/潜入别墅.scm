@@ -7,7 +7,7 @@
     :title "试探迂回"
     :desc "你从边角绕进去，把话一点点逼近核心。"
     :check (check
-    :suits (list reason instinct)
+    :suits (list 逻辑 感知)
     :risk low
     :ok (outcome "他被你绕开了防备。" (list (effect 'clock+ truth 1)))
     :partial (outcome "你逼近了真相，但还差一口气。" (list (effect 'clock+ truth 1)))
@@ -27,7 +27,7 @@
     :title "撬锁进入"
     :desc "你从正门进去，尽量别留下动静。"
     :check (check
-    :suits (list reason instinct)
+    :suits (list 逻辑 感知)
     :risk mid
     :ok (outcome "门锁被你撬开了。" (list (effect 'set entry_method 'front)))
     :partial (outcome "门开得不够干净，但你还是挤了进去。" (list (effect 'set entry_method 'front) (effect 'clock+ alert 1)))
@@ -40,7 +40,7 @@
     :title "等巡查空档"
     :desc "你盯着屋里的人影，等他们错开。"
     :check (check
-    :suits (list reason empathy)
+    :suits (list 逻辑 感知)
     :risk low
     :ok (outcome "你抓住了空档，悄悄从正门进去了。" (list (effect 'set entry_method 'front)))
     :partial (outcome "你等得有点久，还是进去了。" (list (effect 'set entry_method 'front) (effect 'clock+ alert 1)))
@@ -53,7 +53,7 @@
     :title "翻上二楼窗户"
     :desc "你沿着排水管往上爬，从窗缝里翻进去。"
     :check (check
-    :suits (list instinct force)
+    :suits (list 感知 意志)
     :risk high
     :ok (outcome "你无声翻进了二楼。" (list (effect 'set entry_method 'window)))
     :partial (outcome "你擦伤了手，但还是进去了。" (list (effect 'set entry_method 'window) (effect 'health -1)))
@@ -80,7 +80,7 @@
     :title "趁隙穿越"
     :desc "你贴着墙往前压，赌他还没回头。"
     :check (check
-    :suits (list reason instinct)
+    :suits (list 逻辑 感知)
     :risk mid
     :ok (outcome "你稳稳跨过一段。" (list (effect 'clock+ traverse 1) (effect 'clock+ patrol 1)))
     :partial (outcome "你碰到了点动静，但还是往前挪了一步。" (list (effect 'clock+ traverse 1) (effect 'clock+ patrol 1) (effect 'clock+ alert 1)))
@@ -93,7 +93,7 @@
     :title "搏斗"
     :desc "你只能抢先动手，把人压回去。"
     :check (check
-    :suits (list force)
+    :suits (list 意志)
     :risk high
     :ok (outcome "保安倒下了，通路也开了。" (list (effect 'set route none) (effect 'set phase 'entry) (effect 'set traverse 0) (effect 'clock+ alert 1)))
     :partial (outcome "你把他压住了，自己也挨了一下。" (list (effect 'set route none) (effect 'set phase 'entry) (effect 'set traverse 0) (effect 'health -1) (effect 'clock+ alert 1)))
@@ -106,7 +106,7 @@
     :title "狠狠干硬闯"
     :desc "你不跟他绕，狠狠干着肩膀和步子直接撞穿这条走廊。"
     :check (check
-    :suits (list force instinct)
+    :suits (list 意志 感知)
     :risk high
     :ok (outcome "你狠狠干翻了保安，直接冲到了屋外。" (list (effect 'set route none) (effect 'set phase 'entry) (effect 'set patrol 0) (effect 'set traverse 0) (effect 'clock+ alert 2)))
     :partial (outcome "你是硬闯过去了，但自己也挨了一下。" (list (effect 'set route none) (effect 'set phase 'entry) (effect 'set patrol 0) (effect 'set traverse 0) (effect 'health -1) (effect 'clock+ alert 2)))
@@ -119,7 +119,7 @@
     :title "贴墙慢行"
     :desc "你贴着外墙慢慢挪，尽量不碰响任何东西。"
     :check (check
-    :suits (list reason instinct)
+    :suits (list 逻辑 感知)
     :risk mid
     :ok (outcome "你无声挪过了一段。" (list (effect 'set route 'right) (effect 'set patrol 0) (effect 'clock+ traverse 1)))
     :partial (outcome "你还是让它抬了头。你往前挪了一步。" (list (effect 'set route 'right) (effect 'set patrol 0) (effect 'clock+ traverse 1) (effect 'clock+ alert 1) (effect 'set dog_state 'agitated)))
@@ -132,7 +132,7 @@
     :title "投喂毒食"
     :desc "你把预备好的毒食丢进它够得着的地方。"
     :check (check
-    :suits (list reason instinct)
+    :suits (list 逻辑 感知)
     :risk high
     :ok (outcome "狗安静了下来。" (list (effect 'set dog_state 'asleep) (effect 'clock+ traverse 1)))
     :partial (outcome "它吃下去了，但还是挣扎了一下。" (list (effect 'set dog_state 'asleep) (effect 'clock+ traverse 1) (effect 'clock+ alert 1)))
@@ -145,7 +145,7 @@
     :title "低声安抚"
     :desc "你压低声音和动作，试着先让它把你当成没有威胁的东西。"
     :check (check
-    :suits (list empathy instinct)
+    :suits (list 感知)
     :risk mid
     :ok (outcome "它慢慢安静下来，你也顺势往前挪了一段。" (list (effect 'set route 'right) (effect 'set dog_state 'asleep) (effect 'clock+ traverse 1)))
     :partial (outcome "它没有彻底放松，但也没立刻扑上来。" (list (effect 'set route 'right) (effect 'set dog_state 'agitated) (effect 'clock+ alert 1)))
@@ -165,7 +165,7 @@
     :title "直接询问"
     :desc "你开门见山，问他到底在藏什么。"
     :check (check
-    :suits (list reason empathy)
+    :suits (list 逻辑 感知)
     :risk low
     :ok (outcome "他沉默了一下，吐出了一点实话。" (list (effect 'clock+ truth 1)))
     :partial (outcome "他没回答全部，但你听到了关键半句。" (list (effect 'clock+ truth 1) (effect 'clock+ alert 1)))
@@ -178,7 +178,7 @@
     :title "摆出线索"
     :desc "你把一路摸来的痕迹摊给他看。"
     :check (check
-    :suits (list reason empathy)
+    :suits (list 逻辑 感知)
     :risk mid
     :ok (outcome "他终于不再硬扛。" (list (effect 'clock+ truth 2)))
     :partial (outcome "他承认了一半。" (list (effect 'clock+ truth 1) (effect 'clock+ alert 1)))
@@ -191,7 +191,7 @@
     :title "沉默施压"
     :desc "你什么也不说，只是看着他。"
     :check (check
-    :suits (list empathy instinct)
+    :suits (list 感知)
     :risk mid
     :ok (outcome "他先败下阵来。" (list (effect 'clock+ truth 1) (effect 'clock+ alert 1)))
     :partial (outcome "他开始坐不住了。" (list (effect 'clock+ truth 1) (effect 'clock+ alert 1)))
@@ -204,7 +204,7 @@
     :title "直接询问"
     :desc "你开门见山，问他到底在藏什么。"
     :check (check
-    :suits (list reason empathy)
+    :suits (list 逻辑 感知)
     :risk mid
     :ok (outcome "他沉默了一下，吐出了一点实话。" (list (effect 'clock+ truth 1)))
     :partial (outcome "他没回答全部，但你听到了关键半句。" (list (effect 'clock+ truth 1) (effect 'clock+ alert 1)))
@@ -217,7 +217,7 @@
     :title "摆出线索"
     :desc "你把一路摸来的痕迹摊给他看。"
     :check (check
-    :suits (list reason empathy)
+    :suits (list 逻辑 感知)
     :risk high
     :ok (outcome "他终于不再硬扛。" (list (effect 'clock+ truth 2)))
     :partial (outcome "他承认了一半。" (list (effect 'clock+ truth 1) (effect 'clock+ alert 1)))
@@ -230,7 +230,7 @@
     :title "沉默施压"
     :desc "你什么也不说，只是看着他。"
     :check (check
-    :suits (list empathy instinct)
+    :suits (list 感知)
     :risk high
     :ok (outcome "他先败下阵来。" (list (effect 'clock+ truth 1) (effect 'clock+ alert 1)))
     :partial (outcome "他开始坐不住了。" (list (effect 'clock+ truth 1) (effect 'clock+ alert 1)))

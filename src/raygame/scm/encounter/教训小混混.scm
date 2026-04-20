@@ -12,7 +12,7 @@
     :title "防守反击"
     :desc "你先稳住头脸和脚步，再找机会把他顶开。"
     :check (check
-    :suits (list reason empathy)
+    :suits (list 逻辑 感知)
     :risk low
     :ok (outcome "你稳稳顶住了节奏。" (list (effect 'clock+ initiative 1)))
     :partial (outcome "你至少没有继续吃亏。" (list (effect 'clock+ initiative 1)))
@@ -25,7 +25,7 @@
     :title "重拳追击"
     :desc "你不给他喘气空间，直接压上去狠狠干。"
     :check (check
-    :suits (list force)
+    :suits (list 意志)
     :risk mid
     :ok (outcome "你狠狠干中了一拳。" (list (effect 'clock- enemy_hp 1)))
     :partial (outcome "你打实了一下，但他还撑着。" (list (effect 'clock- enemy_hp 1)))
@@ -38,7 +38,7 @@
     :title "假动作试探"
     :desc "你做一个假动作，先试着把他的防守骗开一层。"
     :check (check
-    :suits (list empathy instinct)
+    :suits (list 感知)
     :risk mid
     :ok (outcome "他的防守被你骗得动了一下。" (list (effect 'clock+ opening 1)))
     :partial (outcome "他开始有点被你带着走。" (list (effect 'clock+ opening 1)))
@@ -51,7 +51,7 @@
     :title "踹膝脱身"
     :desc "你不追求漂亮，而是直接踹他的支撑腿。"
     :check (check
-    :suits (list reason force)
+    :suits (list 逻辑 意志)
     :risk mid
     :ok (outcome "你一下踹垮了他。" (list (effect 'clock- enemy_hp 1)))
     :partial (outcome "你们各有胜负" (list (effect 'clock- enemy_hp 1) (effect 'health -1)))
@@ -65,7 +65,7 @@
     :desc "你冒险扑向地上的折刀，想先把局势翻过来。"
     :before (list (effect 'health -1))
     :check (check
-    :suits (list instinct force)
+    :suits (list 感知 意志)
     :risk high
     :ok (outcome "你手已经摸到刀柄了。" (list (effect 'clock+ knife 1)))
     :partial (outcome "你拖着伤抢到了第一步位置。" (list (effect 'clock+ knife 1)))
@@ -78,7 +78,7 @@
     :title "直接挥拳"
     :desc "你不跟他磨，直接狠狠干出一步空间。"
     :check (check
-    :suits (list force)
+    :suits (list 意志)
     :risk high
     :ok (outcome "你狠狠干出了一步空间。" (list (effect 'clock+ initiative 1)))
     :partial (outcome "你砸中了他，但也只是暂时逼开。" (list (effect 'clock+ initiative 1) (effect 'health -1)))
@@ -91,7 +91,7 @@
     :title "持刀逼退"
     :desc "刀一到手，你立刻逼他后撤，把主动权压回来。"
     :check (check
-    :suits (list force reason)
+    :suits (list 意志 逻辑)
     :risk mid
     :ok (outcome "你借着刀势一口气压住了他。" (list (effect 'clock+ initiative 2)))
     :partial (outcome "你逼得他后退了一步。" (list (effect 'clock+ initiative 1)))
@@ -104,7 +104,7 @@
     :title "终结一击"
     :desc "你抓住空门，一击把他放倒。"
     :check (check
-    :suits (list force)
+    :suits (list 意志)
     :risk low
     :ok (outcome "你干净利落地结束了这场架。" (list (effect 'clock- enemy_hp 2)))
     :partial (outcome "你一击放倒了他。" (list (effect 'clock- enemy_hp 2)))

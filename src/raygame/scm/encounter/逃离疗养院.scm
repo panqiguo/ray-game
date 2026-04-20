@@ -22,7 +22,9 @@
   (action
    :title "原地喘口气"
    :desc "靠在墙上深呼吸，试图把肺里的药味和眩晕感排出去。"
-   :before (list (effect 'reset-hand))))
+   :before (list
+            (effect 'reset-hand)
+            (effect 'clock+ alert_clock 1))))
 
 (define make_cautious_path_action
   (lambda (title desc progress-clock ok-text partial-text fail-text)
@@ -30,7 +32,7 @@
      :title title
      :desc desc
      :check (check
-             :suits (list 'reason 'instinct)
+             :suits (list 逻辑 感知)
              :risk 'mid
              :ok (outcome ok-text (list (effect 'clock+ progress-clock 1)))
              :partial (outcome partial-text (list (effect 'clock+ progress-clock 1) (effect 'clock+ alert_clock 1)))
@@ -42,7 +44,7 @@
      :title title
      :desc desc
      :check (check
-             :suits (list 'force 'instinct)
+             :suits (list 意志 感知)
              :risk 'high
              :ok (outcome ok-text (list (effect 'clock+ progress-clock 2)))
              :partial (outcome partial-text (list (effect 'clock+ progress-clock 1) (effect 'clock+ alert_clock 2)))
@@ -63,17 +65,17 @@
               :title "暴力挣脱"
               :desc "咬紧牙关，不顾手腕被勒出血痕，拼命对抗那些劣质皮带。"
               :check (check
-                      :suits (list 'force)
+                      :suits (list 意志)
                       :risk 'high
                       :ok (outcome "粗糙的皮带被你硬生生崩开了一个扣子" (list (effect 'clock+ 挣脱束缚钟 2)))
                       :partial (outcome "你的手腕磨破了皮，铁椅摩擦地板弄出了点声响" (list (effect 'clock+ 挣脱束缚钟 1) (effect 'clock+ alert_clock 1)))
                       :fail (outcome "该死，皮带没断，床腿摩擦地板的声音反而引起了外面的注意" (list (effect 'health -1) (effect 'clock+ alert_clock 2)))))
-             ;; 方式二：利用理智/直觉寻找利器
+             ;; 方式二：利用逻辑/感知寻找利器
              (action
               :title "寻找尖锐物割裂"
               :desc "试着转动酸痛的脖子，寻找铁皮边缘或碎玻璃去磨蹭皮带。"
               :check (check
-                      :suits (list 'reason 'instinct)
+                      :suits (list 逻辑 感知)
                       :risk 'mid
                       :ok (outcome "你利用椅子底部的锋利铁片，成功割裂了部分皮带" (list (effect 'clock+ 挣脱束缚钟 2)))
                       :partial (outcome "进展缓慢，你的手指被铁片划破了" (list (effect 'clock+ 挣脱束缚钟 1) (effect 'clock+ alert_clock 1)))
@@ -109,7 +111,7 @@
                          (when (not path_a_revealed)
                            (make_rush_path_action
                             "大胆硬闯"
-                            "趁还没人露面，凭直觉一口气把左侧这段路抢过去。"
+                            "趁还没人露面，凭感知一口气把左侧这段路抢过去。"
                             左侧探索进度
                             "你几乎是贴着黑影一口气冲到了尽头。"
                             "你冲得太急，沉重的脚步声在墙面间弹了两下。"
@@ -210,7 +212,7 @@
   (alert_clock (clock 
                 :title "守卫警觉" 
                 :initial 0 
-                :max 6))
+                :max 9))
    ;; 场景时钟
    (挣脱束缚钟 (clock :title "挣脱皮带" :initial 0 :max 4))
    (左侧探索进度 (clock :title "探查左侧" :initial 0 :max 3))

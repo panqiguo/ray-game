@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import traceback
 
-from raygame.content.scenario_escape import SCENARIO, build_escape_scenario, replace_escape_scenario
+from raygame.content.city_1 import SCENARIO, build_city_1, replace_city_1
 from raygame.content.validate import validate_content
 from raygame.encounters import get_encounter, initial_store
 from raygame.encounters.defs import EncounterCompileError
@@ -80,17 +80,17 @@ class ScmHotReloader:
         old_world = SCENARIO.get_program()
         old_encounters = ENCOUNTERS_BY_ID.snapshot()
         try:
-            new_world = build_escape_scenario()
+            new_world = build_city_1()
             new_encounters = load_encounters()
             if state is not None and state.active_encounter is not None:
                 assert state.active_encounter.encounter_id in new_encounters, (
                     f"Active encounter removed during hot reload: {state.active_encounter.encounter_id}"
                 )
-            replace_escape_scenario(new_world)
+            replace_city_1(new_world)
             replace_encounters(new_encounters)
             validate_content()
         except Exception:
-            replace_escape_scenario(old_world)
+            replace_city_1(old_world)
             replace_encounters(old_encounters)
             print("[SCM hot reload] failed, keeping previous content")
             traceback.print_exc()

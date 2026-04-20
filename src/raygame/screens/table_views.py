@@ -22,6 +22,7 @@ from .table_presenters import ActionSlotModel, PresentedActionCard, PresentedLoc
 from .ui_core import draw_frame, layout, pill, wrap_text_lines, wrap_text_lines_any
 from .ui_cards import draw_table_card
 from .ui_panels import draw_result_strip
+from .ui_text import ui_text_size, ui_text_style
 from .widgets import draw_note_block, draw_scrim, draw_slot_chip, draw_table_shell
 
 
@@ -152,7 +153,8 @@ def draw_action_card(font: Font | None, state: GameState, presented: PresentedAc
         button_rect = Rectangle(rect.x + 18.0 * scale, rect.y + rect.height + 8.0 * scale, rect.width - 36.0 * scale, 24.0 * scale)
         draw_action_attachment(font, state, action, presented, preview_rect, button_rect, rng, pending, scale=scale)
     elif presented.card.disabled:
-        draw_text(font, "条件未满足或当前资源不足。", int(rect.x + 14.0 * scale), int(rect.y + rect.height - 26.0 * scale), max(10, int(round(14 * scale))), Color(132, 132, 132, 255))
+        disabled_style = ui_text_style("body_sm", "subtle", scale=scale, minimum_size=10)
+        draw_text(font, "条件未满足或当前资源不足。", int(rect.x + 14.0 * scale), int(rect.y + rect.height - 26.0 * scale), disabled_style.size, disabled_style.color)
 
 
 def draw_action_attachment(
@@ -171,11 +173,18 @@ def draw_action_attachment(
         draw_pending_attachment(font, state, rect, button_rect, pending, scale=scale)
         return
     assert presented.attachment is not None
-    draw_text(font, presented.attachment.title, int(rect.x + 10.0 * scale), int(rect.y + 6.0 * scale), max(10, int(round(16 * scale))), Color(224, 192, 112, 255) if presented.attachment.mode == "preview" and presented.attachment.row else LIGHTGRAY)
+    title_style = ui_text_style(
+        "body",
+        "warning" if presented.attachment.mode == "preview" and presented.attachment.row else "muted",
+        scale=scale,
+        minimum_size=10,
+    )
+    body_style = ui_text_style("body_sm", "muted", scale=scale, minimum_size=9)
+    draw_text(font, presented.attachment.title, int(rect.x + 10.0 * scale), int(rect.y + 6.0 * scale), title_style.size, title_style.color)
     if presented.attachment.row:
         draw_result_strip(font, Rectangle(rect.x + 10.0 * scale, rect.y + 28.0 * scale, rect.width - 20.0 * scale, 20.0 * scale), presented.attachment.row, scale=scale)
     elif presented.attachment.hint:
-        draw_text(font, presented.attachment.hint, int(rect.x + 10.0 * scale), int(rect.y + 28.0 * scale), max(9, int(round(14 * scale))), LIGHTGRAY)
+        draw_text(font, presented.attachment.hint, int(rect.x + 10.0 * scale), int(rect.y + 28.0 * scale), body_style.size, body_style.color)
     if pill(font, Rectangle(button_rect.x, button_rect.y, 78.0 * scale, 22.0 * scale), "收回", False, scale=scale):
         clear_assembly(state)
     if pill(font, Rectangle(button_rect.x + button_rect.width - 78.0 * scale, button_rect.y, 78.0 * scale, 22.0 * scale), "执行", False, disabled=not presented.attachment.can_execute, scale=scale):
@@ -184,33 +193,37 @@ def draw_action_attachment(
 
 def draw_pending_attachment(font: Font | None, state: GameState, rect: Rectangle, button_rect: Rectangle, pending: PendingResolutionState, scale: float = 1.0) -> None:
     resolution = pending.resolution
+    title_style = ui_text_style("body", "muted", scale=scale, minimum_size=10)
+    body_style = ui_text_style("body_sm", scale=scale, minimum_size=10)
+    accent_style = ui_text_style("caption", "accent", scale=scale, minimum_size=9)
+    caption_style = ui_text_style("caption", "subtle", scale=scale, minimum_size=9)
     if resolution.result is not None and resolution.value is not None:
-        draw_text(font, "判定中", int(rect.x + 10.0 * scale), int(rect.y + 6.0 * scale), max(10, int(round(16 * scale))), LIGHTGRAY)
+        draw_text(font, "判定中", int(rect.x + 10.0 * scale), int(rect.y + 6.0 * scale), title_style.size, title_style.color)
         draw_inline_resolution_strip(font, Rectangle(rect.x + 10.0 * scale, rect.y + 26.0 * scale, rect.width - 20.0 * scale, 20.0 * scale), pending, scale=scale)
     else:
-        draw_text(font, "执行中", int(rect.x + 10.0 * scale), int(rect.y + 6.0 * scale), max(10, int(round(16 * scale))), LIGHTGRAY)
+        draw_text(font, "执行中", int(rect.x + 10.0 * scale), int(rect.y + 6.0 * scale), title_style.size, title_style.color)
     if pending.settled:
         result_rect = pending_result_rect(font, rect, resolution)
         draw_frame(result_rect, Color(16, 18, 24, 248), Color(78, 84, 98, 220))
         text_width = result_rect.width - 20.0 * scale
         text_y = int(result_rect.y + 10.0 * scale)
-        for line in wrap_text_lines(font, resolution.text, text_width, max(10, int(round(14 * scale)))):
-            draw_text(font, line, int(result_rect.x + 10.0 * scale), text_y, max(10, int(round(14 * scale))), RAYWHITE)
-            text_y += int(round(16 * scale))
+        for line in wrap_text_lines(font, resolution.text, text_width, body_style.size):
+            draw_text(font, line, int(result_rect.x + 10.0 * scale), text_y, body_style.size, body_style.color)
+            text_y += body_style.line_height - 2
         if resolution.effect_lines:
-            for line in wrap_text_lines(font, " | ".join(resolution.effect_lines[:2]), text_width, max(9, int(round(13 * scale)))):
-                draw_text(font, line, int(result_rect.x + 10.0 * scale), text_y + 2, max(9, int(round(13 * scale))), Color(212, 196, 132, 255))
-                text_y += int(round(15 * scale))
+            for line in wrap_text_lines(font, " | ".join(resolution.effect_lines[:2]), text_width, accent_style.size):
+                draw_text(font, line, int(result_rect.x + 10.0 * scale), text_y + 2, accent_style.size, accent_style.color)
+                text_y += accent_style.line_height - 1
         draw_text(
             font,
             "任意输入后自动关闭",
             int(result_rect.x + 10.0 * scale),
             int(result_rect.y + result_rect.height - 18.0 * scale),
-            max(9, int(round(12 * scale))),
-            Color(144, 144, 144, 255),
+            caption_style.size,
+            caption_style.color,
         )
     else:
-        draw_text(font, "结果会在这张卡下面落定。", int(rect.x + 10.0 * scale), int(rect.y + 44.0 * scale), max(9, int(round(14 * scale))), LIGHTGRAY)
+        draw_text(font, "结果会在这张卡下面落定。", int(rect.x + 10.0 * scale), int(rect.y + 44.0 * scale), body_style.size, title_style.color)
 
 
 def toggle_presented_slot(state: GameState, action: ActionDef, slot: ActionSlotModel) -> None:
@@ -245,15 +258,16 @@ def draw_inline_resolution_strip(font: Font | None, rect: Rectangle, pending: Pe
         draw_frame(cell, fill, Color(22, 22, 22, 180))
         if index == active_index:
             draw_rectangle_rounded_lines_ex(cell, 0.035, 6, 3.0, Color(233, 216, 152, 255))
-        draw_text(font, label, int(cell.x + 10.0 * scale), int(cell.y + 4.0 * scale), max(10, int(round(16 * scale))), RAYWHITE)
+        label_style = ui_text_style("body", scale=scale, minimum_size=10)
+        draw_text(font, label, int(cell.x + 10.0 * scale), int(cell.y + 4.0 * scale), label_style.size, label_style.color)
         x += cell_w
 
 
 def pending_result_rect(font: Font | None, preview_rect: Rectangle, resolution) -> Rectangle:
     text_width = preview_rect.width - 168
-    line_count = len(wrap_text_lines(font, resolution.text, text_width, 14))
+    line_count = len(wrap_text_lines(font, resolution.text, text_width, ui_text_size("body_sm")))
     if resolution.effect_lines:
-        line_count += len(wrap_text_lines(font, " | ".join(resolution.effect_lines[:2]), text_width, 13))
+        line_count += len(wrap_text_lines(font, " | ".join(resolution.effect_lines[:2]), text_width, ui_text_size("caption")))
     height = max(46.0, 20.0 + line_count * 16.0)
     return Rectangle(preview_rect.x, preview_rect.y + preview_rect.height + 8, preview_rect.width, height)
 

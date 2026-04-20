@@ -7,6 +7,7 @@ from pyray import *  # type: ignore
 
 from raygame.constants import HAND_HEIGHT, HUD_HEIGHT, WINDOW_HEIGHT, WINDOW_WIDTH
 from raygame.rendering import draw_text, font_cache_key, measure_text_width as render_measure_text_width
+from .ui_text import ui_text_size, ui_text_style
 
 
 @dataclass(frozen=True)
@@ -131,26 +132,32 @@ def draw_table_shell(
     close_label: str | None = None,
 ) -> tuple[TableSections, bool]:
     sections = split_table(rect)
+    title_style = ui_text_style("title")
+    subtitle_style = ui_text_style("body", "muted")
+    note_title_style = ui_text_style("body", "accent")
+    note_body_style = ui_text_style("body", "muted")
     draw_frame(rect, Color(18, 20, 26, 246), Color(112, 112, 112, 220))
-    draw_text(font, title, int(sections.header.x) + 18, int(sections.header.y) + 14, 28, RAYWHITE)
+    draw_text(font, title, int(sections.header.x) + 18, int(sections.header.y) + 14, title_style.size, title_style.color)
     if subtitle:
-        draw_text(font, subtitle, int(sections.header.x) + 18, int(sections.header.y) + 50, 17, LIGHTGRAY)
+        draw_text(font, subtitle, int(sections.header.x) + 18, int(sections.header.y) + 50, subtitle_style.size, subtitle_style.color)
     closed = False
     if close_label is not None:
-        closed = text_button(font, Rectangle(rect.x + rect.width - 102, rect.y + 18, 78, 28), close_label, 16)
+        closed = text_button(font, Rectangle(rect.x + rect.width - 102, rect.y + 18, 78, 28), close_label, ui_text_size("body"))
     if note_title:
-        draw_text(font, note_title, int(sections.note.x), int(sections.note.y), 18, Color(212, 196, 132, 255))
+        draw_text(font, note_title, int(sections.note.x), int(sections.note.y), note_title_style.size, note_title_style.color)
     if note_body:
-        draw_text(font, note_body, int(sections.note.x), int(sections.note.y) + 28, 16, LIGHTGRAY)
+        draw_text(font, note_body, int(sections.note.x), int(sections.note.y) + 28, note_body_style.size, note_body_style.color)
     return sections, closed
 
 
 def draw_note_block(font: Font | None, rect: Rectangle, title: str, body: str) -> None:
+    title_style = ui_text_style("subtitle", scale=(20 / 24))
+    body_style = ui_text_style("body", "muted")
     draw_frame(rect, Color(22, 25, 32, 255), Color(80, 84, 92, 210))
     if title:
-        draw_text(font, title, int(rect.x) + 12, int(rect.y) + 10, 18, RAYWHITE)
+        draw_text(font, title, int(rect.x) + 12, int(rect.y) + 10, title_style.size, title_style.color)
     if body:
-        draw_text(font, body, int(rect.x) + 12, int(rect.y) + 38, 16, LIGHTGRAY)
+        draw_text(font, body, int(rect.x) + 12, int(rect.y) + 38, body_style.size, body_style.color)
 
 
 def clickable(rect: Rectangle) -> bool:
@@ -165,12 +172,13 @@ def clickable(rect: Rectangle) -> bool:
     return False
 
 
-def text_button(font: Font | None, rect: Rectangle, label: str, size: int = 20, disabled: bool = False) -> bool:
+def text_button(font: Font | None, rect: Rectangle, label: str, size: int | None = None, disabled: bool = False) -> bool:
     clicked = False if disabled else clickable(rect)
     fill = Color(24, 27, 34, 255) if disabled else Color(28, 32, 40, 255)
     border = Color(70, 72, 78, 180) if disabled else Color(92, 96, 104, 220)
     draw_frame(rect, fill, border)
-    draw_centered_text(font, label, rect, size, Color(118, 118, 118, 255) if disabled else RAYWHITE)
+    resolved_size = size if size is not None else ui_text_size("body")
+    draw_centered_text(font, label, rect, resolved_size, ui_text_style("body", "disabled" if disabled else "default").color)
     return clicked
 
 
@@ -182,7 +190,8 @@ def pill(font: Font | None, rect: Rectangle, label: str, selected: bool = False,
         border = Color(70, 72, 78, 180)
     clicked = False if disabled else clickable(rect)
     draw_frame(rect, fill, border)
-    draw_centered_text(font, label, rect, max(11, int(round(18 * scale))), Color(118, 118, 118, 255) if disabled else RAYWHITE)
+    label_style = ui_text_style("body", "disabled" if disabled else "default", scale=scale, minimum_size=11)
+    draw_centered_text(font, label, rect, label_style.size, label_style.color)
     return clicked
 
 
@@ -199,7 +208,8 @@ def draw_slot_chip(font: Font | None, rect: Rectangle, label: str, *, filled: bo
         draw_frame(inner, Color(12, 14, 18, 210), Color(34, 38, 46, 160))
     elif receptive:
         draw_frame(inner, Color(56, 46, 30, 150), Color(118, 100, 62, 160))
-    draw_centered_text(font, label, rect, max(10, int(round(15 * scale))), RAYWHITE if not disabled else Color(110, 110, 110, 255))
+    label_style = ui_text_style("body_sm", "disabled" if disabled else "default", scale=scale, minimum_size=10)
+    draw_centered_text(font, label, rect, label_style.size, label_style.color)
     return clicked
 
 

@@ -18,7 +18,7 @@ Encounter / World SCM 速查
 `meta`：
 
 ```scheme
-(meta :key 'escape :title "标题" :desc "描述")
+(meta :key 'city_1 :title "标题" :desc "描述")
 ```
 
 - 必填：`:key` `:title`

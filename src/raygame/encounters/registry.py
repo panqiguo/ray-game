@@ -7,8 +7,11 @@ from .defs import CompiledEncounterProgram, EncounterCompileError
 from .runtime import compile_encounter_program
 
 
+ENCOUNTER_DIR = Path(__file__).resolve().parent.parent / "scm" / "encounter"
+
+
 def _load_program(filename: str) -> CompiledEncounterProgram:
-    path = Path(__file__).with_name(filename)
+    path = ENCOUNTER_DIR / filename
     try:
         return compile_encounter_program(path.read_text(encoding="utf-8"), source_path=path)
     except EncounterCompileError as exc:
@@ -16,10 +19,10 @@ def _load_program(filename: str) -> CompiledEncounterProgram:
 
 
 ENCOUNTER_FILES = (
-    "teach_thug.scm",
-    "black_night.scm",
+    "教训小混混.scm",
+    "潜入别墅.scm",
     "酒吧艳遇.scm",
-    "first_scene.scm",
+    "逃离疗养院.scm",
 )
 
 

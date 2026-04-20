@@ -5,7 +5,7 @@ from raygame.content.runtime import render_world
 from raygame.encounters import ENCOUNTERS_BY_ID, initial_store, render_encounter, validate_encounter_program
 from raygame.content.cards import CARD_DEFS
 from raygame.content.growth import GROWTH_DEFS
-from raygame.content.scenario_escape import SCENARIO
+from raygame.content.city_1 import SCENARIO
 from raygame.model.defs import ActionDef, Condition, Effect, InputRequirement, LocationNode, ProgressClockSpec
 
 

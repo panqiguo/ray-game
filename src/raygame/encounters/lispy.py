@@ -19,6 +19,13 @@ class SpecialFormProcedure:
     func: Callable[[list[Any], "Environment"], Any]
 
 
+@dataclass(frozen=True)
+class Token:
+    text: str
+    line: int
+    column: int
+
+
 class Environment:
     def __init__(
         self,
@@ -60,8 +67,8 @@ class Environment:
 _MISSING = object()
 
 
-def parse_program(text: str) -> list[SexpNode]:
-    tokens = _tokenize(text)
+def parse_program(text: str, *, source_path: Path | None = None) -> list[SexpNode]:
+    tokens = _tokenize(text, source_path=source_path)
     index = 0
     forms: list[SexpNode] = []
     while index < len(tokens):
@@ -71,7 +78,7 @@ def parse_program(text: str) -> list[SexpNode]:
 
 
 def expand_includes(source: str, *, source_path: Path | None, include_stack: tuple[Path, ...] = ()) -> list[SexpNode]:
-    forms = parse_program(source)
+    forms = parse_program(source, source_path=source_path)
     expanded: list[SexpNode] = []
     for form in forms:
         if _is_call(form, "include"):
@@ -96,7 +103,7 @@ def expand_includes(source: str, *, source_path: Path | None, include_stack: tup
 
 def module_dependency_paths(source_path: Path, include_stack: tuple[Path, ...] = ()) -> tuple[Path, ...]:
     source_path = source_path.resolve()
-    forms = parse_program(source_path.read_text(encoding="utf-8"))
+    forms = parse_program(source_path.read_text(encoding="utf-8"), source_path=source_path)
     discovered: list[Path] = [source_path]
     for form in forms:
         if isinstance(form, list) and form and form[0] == "include":
@@ -417,72 +424,148 @@ def _quote_value(node: Any) -> Any:
     return None if node == "nil" else node
 
 
-def _tokenize(text: str) -> list[str]:
-    tokens: list[str] = []
+def _tokenize(text: str, *, source_path: Path | None = None) -> list[Token]:
+    tokens: list[Token] = []
     i = 0
+    line = 1
+    column = 1
+
+    def advance_char(ch: str) -> None:
+        nonlocal line, column
+        if ch == "\n":
+            line += 1
+            column = 1
+        else:
+            column += 1
+
+    def read_while(predicate: Callable[[str], bool]) -> tuple[str, int, int]:
+        nonlocal i, line, column
+        start_line = line
+        start_column = column
+        chars: list[str] = []
+        while i < len(text) and predicate(text[i]):
+            chars.append(text[i])
+            advance_char(text[i])
+            i += 1
+        return "".join(chars), start_line, start_column
+
+    paren_stack: list[tuple[int, int]] = []
     while i < len(text):
         ch = text[i]
         if ch in " \t\r\n":
+            advance_char(ch)
             i += 1
             continue
         if ch == ";":
             while i < len(text) and text[i] != "\n":
+                advance_char(text[i])
                 i += 1
             continue
         if ch in "()":
-            tokens.append(ch)
+            if ch == "(":
+                paren_stack.append((line, column))
+            else:
+                if not paren_stack:
+                    raise EncounterReadError(
+                        _format_read_error(
+                            "Unexpected closing parenthesis.",
+                            source_path=source_path,
+                            line=line,
+                            column=column,
+                        )
+                    )
+                paren_stack.pop()
+            tokens.append(Token(ch, line, column))
+            advance_char(ch)
             i += 1
             continue
         if ch == "'":
-            tokens.append("'")
+            tokens.append(Token("'", line, column))
+            advance_char(ch)
             i += 1
             continue
         if ch == '"':
+            start_line = line
+            start_column = column
+            advance_char(ch)
             i += 1
             chars: list[str] = []
             while i < len(text):
                 cur = text[i]
                 if cur == "\\":
+                    advance_char(cur)
                     i += 1
                     if i >= len(text):
-                        raise EncounterReadError("Unterminated string escape.")
+                        raise EncounterReadError(
+                            _format_read_error(
+                                "Unterminated string escape.",
+                                source_path=source_path,
+                                line=start_line,
+                                column=start_column,
+                            )
+                        )
                     escaped = text[i]
                     chars.append({"n": "\n", "t": "\t", '"': '"', "\\": "\\"}.get(escaped, escaped))
+                    advance_char(escaped)
                     i += 1
                     continue
                 if cur == '"':
+                    advance_char(cur)
                     i += 1
                     break
                 chars.append(cur)
+                advance_char(cur)
                 i += 1
             else:
-                raise EncounterReadError("Unterminated string literal.")
-            tokens.append(f'"{"".join(chars)}"')
+                raise EncounterReadError(
+                    _format_read_error(
+                        "Unterminated string literal.",
+                        source_path=source_path,
+                        line=start_line,
+                        column=start_column,
+                    )
+                )
+            tokens.append(Token(f'"{"".join(chars)}"', start_line, start_column))
             continue
-        start = i
-        while i < len(text) and text[i] not in '()"; \t\r\n':
-            i += 1
-        tokens.append(text[start:i])
+        token_text, token_line, token_column = read_while(lambda cur: cur not in '()"; \t\r\n')
+        tokens.append(Token(token_text, token_line, token_column))
+    if paren_stack:
+        missing_line, missing_column = paren_stack[-1]
+        raise EncounterReadError(
+            _format_read_error(
+                "Missing closing parenthesis.",
+                source_path=source_path,
+                line=missing_line,
+                column=missing_column,
+            )
+        )
     return tokens
 
 
-def _parse_form(tokens: list[str], index: int) -> tuple[SexpNode, int]:
+def _parse_form(tokens: list[Token], index: int) -> tuple[SexpNode, int]:
     token = tokens[index]
-    if token == "(":
+    if token.text == "(":
         items: list[SexpNode] = []
         index += 1
-        while index < len(tokens) and tokens[index] != ")":
+        while index < len(tokens) and tokens[index].text != ")":
             item, index = _parse_form(tokens, index)
             items.append(item)
-        if index >= len(tokens) or tokens[index] != ")":
+        if index >= len(tokens) or tokens[index].text != ")":
             raise EncounterReadError("Missing closing parenthesis.")
         return items, index + 1
-    if token == "'":
+    if token.text == "'":
         quoted, next_index = _parse_form(tokens, index + 1)
         return ["quote", quoted], next_index
-    if token == ")":
+    if token.text == ")":
         raise EncounterReadError("Unexpected closing parenthesis.")
-    return _parse_atom(token), index + 1
+    return _parse_atom(token.text), index + 1
+
+
+def _format_read_error(message: str, *, source_path: Path | None, line: int, column: int) -> str:
+    location = f"{line}:{column}"
+    if source_path is not None:
+        return f"{source_path}:{location} {message}"
+    return f"{location} {message}"
 
 
 def _parse_atom(token: str) -> SexpNode:

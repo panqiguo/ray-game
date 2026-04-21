@@ -31,6 +31,8 @@ from raygame.rules.judgment import compute_action_value, roll_result
 from raygame.rules.rng import RandomSource
 from raygame.model.enums import Suit
 
+OPENING_ENCOUNTER_ID = "教训小混混"
+
 
 def _push_log(state: GameState, text: str) -> None:
     state.action_log.append(text)
@@ -71,8 +73,7 @@ def start_new_run(seed: int) -> tuple[GameState, RandomSource]:
     )
     sync_trauma_cards_with_health(state)
     start_city_day(state.deck, rng, HAND_SIZE)
-    _push_log(state, "你从一场暴打里活了下来，但还没真正脱身。")
-    _resolve_world_reacts(state, rng, [])
+    start_encounter(state, OPENING_ENCOUNTER_ID)
     return state, rng
 
 
@@ -137,8 +138,7 @@ def encounter_action_points(state: GameState) -> tuple[int, int] | None:
 def encounter_spirit_decay(state: GameState, slot_id: str) -> int:
     if state.screen != ScreenName.ENCOUNTER or state.active_encounter is None:
         return 0
-    _sync_encounter_action_cycle(state)
-    return max(0, state.encounter_spirit_usage.get(_slot_spirit(slot_id), 0))
+    return 0
 
 
 def current_world_snapshot(state: GameState):
@@ -259,7 +259,11 @@ def slot_current_value(state: GameState, slot_id: str) -> int:
 
 
 def slot_is_available(state: GameState, slot_id: str) -> bool:
-    return slot_id in state.deck.available_slots and slot_current_value(state, slot_id) > 0
+    if slot_id not in state.deck.available_slots:
+        return False
+    if state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None:
+        return True
+    return slot_current_value(state, slot_id) > 0
 
 
 def slot_is_exhausted(state: GameState, slot_id: str) -> bool:
@@ -279,7 +283,9 @@ def slot_is_preferred_for_check(slot_id: str, check) -> bool | None:
 
 
 def slot_effective_value(state: GameState, slot_id: str, check) -> int:
-    base_value = max(0, slot_current_value(state, slot_id) - encounter_spirit_decay(state, slot_id))
+    base_value = slot_current_value(state, slot_id)
+    if state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None:
+        base_value = max(1, base_value)
     return compute_action_value(base_value, check, preferred=slot_is_preferred_for_check(slot_id, check))
 
 

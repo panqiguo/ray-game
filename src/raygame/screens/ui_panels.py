@@ -7,7 +7,7 @@ from pyray import *  # type: ignore
 from raygame.content import CARD_DEFS, GROWTH_DEFS
 from raygame.labels import ITEM_LABELS
 from raygame.model.defs import ActionDef, InputRequirement
-from raygame.model.enums import ResultType, SUIT_LABELS
+from raygame.model.enums import ResultType, SUIT_LABELS, ScreenName
 from raygame.model.state import GameState
 from raygame.rendering import draw_text
 from raygame.rules.deck import list_spirit_slots
@@ -20,7 +20,6 @@ from raygame.rules import (
     count_spirit_cards,
     continue_dialogue,
     encounter_action_points,
-    encounter_spirit_decay,
     finish_dialogue,
     requirement_is_slotted,
     clear_selected_input,
@@ -80,7 +79,7 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
     encounter_points = encounter_action_points(state)
     if encounter_points is not None:
         current, cap = encounter_points
-        subtitle = f"精力 {current}/{cap}。同一轮重复使用同精神会衰减。"
+        subtitle = f"精力 {current}/{cap}。每次行动消耗 1 点。"
     else:
         subtitle = "灰掉表示已使用或创伤导致当前不可用。"
     draw_text(font, subtitle, int(hand.x) + 166, int(hand.y) + 17, subtitle_style.size, subtitle_style.color)
@@ -88,7 +87,7 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
     y = int(hand.y) + 48
     for index, slot_id in enumerate(list_spirit_slots(state.deck)):
         rect = Rectangle(x, y, 150, 106)
-        disabled = slot_is_exhausted(state, slot_id) or slot_current_value(state, slot_id) <= 0
+        disabled = slot_is_exhausted(state, slot_id) or not slot_is_available(state, slot_id)
         if disabled and state.selected_input.kind == "card" and state.selected_input.index == index:
             clear_selected_input(state)
         selected = (state.selected_input.kind == "card" and state.selected_input.index == index) and not disabled
@@ -126,7 +125,7 @@ def draw_compact_card(
     spirit_id = card_id.split(":", 1)[0]
     card = CARD_DEFS[spirit_id]
     if disabled is None:
-        disabled = state is not None and (slot_is_exhausted(state, card_id) or slot_current_value(state, card_id) <= 0)
+        disabled = state is not None and (slot_is_exhausted(state, card_id) or not slot_is_available(state, card_id))
     hinted = hinted and not disabled
     selected = selected and not disabled
     fill = Color(20, 22, 28, 255) if disabled else Color(29, 33, 40, 255)
@@ -171,7 +170,8 @@ def _draw_hand_card_suit(font: Font | None, rect: Rectangle, card, *, card_id: s
         suit_required = bool(action.check.suits)
         preferred = suit_required and card_matches_action_check(action, card_id)
         effective = slot_effective_value(state, card_id, action.check) if slot_current_value(state, card_id) > 0 else 0
-        decay = encounter_spirit_decay(state, card_id)
+        if state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None:
+            effective = slot_effective_value(state, card_id, action.check)
         modifier = "+2" if preferred else "+0"
         suffix = (
             "已使用"
@@ -180,7 +180,7 @@ def _draw_hand_card_suit(font: Font | None, rect: Rectangle, card, *, card_id: s
             if disabled
             else "不匹配"
             if suit_required and not preferred
-            else f"{modifier} => {effective}" if decay <= 0 else f"{modifier} => {effective} (衰减-{decay})"
+            else f"{modifier} => {effective}"
         )
         suit_label = f"{suit_label}  {suffix}"
     elif disabled:

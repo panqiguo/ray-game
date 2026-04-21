@@ -1,4 +1,4 @@
-from .cards import CARD_DEFS, STARTING_DECK
+from .cards import CARD_DEFS
 from .growth import GROWTH_DEFS
 from .city_1 import SCENARIO
 

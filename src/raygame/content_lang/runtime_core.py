@@ -397,7 +397,7 @@ def builtin_item_input(key: Any, amount: Any = 1, label: Any | None = None) -> I
 
 def builtin_card_input(key: Any, label: Any | None = None) -> InputRequirement:
     key_value = str(unwrap(key))
-    return InputRequirement(kind="card", key=key_value, amount=1, label=("负面牌" if key_value == "negative" else ("手牌" if label is None else str(unwrap(label)))), consume=True)
+    return InputRequirement(kind="card", key=key_value, amount=1, label=("负面牌" if key_value == "negative" else ("精神槽位" if label is None else str(unwrap(label)))), consume=True)
 
 
 def eval_effect_list(expr: Any, env: Environment) -> tuple[Effect, ...]:

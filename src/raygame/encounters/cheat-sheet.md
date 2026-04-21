@@ -95,7 +95,8 @@ Encounter / World SCM 速查
 
 - `:risk`：`'low` `'mid` `'high`
 - `:suits`：`'logic` `'perception` `'willpower`
-- 不写 `:suits` 或写空列表时，表示三种精神牌都可用
+- 不写 `:suits` 或写空列表时，表示三种精神都可用，且没有额外加值
+- 写了适配精神时，适配精神会获得 `+2`
 
 `outcome`：
 
@@ -138,6 +139,8 @@ Encounter / World SCM 速查
 (card 'negative "负面牌")
 ```
 
+- `card` 输入现在表示“消耗一个本回合可用的精神槽位”
+
 `effects`：
 
 ```scheme
@@ -157,6 +160,8 @@ Encounter / World SCM 速查
 (effect 'end-game)
 (effect 'reset-hand)
 ```
+
+- `(effect 'reset-hand)` 现在的语义是“恢复全部精神槽位可用”
 
 时钟查询：
 
@@ -218,6 +223,14 @@ alist：
 ```scheme
 (assoc 'key table)
 (assoc-ref table 'key)
+```
+
+精神与成长：
+
+- 初始精神：`logic = 2`，`perception = 1`，`willpower = 1`
+- 每个精神默认 1 个槽位；重大升级可以增加额外槽位
+- 每个槽位每回合只能使用 1 次
+- 受伤会按固定顺序给槽位叠加创伤；每层创伤让该槽位当前值 `-2`
 (assoc-set table 'key value)
 (assoc-remove table 'key)
 ```

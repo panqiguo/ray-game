@@ -9,10 +9,11 @@ from .enums import ResultType, ScreenName
 
 @dataclass
 class DeckState:
-    draw_pile: list[str]
-    discard_pile: list[str] = field(default_factory=list)
-    hand: list[str] = field(default_factory=list)
-    retained_card_id: str | None = None
+    spirit_values: dict[str, int] = field(default_factory=dict)
+    extra_slots: dict[str, int] = field(default_factory=dict)
+    available_slots: list[str] = field(default_factory=list)
+    exhausted_slots: list[str] = field(default_factory=list)
+    trauma_by_slot: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass

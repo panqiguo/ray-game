@@ -10,6 +10,7 @@ from raygame.model.defs import ActionDef, InputRequirement
 from raygame.model.enums import ResultType, SUIT_LABELS
 from raygame.model.state import GameState
 from raygame.rendering import draw_text
+from raygame.rules.deck import list_spirit_slots
 from raygame.rules import (
     card_hint_flash_active,
     card_matches_action_check,
@@ -19,11 +20,15 @@ from raygame.rules import (
     count_spirit_cards,
     continue_dialogue,
     finish_dialogue,
-    open_modal,
-    open_overlay,
     requirement_is_slotted,
+    clear_selected_input,
     select_card_input,
     select_item_input,
+    slot_current_value,
+    slot_effective_value,
+    slot_is_available,
+    slot_is_exhausted,
+    slot_trauma_count,
 )
 
 from .ui_core import begin_layer, centered_rect, clickable, draw_frame, draw_scrim, end_layer, layout, measure_text_width, mouse_point, text_button, wrap_text_lines, wrap_text_lines_any
@@ -68,43 +73,36 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
     hand = layout().hand
     draw_frame(hand, Color(18, 20, 26, 250))
     hand_title_style = ui_text_style("subtitle")
-    pile_title_style = ui_text_style("subtitle", "muted", scale=(20 / 24))
-    draw_text(font, "手牌", int(hand.x) + 18, int(hand.y) + 14, hand_title_style.size, hand_title_style.color)
-    draw_text(font, "牌堆", int(hand.x) + 520, int(hand.y) + 14, pile_title_style.size, pile_title_style.color)
-    draw_pile_button(font, Rectangle(hand.x + 578, hand.y + 10, 112, 32), "牌库", len(state.deck.draw_pile), state, "draw_pile")
-    draw_pile_button(font, Rectangle(hand.x + 702, hand.y + 10, 112, 32), "弃牌", len(state.deck.discard_pile), state, "discard_pile")
+    subtitle_style = ui_text_style("body", "muted")
+    draw_text(font, "精神槽位", int(hand.x) + 18, int(hand.y) + 14, hand_title_style.size, hand_title_style.color)
+    draw_text(font, "灰掉表示已使用或创伤导致当前不可用。", int(hand.x) + 166, int(hand.y) + 17, subtitle_style.size, subtitle_style.color)
     x = int(hand.x) + 18
     y = int(hand.y) + 48
-    for index, card_id in enumerate(state.deck.hand):
+    for index, slot_id in enumerate(list_spirit_slots(state.deck)):
         rect = Rectangle(x, y, 150, 106)
-        selected = state.selected_input.kind == "card" and state.selected_input.index == index
-        slotted = state.assembly.slotted_card_index == index
-        hinted = card_hint_flash_active(state, action) and card_matches_action_check(action, card_id)
-        if draw_compact_card(font, rect, card_id, selected or slotted, hinted=hinted):
-            select_card_input(state, card_id, index)
+        disabled = slot_is_exhausted(state, slot_id) or slot_current_value(state, slot_id) <= 0
+        if disabled and state.selected_input.kind == "card" and state.selected_input.index == index:
+            clear_selected_input(state)
+        selected = (state.selected_input.kind == "card" and state.selected_input.index == index) and not disabled
+        slotted = (state.assembly.slotted_card_index == index) and not disabled
+        hinted = (not disabled) and card_hint_flash_active(state, action) and card_matches_action_check(action, slot_id)
+        if draw_compact_card(
+            font,
+            rect,
+            slot_id,
+            selected or slotted,
+            interactive=slot_is_available(state, slot_id) and not disabled,
+            hinted=hinted,
+            disabled=disabled,
+            state=state,
+            action=action,
+        ):
+            select_card_input(state, slot_id, index)
         x += 162
         if x > hand.x + hand.width - 260:
             break
     inventory_rect = _inventory_panel_rect()
     draw_inventory_panel(font, inventory_rect, state, action)
-
-
-def draw_pile_button(font: Font | None, rect: Rectangle, label: str, count: int, state: GameState, modal_kind: str) -> None:
-    active = state.modal.kind == modal_kind
-    draw_frame(rect, Color(80, 66, 47, 255) if active else Color(24, 27, 34, 255), Color(190, 162, 96, 255) if active else Color(82, 88, 102, 220))
-    label_style = ui_text_style("body")
-    count_style = ui_text_style("body", "accent")
-    draw_text(font, label, int(rect.x) + 10, int(rect.y) + 6, label_style.size, label_style.color)
-    draw_text(font, str(count), int(rect.x) + 76, int(rect.y) + 6, count_style.size, count_style.color)
-    if clickable(rect):
-        if state.modal.kind == modal_kind:
-            close_modal(state)
-        elif state.modal.kind == "location":
-            open_overlay(state, modal_kind)
-        elif state.modal.kind == "":
-            open_modal(state, modal_kind)
-
-
 def draw_compact_card(
     font: Font | None,
     rect: Rectangle,
@@ -113,45 +111,64 @@ def draw_compact_card(
     interactive: bool = True,
     *,
     hinted: bool = False,
+    disabled: bool | None = None,
+    state: GameState | None = None,
+    action: ActionDef | None = None,
 ) -> bool:
-    card = CARD_DEFS[card_id]
-    fill = Color(62, 43, 40, 255) if card.is_negative else Color(29, 33, 40, 255)
-    border = Color(146, 86, 78, 255) if card.is_negative else Color(95, 99, 107, 220)
+    spirit_id = card_id.split(":", 1)[0]
+    card = CARD_DEFS[spirit_id]
+    if disabled is None:
+        disabled = state is not None and (slot_is_exhausted(state, card_id) or slot_current_value(state, card_id) <= 0)
+    hinted = hinted and not disabled
+    selected = selected and not disabled
+    fill = Color(20, 22, 28, 255) if disabled else Color(29, 33, 40, 255)
+    border = Color(72, 76, 88, 180) if disabled else Color(95, 99, 107, 220)
     if selected:
         border = Color(201, 165, 88, 255)
     elif hinted:
         border = Color(230, 206, 126, 255)
-    clicked = clickable(rect) if interactive else False
+    clicked = clickable(rect) if (interactive and not disabled) else False
     draw_frame(rect, fill, border)
     if hinted and not selected:
         draw_rectangle_rounded_lines_ex(rect, 0.03, 8, 2.0, Color(230, 206, 126, 190))
-    _draw_hand_card_head(font, rect, card)
-    _draw_hand_card_suit(font, rect, card)
-    if card.is_negative:
-        negative_style = ui_text_style("body", "danger")
-        draw_text(font, "负面", int(rect.x) + 12, int(rect.y) + 68, negative_style.size, negative_style.color)
+    if disabled:
+        draw_scrim(rect)
+    _draw_hand_card_head(font, rect, card, card_id=card_id, state=state, disabled=disabled)
+    _draw_hand_card_suit(font, rect, card, card_id=card_id, state=state, action=action, disabled=disabled)
     return clicked
 
 
-def _draw_hand_card_head(font: Font | None, rect: Rectangle, card) -> None:
+def _draw_hand_card_head(font: Font | None, rect: Rectangle, card, *, card_id: str, state: GameState | None, disabled: bool) -> None:
     name = _hand_card_style_label(card.title)
-    number_text = str(card.points)
-    number_style = ui_text_style("title", "danger" if card.is_negative else "accent")
-    suffix_style = ui_text_style("body", "muted")
+    number_text = str(slot_current_value(state, card_id) if state is not None else card.points)
+    trauma = slot_trauma_count(state, card_id) if state is not None else 0
+    number_style = ui_text_style("title", "disabled" if disabled else ("warning" if trauma else "accent"))
+    suffix_style = ui_text_style("body", "disabled" if disabled else "muted")
     text_size = max(28, number_style.size - 2)
     suffix_size = suffix_style.size
     x = int(rect.x) + 12
     y = int(rect.y) + 12
     draw_text(font, number_text, x, y, text_size, number_style.color)
     draw_text(font, name, x + int(measure_text_width(font, number_text, text_size)) + 6, y + 1, suffix_size, suffix_style.color)
+    if trauma and not disabled:
+        trauma_style = ui_text_style("body_sm", "warning")
+        draw_text(font, f"创伤 {trauma}", x, y + 34, trauma_style.size, trauma_style.color)
 
 
-def _draw_hand_card_suit(font: Font | None, rect: Rectangle, card) -> None:
+def _draw_hand_card_suit(font: Font | None, rect: Rectangle, card, *, card_id: str, state: GameState | None, action: ActionDef | None, disabled: bool) -> None:
     if card.suit is None:
         return
     suit_label = SUIT_LABELS[card.suit]
-    suit_style = ui_text_style("body", "muted" if not card.is_negative else "subtle")
-    draw_text(font, suit_label, int(rect.x) + 12, int(rect.y) + 44, suit_style.size, suit_style.color)
+    if action is not None and action.check is not None and state is not None:
+        preferred = bool(action.check.suits) and card_matches_action_check(action, card_id)
+        effective = slot_effective_value(state, card_id, action.check) if slot_current_value(state, card_id) > 0 else 0
+        modifier = "+2" if preferred else "+0"
+        suffix = "已使用" if slot_is_exhausted(state, card_id) else "不可用" if disabled else f"{modifier} => {effective}"
+        suit_label = f"{suit_label}  {suffix}"
+    elif disabled:
+        suit_label = f"{suit_label}  不可用"
+    suit_style = ui_text_style("body", "subtle" if disabled else "muted")
+    draw_text(font, suit_label, int(rect.x) + 12, int(rect.y) + 68, suit_style.size, suit_style.color)
 
 
 def _hand_card_style_label(title: str) -> str:
@@ -188,8 +205,10 @@ def draw_selected_card_curve_overlay(state: GameState) -> None:
         hand = layout().hand
         x = int(hand.x) + 18
         y = int(hand.y) + 48
-        for index, _card_id in enumerate(state.deck.hand):
+        for index, card_id in enumerate(list_spirit_slots(state.deck)):
             if index == state.selected_input.index:
+                if not slot_is_available(state, card_id):
+                    return
                 _draw_selected_card_curve(Rectangle(x, y, 150, 106))
                 return
             x += 162
@@ -367,19 +386,29 @@ def draw_profile_modal(font: Font | None, state: GameState, growth_defs=GROWTH_D
     right = Rectangle(rect.x + 330, content_y, rect.width - 350, content_h)
     draw_frame(left, Color(18, 20, 26, 240), Color(78, 84, 96, 210))
     draw_frame(right, Color(18, 20, 26, 240), Color(78, 84, 96, 210))
-    draw_text(font, "精神调整", int(left.x) + 12, int(left.y) + 10, section_style.size, section_style.color)
-    draw_text(font, "当前精神牌", int(right.x) + 12, int(right.y) + 10, section_style.size, section_style.color)
+    draw_text(font, "成长选项", int(left.x) + 12, int(left.y) + 10, section_style.size, section_style.color)
+    draw_text(font, "当前精神", int(right.x) + 12, int(right.y) + 10, section_style.size, section_style.color)
 
     choice_y = int(left.y) + 38
     counts = count_spirit_cards(state)
-    removable = {
-        "remove_logic": counts["logic"] > 0,
-        "remove_perception": counts["perception"] > 0,
-        "remove_willpower": counts["willpower"] > 0,
-    }
-    for growth_id in ("add_logic", "remove_logic", "add_perception", "remove_perception", "add_willpower", "remove_willpower"):
+    for growth_id in (
+        "upgrade_logic",
+        "upgrade_perception",
+        "upgrade_willpower",
+        "major_logic_slot",
+        "major_perception_slot",
+        "major_willpower_slot",
+    ):
         growth = growth_defs[growth_id]
-        can_claim = state.growth_points > 0 and removable.get(growth_id, True)
+        can_claim = state.growth_points > 0
+        unmet_labels = tuple(condition.label for condition in growth.conditions if condition.label)
+        if unmet_labels:
+            if growth_id == "major_logic_slot":
+                can_claim = state.deck.spirit_values["logic"] >= 3
+            elif growth_id == "major_perception_slot":
+                can_claim = state.deck.spirit_values["perception"] >= 3
+            elif growth_id == "major_willpower_slot":
+                can_claim = state.deck.spirit_values["willpower"] >= 3
         card_rect = Rectangle(left.x + 10, choice_y, left.width - 20, 92)
         draw_frame(card_rect, Color(24, 27, 34, 255), Color(92, 96, 104, 220) if can_claim else Color(70, 72, 78, 180))
         draw_text(font, growth.title, int(card_rect.x) + 12, int(card_rect.y) + 10, section_style.size, section_style.color if can_claim else ui_text_color("disabled"))
@@ -388,8 +417,8 @@ def draw_profile_modal(font: Font | None, state: GameState, growth_defs=GROWTH_D
         for line in body_lines[:2]:
             draw_text(font, line, int(card_rect.x) + 12, body_y, body_style.size, body_style.color)
             body_y += body_style.line_height - 2
-        if growth_id in removable and not removable[growth_id]:
-            draw_text(font, "当前没有可移除的基础牌。", int(card_rect.x) + 12, int(card_rect.y + card_rect.height) - 24, body_style.size, faint_style.color)
+        if unmet_labels and not can_claim:
+            draw_text(font, unmet_labels[0], int(card_rect.x) + 12, int(card_rect.y + card_rect.height) - 24, body_style.size, faint_style.color)
         button_label = "确认" if can_claim else "不可用"
         if text_button(font, Rectangle(card_rect.x + card_rect.width - 92, card_rect.y + card_rect.height - 28, 80, 20), button_label, ui_text_size("body_sm"), disabled=not can_claim):
             claim_growth(state, growth_id)
@@ -399,41 +428,17 @@ def draw_profile_modal(font: Font | None, state: GameState, growth_defs=GROWTH_D
 
     owned_y = int(right.y) + 40
     for label, key in (("逻辑", "logic"), ("感知", "perception"), ("意志", "willpower")):
-        draw_text(font, f"· {label} {counts[key]} 张", int(right.x) + 12, owned_y, meta_style.size, meta_style.color)
+        value = state.deck.spirit_values[key]
+        slots = counts[key]
+        draw_text(font, f"· {label} 值 {value} / 槽位 {slots}", int(right.x) + 12, owned_y, meta_style.size, meta_style.color)
         owned_y += 24
     owned_y += 16
-    draw_text(font, "只能移除基础精神牌。创伤与其他污染牌不会被这类成长点移除。", int(right.x) + 12, owned_y, faint_style.size, faint_style.color)
+    draw_text(font, "每点生命损失会按固定顺序给精神槽位叠加创伤。每层创伤让该槽位的值 -2。", int(right.x) + 12, owned_y, faint_style.size, faint_style.color)
     end_layer("profile")
 
 
 def draw_card_pile_modal(font: Font | None, state: GameState) -> None:
-    if state.modal.kind not in {"draw_pile", "discard_pile"}:
-        return
-    begin_layer("pile_modal", interactive=True)
-    pile = state.deck.draw_pile if state.modal.kind == "draw_pile" else state.deck.discard_pile
-    title = "牌库" if state.modal.kind == "draw_pile" else "弃牌堆"
-    rect = centered_rect(860, 520, -6)
-    draw_scrim(layout().stage)
-    draw_frame(rect, Color(16, 18, 24, 250), Color(118, 118, 118, 220))
-    title_style = ui_text_style("title")
-    summary_style = ui_text_style("body", "accent")
-    draw_text(font, title, int(rect.x) + 20, int(rect.y) + 18, title_style.size, title_style.color)
-    trauma_count = pile.count("trauma")
-    draw_text(font, f"共 {len(pile)} 张    创伤 {trauma_count} 张", int(rect.x) + 20, int(rect.y) + 54, summary_style.size, summary_style.color)
-    if text_button(font, Rectangle(rect.x + rect.width - 98, rect.y + 18, 70, 28), "关闭", ui_text_size("body")):
-        close_modal(state)
-        end_layer("pile_modal")
-        return
-    x = int(rect.x) + 20
-    y = int(rect.y) + 92
-    for card_id in pile:
-        card_rect = Rectangle(x, y, 150, 92)
-        draw_compact_card(font, card_rect, card_id, False, interactive=False)
-        x += 162
-        if x > rect.x + rect.width - 170:
-            x = int(rect.x) + 20
-            y += 104
-    end_layer("pile_modal")
+    del font, state
 
 
 def draw_dialogue_modal(font: Font | None, state: GameState) -> None:

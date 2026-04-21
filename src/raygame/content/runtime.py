@@ -337,7 +337,7 @@ def _dummy_state(program: CompiledWorldProgram) -> GameState:
     from raygame.model.state import AttributeState, DeckState, GameState, WorldState
 
     return GameState(
-        deck=DeckState(draw_pile=[]),
+        deck=DeckState(),
         attributes=AttributeState(health=program.initial_health, stress=program.initial_stress),
         world=WorldState(
             progress_clocks={clock_id: ProgressClockState(value=0, visible=True) for clock_id in program.clocks_by_id},

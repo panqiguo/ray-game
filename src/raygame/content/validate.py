@@ -27,6 +27,8 @@ WORLD_EFFECTS = {
     "add_field",
     "shift_clock",
     "reset_hand",
+    "upgrade_spirit_value",
+    "add_spirit_slot",
     "advance_day",
     "end_game",
     "start_encounter",
@@ -49,6 +51,8 @@ ENCOUNTER_COMPLETION_EFFECTS = {
     "add_field",
     "shift_clock",
     "reset_hand",
+    "upgrade_spirit_value",
+    "add_spirit_slot",
     "advance_day",
     "end_game",
     "start_encounter",
@@ -122,6 +126,10 @@ def validate_content() -> None:
         assert card.id == card_id
     for growth_id, growth in GROWTH_DEFS.items():
         assert growth.id == growth_id
+        for condition in growth.conditions:
+            _validate_condition(condition)
+        for effect in growth.effects:
+            _validate_effect(effect, context="encounter_completion")
     snapshot = render_world(SCENARIO, _validation_state())
     for location_id, location in snapshot.locations_by_id.items():
         assert location.id == location_id
@@ -159,7 +167,7 @@ def _validate_location(location: LocationNode) -> None:
 def _validation_state():
     from raygame.model.state import AttributeState, DeckState, GameState, WorldState, ProgressClockState
     return GameState(
-        deck=DeckState(draw_pile=[]),
+        deck=DeckState(),
         attributes=AttributeState(health=SCENARIO.initial_health, stress=SCENARIO.initial_stress),
         world=WorldState(
             progress_clocks={clock_id: ProgressClockState(value=0, visible=True) for clock_id in SCENARIO.clocks_by_id},

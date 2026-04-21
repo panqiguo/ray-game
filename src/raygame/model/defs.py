@@ -110,6 +110,7 @@ class GrowthDef:
     title: str
     description: str
     effects: tuple[Effect, ...]
+    conditions: tuple[Condition, ...] = ()
 
 
 @dataclass(frozen=True)

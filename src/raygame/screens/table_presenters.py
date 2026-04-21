@@ -13,8 +13,9 @@ from raygame.rules import (
     action_slot_ready,
     location_is_available,
     location_is_visible,
+    slot_effective_value,
 )
-from raygame.rules.judgment import RESULT_TABLE, clamp_action_value, compute_action_value
+from raygame.rules.judgment import RESULT_TABLE, clamp_action_value
 
 from .ui_cards import ACTION_CARD, TABLE_CARD, TableCardModel
 from .ui_tags import action_corner_labels, location_status_labels
@@ -112,7 +113,7 @@ def present_action_card(state: GameState, action: ActionDef) -> PresentedActionC
     pending = state.pending_resolution if state.pending_resolution and state.pending_resolution.resolution.action_id == action.id else None
     metadata: tuple[str, ...] = ()
     if action.check is not None:
-        suits = " / ".join(SUIT_LABELS[suit] for suit in action.check.suits)
+        suits = "通用" if not action.check.suits else " / ".join(SUIT_LABELS[suit] for suit in action.check.suits)
         metadata = (suits, RISK_LABELS[action.check.risk])
     return PresentedActionCard(
         action=action,
@@ -142,7 +143,7 @@ def _present_action_slots(state: GameState, action: ActionDef, has_pending: bool
         slots.append(
             ActionSlotModel(
                 key="check",
-                label="手牌槽",
+                label="精神槽位",
                 filled=action_slot_ready(state, action, check_slot=True),
                 receptive=available and (not locked) and action_can_accept_selected_input(state, action, check_slot=True),
                 disabled=not available,
@@ -197,7 +198,7 @@ def _present_action_attachment(
     if action.check is None and not action.effects:
         return None
     if action.check is not None and state.assembly.slotted_card_id is not None:
-        value = compute_action_value(state.assembly.slotted_card_id, action.check)
+        value = slot_effective_value(state, state.assembly.slotted_card_id, action.check)
         return ActionAttachmentModel(
             mode="preview",
             title=f"状态档 {value}",
@@ -208,7 +209,7 @@ def _present_action_attachment(
     if action.check is not None:
         return ActionAttachmentModel(
             mode="hint",
-            title="先从下方选一张手牌，再把它放进卡槽。",
+            title="先从下方选一个精神槽位，再把它放进卡槽。",
             can_execute=False,
         )
     return ActionAttachmentModel(

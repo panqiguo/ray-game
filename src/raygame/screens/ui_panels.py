@@ -19,6 +19,8 @@ from raygame.rules import (
     close_modal,
     count_spirit_cards,
     continue_dialogue,
+    encounter_action_points,
+    encounter_spirit_decay,
     finish_dialogue,
     requirement_is_slotted,
     clear_selected_input,
@@ -75,7 +77,13 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
     hand_title_style = ui_text_style("subtitle")
     subtitle_style = ui_text_style("body", "muted")
     draw_text(font, "精神槽位", int(hand.x) + 18, int(hand.y) + 14, hand_title_style.size, hand_title_style.color)
-    draw_text(font, "灰掉表示已使用或创伤导致当前不可用。", int(hand.x) + 166, int(hand.y) + 17, subtitle_style.size, subtitle_style.color)
+    encounter_points = encounter_action_points(state)
+    if encounter_points is not None:
+        current, cap = encounter_points
+        subtitle = f"精力 {current}/{cap}。同一轮重复使用同精神会衰减。"
+    else:
+        subtitle = "灰掉表示已使用或创伤导致当前不可用。"
+    draw_text(font, subtitle, int(hand.x) + 166, int(hand.y) + 17, subtitle_style.size, subtitle_style.color)
     x = int(hand.x) + 18
     y = int(hand.y) + 48
     for index, slot_id in enumerate(list_spirit_slots(state.deck)):
@@ -160,10 +168,20 @@ def _draw_hand_card_suit(font: Font | None, rect: Rectangle, card, *, card_id: s
         return
     suit_label = SUIT_LABELS[card.suit]
     if action is not None and action.check is not None and state is not None:
-        preferred = bool(action.check.suits) and card_matches_action_check(action, card_id)
+        suit_required = bool(action.check.suits)
+        preferred = suit_required and card_matches_action_check(action, card_id)
         effective = slot_effective_value(state, card_id, action.check) if slot_current_value(state, card_id) > 0 else 0
+        decay = encounter_spirit_decay(state, card_id)
         modifier = "+2" if preferred else "+0"
-        suffix = "已使用" if slot_is_exhausted(state, card_id) else "不可用" if disabled else f"{modifier} => {effective}"
+        suffix = (
+            "已使用"
+            if slot_is_exhausted(state, card_id)
+            else "不可用"
+            if disabled
+            else "不匹配"
+            if suit_required and not preferred
+            else f"{modifier} => {effective}" if decay <= 0 else f"{modifier} => {effective} (衰减-{decay})"
+        )
         suit_label = f"{suit_label}  {suffix}"
     elif disabled:
         suit_label = f"{suit_label}  不可用"

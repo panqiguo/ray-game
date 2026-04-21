@@ -147,3 +147,7 @@ class GameState:
     seed: int = 0
     render_cache: RenderCacheState = field(default_factory=RenderCacheState)
     card_hint_flash: CardHintFlashState = field(default_factory=CardHintFlashState)
+    encounter_action_points: int = 3
+    encounter_action_point_cap: int = 3
+    encounter_spirit_usage: dict[str, int] = field(default_factory=dict)
+    encounter_resource_root_id: str = ""

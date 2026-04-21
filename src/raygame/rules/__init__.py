@@ -13,6 +13,8 @@ from .progression import (
     clear_selected_input,
     close_modal,
     continue_dialogue,
+    encounter_action_points,
+    encounter_spirit_decay,
     current_action,
     current_encounter_snapshot,
     current_world_snapshot,

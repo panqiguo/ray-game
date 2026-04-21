@@ -26,25 +26,37 @@
             (effect 'reset-hand)
             (effect 'clock+ alert_clock 1))))
 
-(define make_cautious_path_action
+(define make_logic_path_action
   (lambda (title desc progress-clock ok-text partial-text fail-text)
     (action
      :title title
      :desc desc
      :check (check
-             :suits (list 逻辑 感知)
+             :suits (list 逻辑)
              :risk 'mid
              :ok (outcome ok-text (list (effect 'clock+ progress-clock 1)))
              :partial (outcome partial-text (list (effect 'clock+ progress-clock 1) (effect 'clock+ alert_clock 1)))
              :fail (outcome fail-text (list (effect 'clock+ alert_clock 1)))))))
 
-(define make_rush_path_action
+(define make_perception_path_action
   (lambda (title desc progress-clock ok-text partial-text fail-text)
     (action
      :title title
      :desc desc
      :check (check
-             :suits (list 意志 感知)
+             :suits (list 感知)
+             :risk 'mid
+             :ok (outcome ok-text (list (effect 'clock+ progress-clock 1)))
+             :partial (outcome partial-text (list (effect 'clock+ progress-clock 1) (effect 'clock+ alert_clock 1)))
+             :fail (outcome fail-text (list (effect 'clock+ alert_clock 1)))))))
+
+(define make_willpower_path_action
+  (lambda (title desc progress-clock ok-text partial-text fail-text)
+    (action
+     :title title
+     :desc desc
+     :check (check
+             :suits (list 意志)
              :risk 'high
              :ok (outcome ok-text (list (effect 'clock+ progress-clock 2)))
              :partial (outcome partial-text (list (effect 'clock+ progress-clock 1) (effect 'clock+ alert_clock 2)))
@@ -70,16 +82,26 @@
                       :ok (outcome "粗糙的皮带被你硬生生崩开了一个扣子" (list (effect 'clock+ 挣脱束缚钟 2)))
                       :partial (outcome "你的手腕磨破了皮，铁椅摩擦地板弄出了点声响" (list (effect 'clock+ 挣脱束缚钟 1) (effect 'clock+ alert_clock 1)))
                       :fail (outcome "该死，皮带没断，床腿摩擦地板的声音反而引起了外面的注意" (list (effect 'health -1) (effect 'clock+ alert_clock 2)))))
-             ;; 方式二：利用逻辑/感知寻找利器
+             ;; 方式二：靠感知寻找可用边角
              (action
               :title "寻找尖锐物割裂"
               :desc "试着转动酸痛的脖子，寻找铁皮边缘或碎玻璃去磨蹭皮带。"
               :check (check
-                      :suits (list 逻辑 感知)
+                      :suits (list 感知)
                       :risk 'mid
                       :ok (outcome "你利用椅子底部的锋利铁片，成功割裂了部分皮带" (list (effect 'clock+ 挣脱束缚钟 2)))
                       :partial (outcome "进展缓慢，你的手指被铁片划破了" (list (effect 'clock+ 挣脱束缚钟 1) (effect 'clock+ alert_clock 1)))
-                      :fail (outcome "你不仅没割开皮带，反而打翻了旁边的点滴架" (list (effect 'health -1) (effect 'clock+ alert_clock 1))))))))
+                      :fail (outcome "你不仅没割开皮带，反而打翻了旁边的点滴架" (list (effect 'health -1) (effect 'clock+ alert_clock 1)))))
+             ;; 方式三：靠逻辑拆解搭扣
+             (action
+              :title "分析搭扣结构"
+              :desc "你盯住皮带扣和受力点，尝试用最小动作把它们一段段松开。"
+              :check (check
+                      :suits (list 逻辑)
+                      :risk 'mid
+                      :ok (outcome "你抓到搭扣的薄弱点，连续松开了两段固定带" (list (effect 'clock+ 挣脱束缚钟 2)))
+                      :partial (outcome "你拆开了一处受力点，但金属碰撞声让你心里一紧" (list (effect 'clock+ 挣脱束缚钟 1) (effect 'clock+ alert_clock 1)))
+                      :fail (outcome "你判断错了方向，搭扣卡死，还发出清脆的金属声" (list (effect 'clock+ alert_clock 1))))))))
 
 ;; ==========================================
 ;; Scene 2: 二楼探索
@@ -101,17 +123,25 @@
                :actions (list
                          (if path_a_revealed
                              (action :title "左侧道路 (死路) " :desc "这条路已经被证实不通。" :before (list))
-                             (make_cautious_path_action
-                              "像猫一样潜行"
-                              "贴着墙根挪步，确保自己的皮鞋没踩进什么会响的东西里。"
+                             (make_logic_path_action
+                              "观察巡逻节奏"
+                              "先听清巡逻脚步和停顿，再按节奏推进。"
                               左侧探索进度
-                              "你借着夜色安静地摸到了更深处。"
-                              "你虽然放轻了动作，但还是碰翻了走廊角落的扫帚。"
-                              "你在黑暗里踩偏了一步，走廊里立刻回荡起一声空洞的闷响。"))
+                              "你抓到巡逻空档，稳稳推进到了更深处。"
+                              "你判断得还算准，但转身时还是碰到了走廊角落的扫帚。"
+                              "你算错了一个转角节奏，黑暗里立刻回荡起一声闷响。"))
                          (when (not path_a_revealed)
-                           (make_rush_path_action
+                           (make_perception_path_action
+                            "像猫一样潜行"
+                            "贴着墙根挪步，确保自己的皮鞋没踩进什么会响的东西里。"
+                            左侧探索进度
+                            "你借着夜色安静地摸到了更深处。"
+                            "你虽然放轻了动作，但还是碰翻了走廊角落的扫帚。"
+                            "你在黑暗里踩偏了一步，走廊里立刻回荡起一声空洞的闷响。"))
+                         (when (not path_a_revealed)
+                           (make_willpower_path_action
                             "大胆硬闯"
-                            "趁还没人露面，凭感知一口气把左侧这段路抢过去。"
+                            "趁还没人露面，咬牙一口气把左侧这段路抢过去。"
                             左侧探索进度
                             "你几乎是贴着黑影一口气冲到了尽头。"
                             "你冲得太急，沉重的脚步声在墙面间弹了两下。"
@@ -126,15 +156,23 @@
                :actions (list
                          (if path_b_revealed
                              (action :title "右侧道路 (死路) " :desc "这边的门被挂锁锁死了。" :before (list))
-                             (make_cautious_path_action
-                              "谨慎摸索"
-                              "先停下脚步听听动静，再顺着右边的黑影慢慢蹭过去。"
+                             (make_logic_path_action
+                              "先判路线再推进"
+                              "你停下脚步，先判断锁门位置与遮挡，再择机前压。"
                               右侧探索进度
-                              "你像个幽灵般推进了一段距离。"
-                              "你靠得太近，风衣的下摆带倒了墙边的一个铁盘。"
-                              "你还没摸清地形，皮鞋在光滑的瓷砖上打滑，发出了刺耳的摩擦声。"))
+                              "你借着墙面分区稳稳推进了一段距离。"
+                              "你路线选得不错，但风衣下摆还是带倒了墙边的铁盘。"
+                              "你对地形判断失误，鞋底在光滑瓷砖上擦出刺耳响声。"))
                          (when (not path_b_revealed)
-                           (make_rush_path_action
+                           (make_perception_path_action
+                            "谨慎摸索"
+                            "先停下脚步听听动静，再顺着右边的黑影慢慢蹭过去。"
+                            右侧探索进度
+                            "你像个幽灵般推进了一段距离。"
+                            "你靠得太近，风衣的下摆带倒了墙边的一个铁盘。"
+                            "你还没摸清地形，皮鞋在光滑的瓷砖上打滑，发出了刺耳的摩擦声。"))
+                         (when (not path_b_revealed)
+                           (make_willpower_path_action
                             "迅速逼近"
                             "不再磨蹭，靠侦探的敏捷把这段路先占下来。"
                             右侧探索进度
@@ -151,15 +189,23 @@
                :actions (list
                          (if path_c_revealed
                              (action :title "正前道路 (通路) " :desc "这条路能通向自由。" :before (list))
-                             (make_cautious_path_action
-                              "借视野死角潜伏"
-                              "压低身体，借着走廊立柱的死角一点点逼近前方。"
+                             (make_logic_path_action
+                              "推演视线盲区"
+                              "你先判断拐角监视死角，再沿着盲区推进。"
                               前方探索进度
-                              "你稳稳地向前推进了一截，连只老鼠都没惊动。"
-                              "你虽然没暴露，但鞋底还是在地板上拖出了沙沙声。"
-                              "你差点和拐角处抽烟的打手撞个正着，只能猛地退回阴影里。"))
+                              "你抓住盲区窗口，稳稳向前推进了一截。"
+                              "你路线是对的，但鞋底还是在地板上拖出了沙沙声。"
+                              "你推演慢了一拍，差点和拐角抽烟的打手迎面撞上。"))
                          (when (not path_c_revealed)
-                           (make_rush_path_action
+                           (make_perception_path_action
+                            "借视野死角潜伏"
+                            "压低身体，借着走廊立柱的死角一点点逼近前方。"
+                            前方探索进度
+                            "你稳稳地向前推进了一截，连只老鼠都没惊动。"
+                            "你虽然没暴露，但鞋底还是在地板上拖出了沙沙声。"
+                            "你差点和拐角处抽烟的打手撞个正着，只能猛地退回阴影里。"))
+                         (when (not path_c_revealed)
+                           (make_willpower_path_action
                             "快步穿插"
                             "趁走廊现在还空着，直接从正前方大步走过去。"
                             前方探索进度

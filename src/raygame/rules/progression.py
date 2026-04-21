@@ -110,6 +110,37 @@ def _current_encounter_root_id(state: GameState) -> str:
     return _encounter_snapshot(state).root_location_id
 
 
+def _reset_encounter_action_cycle(state: GameState) -> None:
+    state.encounter_action_points = state.encounter_action_point_cap
+    state.encounter_spirit_usage.clear()
+
+
+def _sync_encounter_action_cycle(state: GameState) -> None:
+    if state.screen != ScreenName.ENCOUNTER or state.active_encounter is None:
+        return
+    root_id = _current_encounter_root_id(state)
+    if state.encounter_resource_root_id != root_id:
+        state.encounter_resource_root_id = root_id
+        _reset_encounter_action_cycle(state)
+        return
+    if state.encounter_action_points <= 0:
+        _reset_encounter_action_cycle(state)
+
+
+def encounter_action_points(state: GameState) -> tuple[int, int] | None:
+    if state.screen != ScreenName.ENCOUNTER or state.active_encounter is None:
+        return None
+    _sync_encounter_action_cycle(state)
+    return (state.encounter_action_points, state.encounter_action_point_cap)
+
+
+def encounter_spirit_decay(state: GameState, slot_id: str) -> int:
+    if state.screen != ScreenName.ENCOUNTER or state.active_encounter is None:
+        return 0
+    _sync_encounter_action_cycle(state)
+    return max(0, state.encounter_spirit_usage.get(_slot_spirit(slot_id), 0))
+
+
 def current_world_snapshot(state: GameState):
     cache = state.render_cache
     if cache.world_revision == cache.revision and cache.world_snapshot is not None:
@@ -248,11 +279,17 @@ def slot_is_preferred_for_check(slot_id: str, check) -> bool | None:
 
 
 def slot_effective_value(state: GameState, slot_id: str, check) -> int:
-    return compute_action_value(slot_current_value(state, slot_id), check, preferred=slot_is_preferred_for_check(slot_id, check))
+    base_value = max(0, slot_current_value(state, slot_id) - encounter_spirit_decay(state, slot_id))
+    return compute_action_value(base_value, check, preferred=slot_is_preferred_for_check(slot_id, check))
 
 
 def _slot_can_execute_check(state: GameState, slot_id: str, check) -> bool:
-    return slot_is_available(state, slot_id) and slot_effective_value(state, slot_id, check) > 0
+    if not slot_is_available(state, slot_id):
+        return False
+    preferred = slot_is_preferred_for_check(slot_id, check)
+    if preferred is False:
+        return False
+    return slot_effective_value(state, slot_id, check) > 0
 
 
 def _coerce_like(current: int | bool | str, value: int | bool | str) -> int | bool | str:
@@ -274,6 +311,7 @@ def action_is_visible(action: ActionDef, state: GameState) -> bool:
 
 
 def action_is_available(action: ActionDef, state: GameState) -> bool:
+    _sync_encounter_action_cycle(state)
     return action_is_visible(action, state) and all_met(action.conditions, state) and requirements_affordable(action.inputs, state)
 
 
@@ -719,7 +757,7 @@ def perform_current_action(state: GameState, rng: RandomSource) -> None:
         card_id = _slotted_card_id(state)
         assert card_id is not None
         value = slot_effective_value(state, card_id, action.check)
-        _consume_slotted_card(state)
+        _consume_check_resource(state, card_id)
         die_roll = rng.d6()
         result = roll_result(value, die_roll)
         if result == ResultType.SUCCESS:
@@ -831,6 +869,17 @@ def _consume_slotted_card(state: GameState) -> None:
         state.deck.available_slots.remove(slot_id)
     if slot_id not in state.deck.exhausted_slots:
         state.deck.exhausted_slots.append(slot_id)
+
+
+def _consume_check_resource(state: GameState, slot_id: str) -> None:
+    if state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None:
+        _sync_encounter_action_cycle(state)
+        assert state.encounter_action_points > 0, "encounter action points must be positive before spend"
+        state.encounter_action_points -= 1
+        spirit = _slot_spirit(slot_id)
+        state.encounter_spirit_usage[spirit] = state.encounter_spirit_usage.get(spirit, 0) + 1
+        return
+    _consume_slotted_card(state)
 
 
 def _selected_card_id(state: GameState) -> str | None:
@@ -1031,6 +1080,9 @@ def _resolve_world_reacts(state: GameState, rng: RandomSource, extra_lines: list
 
 def reset_hand(state: GameState, rng: RandomSource) -> None:
     del rng
+    if state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None:
+        _reset_encounter_action_cycle(state)
+        return
     refresh_spirit_slots(state.deck)
     _mark_content_dirty(state)
 
@@ -1086,6 +1138,8 @@ def start_encounter(state: GameState, encounter_id: str) -> None:
     state.modal.return_primary_id = None
     clear_assembly(state)
     clear_selected_input(state)
+    state.encounter_resource_root_id = ""
+    _reset_encounter_action_cycle(state)
     _mark_content_dirty(state)
     _push_log(state, f"进入侦探任务：{encounter.title}")
     _resolve_encounter_reacts(state, RandomSource(state.seed), [])
@@ -1108,6 +1162,8 @@ def finish_encounter(state: GameState, outcome: str, rng: RandomSource, extra_li
     state.modal.return_primary_id = None
     clear_assembly(state)
     clear_selected_input(state)
+    state.encounter_resource_root_id = ""
+    _reset_encounter_action_cycle(state)
     _mark_content_dirty(state)
     if outcome == "success":
         _apply_effects(encounter.rewards, state, rng, extra_lines)

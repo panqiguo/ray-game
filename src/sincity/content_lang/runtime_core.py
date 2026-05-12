@@ -352,17 +352,13 @@ def eval_react_condition(condition: Any, env: Environment) -> Any:
 def builtin_effect(args: tuple[Any, ...]) -> Effect:
     assert args, "`effect` requires a kind."
     kind = unwrap(args[0])
-    kind_aliases = {
-        "start-dialogue": "start_dialogue",
-        "start_dialogue": "start_dialogue",
-        "start-quick-dialogue": "start_quick_dialogue",
-        "start_quick_dialogue": "start_quick_dialogue",
-    }
-    if kind in kind_aliases:
-        return Effect(kind=kind_aliases[kind], value=str(unwrap(args[1])))
-    if kind in {"upgrade-spirit-value", "upgrade_spirit_value"}:
+    if kind == "start-dialogue":
+        return Effect(kind="start_dialogue", value=str(unwrap(args[1])))
+    if kind == "start-quick-dialogue":
+        return Effect(kind="start_quick_dialogue", value=str(unwrap(args[1])))
+    if kind == "upgrade-spirit-value":
         return Effect(kind="upgrade_spirit_value", value=f"{str(unwrap(args[1]))}:{int(unwrap(args[2]))}")
-    if kind in {"add-spirit-slot", "add_spirit_slot"}:
+    if kind == "add-spirit-slot":
         return Effect(kind="add_spirit_slot", value=str(unwrap(args[1])))
     if kind in {"clock+", "clock-"}:
         target = clock_id(args[1])

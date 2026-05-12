@@ -113,11 +113,10 @@
   ))
 
 (content
-  :meta (meta :key '教训小混混 :title "教训小混混" :desc "拿人钱财，帮人把这件事办干干净净。")
+  :meta (meta :key '教训小混混 :title "巷口警告" :desc "黑帮的人把你堵在巷子里。他们不是来谈价钱的，是来让你闭嘴的。")
   ;; These quoted keys are world facts written back to the city after success.
   :on-success (list
-    (effect 'add money 80)
-    (effect 'set 'gang_task_result_pending true))
+    (effect 'set 'gang_pressure_result_pending true))
   :state (state
     (initiative (clock :title "主动权" :initial 0 :max 4))
     (knife (clock :title "夺刀" :initial 0 :max 2))
@@ -128,7 +127,7 @@
   :root
   (cond ((< (clock-value initiative) (clock-max initiative)) (if (< (clock-value knife) (clock-max knife)) (scene
     :title "徒手受压"
-    :desc "打手把你逼在墙边。你得先决定，是稳着反顶、直接狠狠干、还是冒险把折刀夺到手。"
+    :desc "打手把你逼在墙边，低声重复那个名字：红房间。你得先决定，是稳着反顶、直接狠狠干、还是冒险把折刀夺到手。"
     :show-clocks (list initiative (when (> (clock-value knife) 0) knife))
     :actions (list counter blunt_punch rush_knife breathe)
   ) (scene
@@ -138,7 +137,7 @@
     :actions (list counter knife_press breathe)
   ))) ((< (clock-value opening) (clock-max opening)) (scene
     :title "对峙"
-    :desc "对方后退半步，准备再扑上来。你可以直接狠狠干，也可以先撬开他的破绽。"
+    :desc "对方后退半步，准备再扑上来。他背后的人不想杀你，至少现在不想。他们只想让你学会害怕。"
     :show-clocks (list enemy_hp opening)
     :actions (list heavy_punch feint knee_kick breathe)
   )) (else (scene

@@ -649,12 +649,20 @@ def action_can_accept_selected_input(state: GameState, action: ActionDef, requir
 def first_usable_energy_slot(state: GameState, action: ActionDef) -> tuple[str, int] | None:
     if not action_requires_energy_slot(action):
         return None
+    best: tuple[str, int] | None = None
+    best_value = -1
     for index, slot_id in enumerate(list_spirit_slots(state.deck)):
         if action.check is not None and _slot_can_execute_check(state, slot_id, action.check):
-            return slot_id, index
-        if action.check is None and _slot_can_spend_energy(state, slot_id):
-            return slot_id, index
-    return None
+            value = slot_effective_value(state, slot_id, action.check)
+            if value > best_value:
+                best_value = value
+                best = (slot_id, index)
+        elif action.check is None and _slot_can_spend_energy(state, slot_id):
+            value = slot_current_value(state, slot_id)
+            if value > best_value:
+                best_value = value
+                best = (slot_id, index)
+    return best
 
 
 def toggle_action_energy_slot(state: GameState, action: ActionDef) -> None:

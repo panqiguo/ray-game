@@ -1,0 +1,51 @@
+<div>
+  <p>同意，这个判断很对。SCM 的优势其实是“少量稳定规则 + Scheme 本身的组合能力”，如果再铺一层很厚的 DSL 糖，短期好看，长期会变成两门语言叠在一起。</p>
+
+  <h3>我会把方向收敛成这样</h3>
+
+  <ol>
+    <li>
+      <strong>不追求大量语法糖</strong><br>
+      保留现在的 <code>action/check/outcome/effect/react</code> 主结构，让作者和 LLM 学一套稳定形状。
+    </li>
+    <li>
+      <strong>统一命名风格</strong><br>
+      effect kind 全部使用 kebab-case：<code>start-dialogue</code>、<code>start-quick-dialogue</code>、<code>start-encounter</code>、<code>end-encounter</code>。<code>start_dialogue</code> 作为旧兼容可以先留，但 lint 警告。
+    </li>
+    <li>
+      <strong>明确 quote 规则，而不是靠糖遮盖</strong><br>
+      推荐继续保持：
+      <pre><code class="language-scheme">(effect 'add energy -1)
+(effect 'set phase 'entry)
+:risk 'mid</code></pre>
+      也就是：操作名和枚举值 quote，字段绑定不 quote。这个规则虽然稍微 Scheme 味重，但一旦写进文档会很稳定。
+    </li>
+    <li>
+      <strong>引入 <code>defscene</code> / <code>defscene-fn</code></strong><br>
+      这是我觉得最值得加的，因为它不是“好看糖”，而是在语言层面区分“静态数据”和“动态模板”。
+    </li>
+  </ol>
+
+  <h3>建议目标</h3>
+
+  <pre><code class="language-scheme">(defscene room_search
+  (scene
+    :title "房间搜寻"
+    :actions (list inspect_bed inspect_desk)))
+
+(defscene-fn make_locked_room (title alert-clock)
+  (scene
+    :title title
+    :actions (list
+      (action
+        :title "撬锁"
+        :check ...))))</code></pre>
+
+  <p>
+    这样语言会更简洁可靠：不是变得“更花”，而是把现在最容易误解的地方命名清楚。
+  </p>
+
+  <p>
+    我会优先做三件事：统一 effect 命名规范、加 <code>defscene</code>/<code>defscene-fn</code>、升级 lint 让它抓风格不一致。这个路线比较克制，也符合你说的“保持规则，但让语言更简洁可靠”。
+  </p>
+</div>

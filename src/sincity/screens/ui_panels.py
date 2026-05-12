@@ -384,28 +384,17 @@ def _draw_message_log(font: Font | None, rect: Rectangle, state: GameState) -> N
     inner_x = int(rect.x) + 12
     inner_w = int(rect.width) - 24
     y = int(rect.y) + 40
-    if state.last_resolution is not None:
-        draw_text(font, "最近判定", inner_x, y, section_style.size, section_style.color)
-        y += 18
-        meta = ""
-        if state.last_resolution.value is not None:
-            meta = f"值 {state.last_resolution.value}"
-        if meta:
-            draw_text(font, meta, inner_x, y, body_style.size, ui_text_color("accent"))
-            y += 18
-        for line in wrap_text_lines(font, state.last_resolution.text, inner_w, body_style.size):
-            draw_text(font, line, inner_x, y, body_style.size, body_style.color)
-            y += body_style.line_height - 2
-        y += 10
-        draw_rectangle_rec(Rectangle(rect.x + 12, y, rect.width - 24, 1), Color(70, 74, 84, 180))
-        y += 14
     draw_text(font, "行动记录", inner_x, y, section_style.size, section_style.color)
     y += 20
     entries = list(reversed(state.action_log[-6:]))
     if not entries:
         draw_text(font, "暂无记录。", inner_x, y, body_style.size, faint_style.color)
         return
-    for entry in entries:
+    for i, entry in enumerate(entries):
+        if i == 1:
+            y += 4
+            draw_rectangle_rec(Rectangle(rect.x + 12, y, rect.width - 24, 1), Color(70, 74, 84, 180))
+            y += 8
         for line in wrap_text_lines(font, f"· {entry}", inner_w, body_style.size):
             draw_text(font, line, inner_x, y, body_style.size, body_style.color)
             y += body_style.line_height - 2

@@ -52,7 +52,7 @@ def _build_codepoints() -> list[int]:
         (0x2200, 0x22FF),  # Mathematical Operators: ∞, ≈, ± and similar signs
         (0x25A0, 0x25FF),  # Geometric Shapes: UI glyphs and bullets
         (0x3000, 0x303F),  # CJK Symbols and Punctuation
-        (0x4E00, 0x9FFF),  # CJK Unified Ideographs: all common Chinese characters
+        (0x4E00, 0x7FFF),  # CJK Unified Ideographs: common Chinese chars (练 etc.)
         (0xFF00, 0xFFEF),  # Halfwidth and Fullwidth Forms
     )
     codepoints: set[int] = set()

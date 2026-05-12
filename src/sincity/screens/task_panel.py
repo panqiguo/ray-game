@@ -26,7 +26,7 @@ def draw_task_panel(font, rect: Rectangle, state: GameState) -> None:
     done_style = ui_text_style("body_sm", "subtle")
     future_style = ui_text_style("body_sm", "muted")
     danger_style = ui_text_style("body_sm", "danger")
-    draw_text(font, "威胁", int(rect.x) + 12, int(rect.y) + 10, title_style.size, title_style.color)
+    draw_text(font, "线索与压力", int(rect.x) + 12, int(rect.y) + 10, title_style.size, title_style.color)
 
     content_rect = Rectangle(rect.x + 12, rect.y + 38, rect.width - 24, max(0.0, rect.height - 48))
     rows = _chapter_one_tasks(state)
@@ -69,46 +69,92 @@ def draw_task_panel(font, rect: Rectangle, state: GameState) -> None:
 
 def _chapter_one_tasks(state: GameState) -> tuple[TaskLine, ...]:
     values = state.world.values
-    main_completed = bool(values.get("main_resolved", False))
-    failed = state.screen.name == "ENDING" and not main_completed
-    intro_seen = bool(values.get("intro_seen", False))
-    debt_paid = bool(values.get("debt_paid", False))
-    gang_phase = int(values.get("gang_phase", 1))
-    gang_deadline = int(values.get("gang_deadline", 5))
-    gang_task_forced = bool(values.get("gang_task_forced", False))
-    debt_amount = int(values.get("debt_amount", 100))
-    days_left = gang_deadline - state.day
+    old_case_checked = bool(values.get("old_case_checked", False))
+    moon_hotel_unlocked = bool(values.get("moon_hotel_unlocked", False))
+    hotel_search_done = bool(values.get("hotel_search_done", False))
+    red_room_clipping = bool(values.get("red_room_clipping", False))
+    tracker_seen = bool(values.get("tracker_seen", False))
 
-    if debt_paid:
-        main_text = "黑帮债务：现金结清"
-    elif main_completed:
-        main_text = "黑帮威胁：暂时解除"
+    police_fine_active = bool(values.get("police_fine_active", False))
+    police_fine_paid = bool(values.get("police_fine_paid", False))
+    police_fine_failed = bool(values.get("police_fine_failed", False))
+    police_fine_deadline = int(values.get("police_fine_deadline", 0))
+    police_fine_amount = int(values.get("police_fine_amount", 60))
+    gang_warning_active = bool(values.get("gang_warning_active", False))
+    gang_warning_deadline = int(values.get("gang_warning_deadline", 0))
+    gang_pressure_forced = bool(values.get("gang_pressure_forced", False))
+    pressure_phase = int(values.get("pressure_phase", 0))
+
+    if hotel_search_done:
+        main_text = "主线：整理望月旅馆带回的红房间线索"
+    elif moon_hotel_unlocked:
+        main_text = "主线：前往望月旅馆搜寻 302 房间"
+    elif old_case_checked:
+        main_text = "主线：在城里打听薇拉的去向"
     else:
-        main_text = "黑帮威胁：三件脏活，或还清本息"
+        main_text = "主线：去警局查十年前红房间旧案"
 
-    if days_left > 0:
-        deadline_text = f"截止日期：第 {gang_deadline} 天，还剩 {days_left} 天"
-        deadline_failed = False
-    elif days_left == 0:
-        deadline_text = f"截止日期：第 {gang_deadline} 天，今天到期"
-        deadline_failed = False
-    else:
-        deadline_text = f"截止日期：第 {gang_deadline} 天，已经逾期 {-days_left} 天"
-        deadline_failed = True
+    lines: list[TaskLine] = [TaskLine(main_text, active=not hotel_search_done, completed=hotel_search_done and red_room_clipping)]
+    lines.append(TaskLine("查阅红房间旧案报告", completed=old_case_checked, active=not old_case_checked))
+    lines.append(TaskLine("在酒吧或老街打听薇拉", completed=moon_hotel_unlocked, active=old_case_checked and not moon_hotel_unlocked))
+    lines.append(TaskLine("搜寻望月旅馆 302 房间", completed=hotel_search_done, active=moon_hotel_unlocked and not hotel_search_done))
+    if tracker_seen:
+        lines.append(TaskLine("有人开始跟踪你", active=True, failed=True))
 
-    all_lines = (
-        TaskLine(main_text, completed=main_completed, failed=failed),
-        TaskLine("听完黑帮的留言", completed=intro_seen, active=not intro_seen),
-        TaskLine(f"当前要求：处理第 {gang_phase}/3 件小事", completed=main_completed, active=intro_seen and not main_completed),
-        TaskLine(deadline_text, completed=main_completed, active=intro_seen and not main_completed and not deadline_failed, failed=intro_seen and not main_completed and deadline_failed),
-        TaskLine(f"替代选择：交出 {debt_amount} 元本息", completed=debt_paid, active=intro_seen and not main_completed),
-        TaskLine("已到期：黑帮正在把你拖去办事", active=gang_task_forced and not main_completed, failed=gang_task_forced and not main_completed),
+    pressure_lines = _pressure_lines(
+        state_day=state.day,
+        police_fine_active=police_fine_active,
+        police_fine_paid=police_fine_paid,
+        police_fine_failed=police_fine_failed,
+        police_fine_deadline=police_fine_deadline,
+        police_fine_amount=police_fine_amount,
+        gang_warning_active=gang_warning_active,
+        gang_warning_deadline=gang_warning_deadline,
+        gang_pressure_forced=gang_pressure_forced,
+        pressure_phase=pressure_phase,
     )
-    visible_lines = [all_lines[0]]
-    for line in all_lines[1:]:
-        if line.completed or line.active:
-            visible_lines.append(line)
-    return tuple(visible_lines)
+    lines.extend(pressure_lines)
+    return tuple(line for line in lines if line.completed or line.active or line is lines[0])
+
+
+def _pressure_lines(
+    *,
+    state_day: int,
+    police_fine_active: bool,
+    police_fine_paid: bool,
+    police_fine_failed: bool,
+    police_fine_deadline: int,
+    police_fine_amount: int,
+    gang_warning_active: bool,
+    gang_warning_deadline: int,
+    gang_pressure_forced: bool,
+    pressure_phase: int,
+) -> tuple[TaskLine, ...]:
+    rows: list[TaskLine] = []
+    if police_fine_active:
+        days_left = police_fine_deadline - state_day
+        if days_left > 0:
+            rows.append(TaskLine(f"压力：警察罚单 {police_fine_amount} 元，还剩 {days_left} 天", active=True))
+        elif days_left == 0:
+            rows.append(TaskLine(f"压力：警察罚单 {police_fine_amount} 元，今天到期", active=True, failed=True))
+        else:
+            rows.append(TaskLine("压力：警察罚单已经逾期", active=True, failed=True))
+    elif police_fine_paid:
+        rows.append(TaskLine("压力：警察罚单已缴清", completed=True))
+    elif police_fine_failed:
+        rows.append(TaskLine("压力：警察已经上门收拾过你", completed=True, failed=True))
+
+    if gang_pressure_forced:
+        rows.append(TaskLine("压力：黑帮正在把你拖进巷子", active=True, failed=True))
+    elif gang_warning_active:
+        days_left = gang_warning_deadline - state_day
+        if days_left > 0:
+            rows.append(TaskLine(f"压力：黑帮警告，还剩 {days_left} 天", active=True))
+        else:
+            rows.append(TaskLine("压力：黑帮警告已经到期", active=True, failed=True))
+    elif pressure_phase >= 3:
+        rows.append(TaskLine("压力：黑帮施压暂时退去", completed=True))
+    return tuple(rows)
 
 
 def _task_content_height(font, rows: tuple[TaskLine, ...], width: float) -> float:

@@ -1,4 +1,4 @@
-# ray-game
+# sincity
 
 一个使用 `uv` 管理的 Python + raylib + raygui 示例项目。
 
@@ -11,7 +11,7 @@
 
 ```bash
 uv sync
-uv run ray-game
+uv run sincity
 ```
 
 ## Web 打包
@@ -29,8 +29,8 @@ make web-upload ITCH_USER=<itch-user> ITCH_GAME=<itch-game>
 
 - Web 打包不会再直接扫描整个仓库，而是先组装一个最小 staging 目录再交给 `pygbag`
 - 这样可以避免把 `.venv`、本机 `.so`、构建缓存和设计文档误打进 Web 包里
-- 当前 Web 包会包含 `main.py`、`font.ttf` 和 `src/raygame`
-- itch.io 最终上传包会生成到 `build/ray-game-itch.zip`
+- 当前 Web 包会包含 `main.py`、`font.ttf` 和 `src/sincity`
+- itch.io 最终上传包会生成到 `build/sincity-itch.zip`
 - 上传 itch.io 需要先安装并登录 `butler`；`make web-upload` 会先重新构建并打包，再上传到 `<itch-user>/<itch-game>:html5`
 
 ## 环境

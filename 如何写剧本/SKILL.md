@@ -1,6 +1,6 @@
 ---
 name: encounter-scene-treatment
-description: 把一个混乱的点子、桥段概念或潜入/打斗/对峙想法，整理成适合 ray-game 的纸面剧本。用于先分幕、设目标、列阻碍、列方法、列潜在状态变化与分支流转，再交给后续实现。
+description: 把一个混乱的点子、桥段概念或潜入/打斗/对峙想法，整理成适合 sincity 的纸面剧本。用于先分幕、设目标、列阻碍、列方法、列潜在状态变化与分支流转，再交给后续实现。
 ---
 
 # Encounter Scene Treatment

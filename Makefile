@@ -1,8 +1,8 @@
 .PHONY: web web-stage web-serve web-package web-upload web-clean
 
-WEB_STAGE_DIR := build/ray-game
+WEB_STAGE_DIR := build/sincity
 WEB_DIST_DIR := build/web
-WEB_ITCH_ZIP := build/ray-game-itch.zip
+WEB_ITCH_ZIP := build/sincity-itch.zip
 BUTLER ?= butler
 ITCH_CHANNEL ?= html5
 
@@ -13,7 +13,7 @@ web-stage:
 	rm -rf $(WEB_STAGE_DIR)
 	mkdir -p $(WEB_STAGE_DIR)/src
 	rsync -a main.py font.ttf $(WEB_STAGE_DIR)/
-	rsync -a src/raygame $(WEB_STAGE_DIR)/src/
+	rsync -a src/sincity $(WEB_STAGE_DIR)/src/
 
 # Build web version for itch.io.
 # Output: build/web/ (contains index.html, tar.gz, and all assets ready for itch.io)
@@ -27,7 +27,7 @@ web:
 	rsync -a $(WEB_STAGE_DIR)/build/web/ $(WEB_DIST_DIR)/
 	uv run python scripts/fix_web_index.py $(WEB_DIST_DIR)/index.html
 	@echo "✓ Web build complete: $(WEB_DIST_DIR)/"
-	@echo "  Contains: index.html, ray-game.tar.gz, ray-game.apk"
+	@echo "  Contains: index.html, sincity.tar.gz, sincity.apk"
 	@echo "  Ready to upload to itch.io"
 
 # Create the final itch.io upload zip from build/web.
@@ -51,7 +51,7 @@ web-upload: web-package
 # Remove intermediate build outputs and old debug artefacts.
 # Keeps the final web build plus the itch upload zip.
 web-clean:
-	rm -rf build/web-cache build/web-app build/ray-game web_probe_pyray/build
+	rm -rf build/web-cache build/web-app build/sincity web_probe_pyray/build
 	find build -name '.DS_Store' -delete
 	rm -f build/web.zip
 

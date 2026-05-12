@@ -1,6 +1,6 @@
 # SKILL: 如何撰写 `.scm` 场景文件
 
-本 skill 用于撰写 ray-game 的 `.scm` 内容脚本。  
+本 skill 用于撰写 sincity 的 `.scm` 内容脚本。  
 现在城市与 encounter 走同一套 Scheme 内容语言，统一用 `(content ...)` 作为顶层入口。
 
 目标不是“把 Python builder 翻译成 Scheme”，而是**直接用 Scheme 组织内容**。

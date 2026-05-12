@@ -53,7 +53,23 @@ wheels = [
 ]
 
 [[package]]
-name = "ray-game"
+name = "raylib"
+version = "5.5.0.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cffi" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/86/77/be23455a3ad6588860daa7cea0c27e762858d7e3a6dc81b5b7fc2bb972a1/raylib-5.5.0.3.tar.gz", hash = "sha256:f7cfabe7400bf334fc953df6ab99c7435cd4b2251c495040a48d22d44544080a", size = 184322, upload-time = "2025-09-03T16:04:22.577Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e9/ee/f3078da7168789840cae2e8af1c5c57519941c9fc561db7ff6def6c9131b/raylib-5.5.0.3-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:c6bc7563fbe0b53aba8d79b9437921bd63e2b1a706434d56ec18c4e7dd59d431", size = 1644917, upload-time = "2025-09-03T16:02:50.509Z" },
+    { url = "https://files.pythonhosted.org/packages/6f/5d/1ce67531e6b08c34c5f6c1747bca6f77f539cb22a542d840592c719fdd83/raylib-5.5.0.3-cp313-cp313-macosx_15_0_arm64.whl", hash = "sha256:0866d065ae99de7ad90f6fb5511b00cae1dc93aea8d0045bd3564d60774a3a79", size = 1257694, upload-time = "2025-09-03T16:08:26.525Z" },
+    { url = "https://files.pythonhosted.org/packages/85/eb/b80df6971cf8c0dcbcb25fd878610dd9392f8dd9be4436f24ce3268e301b/raylib-5.5.0.3-cp313-cp313-manylinux2014_aarch64.whl", hash = "sha256:30fce3d12ac14647ef88ce3300244b03e9a30cb0c88f5406565b5ff791b9e315", size = 2199253, upload-time = "2025-09-03T16:08:28.864Z" },
+    { url = "https://files.pythonhosted.org/packages/2b/5e/c872ab1fb732740b115a40cda48e2e8b72153ef6c06f133c75adcbff4e36/raylib-5.5.0.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:bcdd119fd87618ce3c1f1ae29345061bc2c3d97ec3063d2f575f26586b1e4fd7", size = 2205557, upload-time = "2025-09-03T16:02:52.874Z" },
+    { url = "https://files.pythonhosted.org/packages/a8/68/39916a71cb323be16074040146a53222d33542002f4f7b970f570a14c7d8/raylib-5.5.0.3-cp313-cp313-win_amd64.whl", hash = "sha256:afdafe2316dd2c2fd734968475a19211420c44353eda3a35b7b688bb38e3a9bf", size = 1708193, upload-time = "2025-09-03T16:02:54.992Z" },
+]
+
+[[package]]
+name = "sincity"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
@@ -74,19 +90,3 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 web = [{ name = "pygbag", specifier = ">=0.8.7" }]
-
-[[package]]
-name = "raylib"
-version = "5.5.0.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "cffi" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/86/77/be23455a3ad6588860daa7cea0c27e762858d7e3a6dc81b5b7fc2bb972a1/raylib-5.5.0.3.tar.gz", hash = "sha256:f7cfabe7400bf334fc953df6ab99c7435cd4b2251c495040a48d22d44544080a", size = 184322, upload-time = "2025-09-03T16:04:22.577Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e9/ee/f3078da7168789840cae2e8af1c5c57519941c9fc561db7ff6def6c9131b/raylib-5.5.0.3-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:c6bc7563fbe0b53aba8d79b9437921bd63e2b1a706434d56ec18c4e7dd59d431", size = 1644917, upload-time = "2025-09-03T16:02:50.509Z" },
-    { url = "https://files.pythonhosted.org/packages/6f/5d/1ce67531e6b08c34c5f6c1747bca6f77f539cb22a542d840592c719fdd83/raylib-5.5.0.3-cp313-cp313-macosx_15_0_arm64.whl", hash = "sha256:0866d065ae99de7ad90f6fb5511b00cae1dc93aea8d0045bd3564d60774a3a79", size = 1257694, upload-time = "2025-09-03T16:08:26.525Z" },
-    { url = "https://files.pythonhosted.org/packages/85/eb/b80df6971cf8c0dcbcb25fd878610dd9392f8dd9be4436f24ce3268e301b/raylib-5.5.0.3-cp313-cp313-manylinux2014_aarch64.whl", hash = "sha256:30fce3d12ac14647ef88ce3300244b03e9a30cb0c88f5406565b5ff791b9e315", size = 2199253, upload-time = "2025-09-03T16:08:28.864Z" },
-    { url = "https://files.pythonhosted.org/packages/2b/5e/c872ab1fb732740b115a40cda48e2e8b72153ef6c06f133c75adcbff4e36/raylib-5.5.0.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:bcdd119fd87618ce3c1f1ae29345061bc2c3d97ec3063d2f575f26586b1e4fd7", size = 2205557, upload-time = "2025-09-03T16:02:52.874Z" },
-    { url = "https://files.pythonhosted.org/packages/a8/68/39916a71cb323be16074040146a53222d33542002f4f7b970f570a14c7d8/raylib-5.5.0.3-cp313-cp313-win_amd64.whl", hash = "sha256:afdafe2316dd2c2fd734968475a19211420c44353eda3a35b7b688bb38e3a9bf", size = 1708193, upload-time = "2025-09-03T16:02:54.992Z" },
-]

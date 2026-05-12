@@ -17,7 +17,7 @@ if str(SRC) not in sys.path:
 
 async def main() -> None:
     try:
-        from raygame.app import GameApp
+        from sincity.app import GameApp
 
         app = GameApp()
         await app.run_async()

@@ -1,5 +1,5 @@
 [project]
-name = "ray-game"
+name = "sincity"
 version = "0.1.0"
 description = "Playable noir detective prototype built with raylib + raygui"
 readme = "README.md"
@@ -10,14 +10,14 @@ dependencies = [
 ]
 
 [project.scripts]
-ray-game = "raygame.main:main"
+sincity = "sincity.main:main"
 
 [build-system]
 requires = ["hatchling>=1.24"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/raygame"]
+packages = ["src/sincity"]
 
 [dependency-groups]
 web = [

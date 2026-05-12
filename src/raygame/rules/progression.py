@@ -31,8 +31,6 @@ from raygame.rules.judgment import compute_action_value, roll_result
 from raygame.rules.rng import RandomSource
 from raygame.model.enums import Suit
 
-OPENING_ENCOUNTER_ID = "教训小混混"
-
 
 def _push_log(state: GameState, text: str) -> None:
     state.action_log.append(text)
@@ -73,7 +71,7 @@ def start_new_run(seed: int) -> tuple[GameState, RandomSource]:
     )
     sync_trauma_cards_with_health(state)
     start_city_day(state.deck, rng, HAND_SIZE)
-    start_encounter(state, OPENING_ENCOUNTER_ID)
+    _resolve_world_reacts(state, rng, [])
     return state, rng
 
 
@@ -113,7 +111,6 @@ def _current_encounter_root_id(state: GameState) -> str:
 
 def _reset_encounter_action_cycle(state: GameState) -> None:
     state.encounter_action_points = state.encounter_action_point_cap
-    state.encounter_spirit_usage.clear()
 
 
 def _sync_encounter_action_cycle(state: GameState) -> None:
@@ -122,23 +119,11 @@ def _sync_encounter_action_cycle(state: GameState) -> None:
     root_id = _current_encounter_root_id(state)
     if state.encounter_resource_root_id != root_id:
         state.encounter_resource_root_id = root_id
-        _reset_encounter_action_cycle(state)
-        return
-    if state.encounter_action_points <= 0:
-        _reset_encounter_action_cycle(state)
 
 
 def encounter_action_points(state: GameState) -> tuple[int, int] | None:
-    if state.screen != ScreenName.ENCOUNTER or state.active_encounter is None:
-        return None
     _sync_encounter_action_cycle(state)
     return (state.encounter_action_points, state.encounter_action_point_cap)
-
-
-def encounter_spirit_decay(state: GameState, slot_id: str) -> int:
-    if state.screen != ScreenName.ENCOUNTER or state.active_encounter is None:
-        return 0
-    return 0
 
 
 def current_world_snapshot(state: GameState):
@@ -255,7 +240,7 @@ def slot_base_value(state: GameState, slot_id: str) -> int:
 
 
 def slot_current_value(state: GameState, slot_id: str) -> int:
-    return max(0, slot_base_value(state, slot_id) - 2 * slot_trauma_count(state, slot_id))
+    return max(0, slot_base_value(state, slot_id) - slot_trauma_count(state, slot_id))
 
 
 def slot_is_available(state: GameState, slot_id: str) -> bool:
@@ -290,12 +275,22 @@ def slot_effective_value(state: GameState, slot_id: str, check) -> int:
 
 
 def _slot_can_execute_check(state: GameState, slot_id: str, check) -> bool:
-    if not slot_is_available(state, slot_id):
+    _sync_encounter_action_cycle(state)
+    if not _slot_can_spend_energy(state, slot_id):
         return False
     preferred = slot_is_preferred_for_check(slot_id, check)
     if preferred is False:
         return False
     return slot_effective_value(state, slot_id, check) > 0
+
+
+def _slot_can_spend_energy(state: GameState, slot_id: str) -> bool:
+    _sync_encounter_action_cycle(state)
+    if state.encounter_action_points <= 0:
+        return False
+    if not slot_is_available(state, slot_id):
+        return False
+    return slot_current_value(state, slot_id) > 0 or (state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None)
 
 
 def _coerce_like(current: int | bool | str, value: int | bool | str) -> int | bool | str:
@@ -597,22 +592,28 @@ def focus_action(state: GameState, action_id: str) -> None:
     state.assembly = ActionAssemblyState(action_id=action_id)
 
 
-def action_slot_ready(state: GameState, action: ActionDef, requirement: InputRequirement | None = None, *, check_slot: bool = False) -> bool:
+def action_slot_ready(state: GameState, action: ActionDef, requirement: InputRequirement | None = None, *, energy_slot: bool = False) -> bool:
     if state.assembly.action_id != action.id:
         return False
-    if check_slot:
+    if energy_slot:
         return state.assembly.slotted_card_id is not None
     assert requirement is not None
     return requirement_is_slotted(state, requirement)
 
 
-def action_can_accept_selected_input(state: GameState, action: ActionDef, requirement: InputRequirement | None = None, *, check_slot: bool = False) -> bool:
+def action_can_accept_selected_input(state: GameState, action: ActionDef, requirement: InputRequirement | None = None, *, energy_slot: bool = False) -> bool:
     selected = state.selected_input
     if not selected.kind:
         return False
-    if check_slot:
+    if energy_slot:
         card_id = _selected_card_id(state)
-        return card_id is not None and action.check is not None and _slot_can_execute_check(state, card_id, action.check)
+        if card_id is None:
+            return False
+        if action.check is not None:
+            return _slot_can_execute_check(state, card_id, action.check)
+        if action_requires_energy_slot(action):
+            return _slot_can_spend_energy(state, card_id)
+        return False
     assert requirement is not None
     if requirement.kind == "item":
         return selected.kind == "item" and selected.key == requirement.key and int(_field_value(state, requirement.key)) >= requirement.amount
@@ -624,22 +625,32 @@ def action_can_accept_selected_input(state: GameState, action: ActionDef, requir
     return False
 
 
-def toggle_action_check_slot(state: GameState, action: ActionDef) -> None:
+def first_usable_energy_slot(state: GameState, action: ActionDef) -> tuple[str, int] | None:
+    if not action_requires_energy_slot(action):
+        return None
+    for index, slot_id in enumerate(list_spirit_slots(state.deck)):
+        if action.check is not None and _slot_can_execute_check(state, slot_id, action.check):
+            return slot_id, index
+        if action.check is None and _slot_can_spend_energy(state, slot_id):
+            return slot_id, index
+    return None
+
+
+def toggle_action_energy_slot(state: GameState, action: ActionDef) -> None:
     if state.assembly.action_id == action.id and state.assembly.slotted_card_id is not None:
         state.assembly.slotted_card_id = None
         state.assembly.slotted_card_index = None
         if not state.assembly.slotted_items:
             state.assembly.action_id = None
         return
-    if not action_can_accept_selected_input(state, action, check_slot=True):
+    slot = first_usable_energy_slot(state, action)
+    if slot is None:
         focus_action(state, action.id)
         trigger_card_hint_flash(state, action)
         return
     focus_action(state, action.id)
-    card_id = _selected_card_id(state)
-    assert card_id is not None
-    state.assembly.slotted_card_id = card_id
-    state.assembly.slotted_card_index = state.selected_input.index
+    state.assembly.slotted_card_id = slot[0]
+    state.assembly.slotted_card_index = slot[1]
     clear_selected_input(state)
 
 
@@ -713,6 +724,8 @@ def action_ready_to_execute(action: ActionDef, state: GameState) -> bool:
         return False
     if action.check is None and not action.effects:
         return False
+    if action_requires_energy_slot(action) and state.encounter_action_points <= 0:
+        return False
     for requirement in action.inputs:
         if not requirement_is_slotted(state, requirement):
             return False
@@ -720,7 +733,15 @@ def action_ready_to_execute(action: ActionDef, state: GameState) -> bool:
         card_id = _slotted_card_id(state)
         if card_id is None or not _slot_can_execute_check(state, card_id, action.check):
             return False
+    elif action_requires_energy_slot(action):
+        card_id = _slotted_card_id(state)
+        if card_id is None or not _slot_can_spend_energy(state, card_id):
+            return False
     return True
+
+
+def action_requires_energy_slot(action: ActionDef) -> bool:
+    return action.check is not None
 
 
 def current_action(state: GameState) -> ActionDef | None:
@@ -744,6 +765,10 @@ def perform_current_action(state: GameState, rng: RandomSource) -> None:
     location_id = location_for_action(action.id, state)
     _consume_inputs(state, action)
     if action.check is None:
+        if action_requires_energy_slot(action):
+            slot_id = _slotted_card_id(state)
+            assert slot_id is not None, "energy slot must be slotted before spending energy"
+            _consume_energy_from_slot(state, slot_id)
         resolution = ActionResolution(
             action_id=action.id,
             card_id=_slotted_card_id(state),
@@ -878,14 +903,15 @@ def _consume_slotted_card(state: GameState) -> None:
 
 
 def _consume_check_resource(state: GameState, slot_id: str) -> None:
-    if state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None:
-        _sync_encounter_action_cycle(state)
-        assert state.encounter_action_points > 0, "encounter action points must be positive before spend"
-        state.encounter_action_points -= 1
-        spirit = _slot_spirit(slot_id)
-        state.encounter_spirit_usage[spirit] = state.encounter_spirit_usage.get(spirit, 0) + 1
-        return
-    _consume_slotted_card(state)
+    _consume_energy_from_slot(state, slot_id)
+
+
+def _consume_energy_from_slot(state: GameState, slot_id: str) -> None:
+    assert _slot_can_spend_energy(state, slot_id), f"energy slot cannot spend energy: {slot_id}"
+    _sync_encounter_action_cycle(state)
+    assert state.encounter_action_points > 0, "energy points must be positive before spend"
+    state.encounter_action_points -= 1
+    _mark_content_dirty(state)
 
 
 def _selected_card_id(state: GameState) -> str | None:
@@ -1086,9 +1112,7 @@ def _resolve_world_reacts(state: GameState, rng: RandomSource, extra_lines: list
 
 def reset_hand(state: GameState, rng: RandomSource) -> None:
     del rng
-    if state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None:
-        _reset_encounter_action_cycle(state)
-        return
+    _reset_encounter_action_cycle(state)
     refresh_spirit_slots(state.deck)
     _mark_content_dirty(state)
 
@@ -1145,7 +1169,6 @@ def start_encounter(state: GameState, encounter_id: str) -> None:
     clear_assembly(state)
     clear_selected_input(state)
     state.encounter_resource_root_id = ""
-    _reset_encounter_action_cycle(state)
     _mark_content_dirty(state)
     _push_log(state, f"进入侦探任务：{encounter.title}")
     _resolve_encounter_reacts(state, RandomSource(state.seed), [])
@@ -1169,7 +1192,6 @@ def finish_encounter(state: GameState, outcome: str, rng: RandomSource, extra_li
     clear_assembly(state)
     clear_selected_input(state)
     state.encounter_resource_root_id = ""
-    _reset_encounter_action_cycle(state)
     _mark_content_dirty(state)
     if outcome == "success":
         _apply_effects(encounter.rewards, state, rng, extra_lines)
@@ -1255,8 +1277,12 @@ def _add_spirit_slot(state: GameState, spirit: str, extra_lines: list[str] | Non
 def _check_endings(state: GameState) -> None:
     if state.screen == ScreenName.ENDING:
         return
+    pursuit_spec = SCENARIO.clocks_by_id.get("pursuit")
+    if pursuit_spec is None:
+        return
+    assert "pursuit" in state.world.progress_clocks, "Scenario defines `pursuit` clock but state is missing it"
     pursuit = state.world.progress_clocks["pursuit"]
-    if pursuit.value >= SCENARIO.clocks_by_id["pursuit"].segments:
+    if pursuit.value >= pursuit_spec.segments:
         state.ending_id = "caught"
         state.ending_title = "被追上了"
         state.ending_body = "你每晚都在争时间，但脚步声终究还是追上了你。"
@@ -1334,7 +1360,7 @@ def _describe_effects(effects: tuple[Effect, ...], action_id: str, state: GameSt
             target = get_dialogue(value)
             lines.append(f"进入对话：{target.title}")
         elif item.kind == "reset_hand":
-            lines.append("恢复精神槽位")
+            lines.append("恢复精力")
         elif item.kind == "advance_day":
             lines.append("进入下一天")
         elif item.kind == "end_game":

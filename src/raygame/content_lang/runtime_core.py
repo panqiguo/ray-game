@@ -20,7 +20,7 @@ from raygame.encounters.defs import (
     StateBindingValue,
     StoreFieldSpec,
 )
-from raygame.encounters.lispy import Environment, SpecialFormProcedure, evaluate
+from raygame.encounters.lispy import Environment, Procedure, SpecialFormProcedure, evaluate
 from raygame.labels import lookup_input_label
 from raygame.model.defs import ActionDef, CheckDef, Condition, Effect, InputRequirement, LocationNode, OutcomeDef
 from raygame.model.enums import Risk, ScreenName, Suit
@@ -85,6 +85,7 @@ def validate_action_template(action: ActionTemplate) -> None:
 
 
 def validate_react_template(react: ReactTemplate) -> None:
+    assert isinstance(react.condition, Procedure) and not react.condition.params, f"react condition must be a zero-argument procedure: {react.condition!r}"
     for effect in react.effects:
         assert isinstance(effect, Effect), f"react contains non-effect value: {effect!r}"
 
@@ -209,6 +210,7 @@ def host_values(*, store_specs: dict[str, StoreFieldSpec], store: dict[str, int 
     return {
         "clock": builtin_clock,
         "clocks": lambda *args: [item for item in args if item is not None],
+        "state": SpecialFormProcedure(lambda args, env: ["state", *args]),
         "meta": lambda *args: builtin_meta(args),
         "condition": builtin_condition,
         "has-item": builtin_has_item_condition,
@@ -262,10 +264,10 @@ def builtin_scene(args: tuple[Any, ...]) -> SceneTemplate:
 
 
 def builtin_action(args: tuple[Any, ...]) -> ActionTemplate:
-    kwargs = keyword_args(list(args), allowed={":title", ":desc", ":position", ":conditions", ":inputs", ":before", ":effects", ":check"})
+    kwargs = keyword_args(list(args), allowed={":title", ":desc", ":position", ":conditions", ":inputs", ":always", ":effects", ":check"})
     check = kwargs.get(":check")
     effects = as_effect_tuple(kwargs.get(":effects"))
-    before = as_effect_tuple(kwargs.get(":before"))
+    before = as_effect_tuple(kwargs.get(":always"))
     assert check is None or not effects, "Action cannot have both :check and :effects."
     return ActionTemplate(
         title=keyword_string(kwargs, ":title"),
@@ -314,18 +316,18 @@ def builtin_field_truthy_condition(key: Any, label: Any | None = None) -> Condit
 
 def builtin_react(args: list[Any], env: Environment) -> ReactTemplate:
     kwargs = keyword_args(list(args), allowed={":when", ":then"})
-    condition = freeze_react_expr(kwargs[":when"], env)
+    condition = Procedure(params=(), body=normalize_react_condition_body(kwargs[":when"], env), env=env)
     effects = eval_effect_list(kwargs[":then"], env)
-    return ReactTemplate(condition_expr=condition, effects=effects)
+    return ReactTemplate(condition=condition, effects=effects)
 
 
-def freeze_react_expr(expr: Any, env: Environment) -> Any:
+def normalize_react_condition_body(expr: Any, env: Environment) -> Any:
     if isinstance(expr, list):
         if not expr:
             return []
         if expr[0] == "quote":
             return expr
-        return [freeze_react_expr(item, env) for item in expr]
+        return [normalize_react_condition_body(item, env) for item in expr]
     if isinstance(expr, str):
         if expr.startswith(":"):
             return expr
@@ -340,6 +342,11 @@ def freeze_react_expr(expr: Any, env: Environment) -> Any:
         if isinstance(value, str):
             return ["quote", value]
     return expr
+
+
+def eval_react_condition(condition: Any, env: Environment) -> Any:
+    assert isinstance(condition, Procedure) and not condition.params, f"react condition must be a zero-argument procedure: {condition!r}"
+    return evaluate(condition.body, env)
 
 
 def builtin_effect(args: tuple[Any, ...]) -> Effect:
@@ -365,10 +372,6 @@ def builtin_effect(args: tuple[Any, ...]) -> Effect:
     if kind == "add":
         target = binding_name(args[1])
         return Effect(kind="add_field", value=f"{target}:{int(unwrap(args[2]))}")
-    if kind == "health":
-        return Effect(kind="add_field", value=f"health:{int(unwrap(args[1]))}")
-    if kind == "stress":
-        return Effect(kind="add_field", value=f"stress:{int(unwrap(args[1]))}")
     if kind == "start-encounter":
         return Effect(kind="start_encounter", value=str(unwrap(args[1])))
     if kind == "end-encounter":

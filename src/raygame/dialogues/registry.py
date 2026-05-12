@@ -28,6 +28,11 @@ def _register_defaults() -> dict[str, DialogueAsset]:
             title="主治医师办公室",
             compiled_path=ASSET_DIR / "first_scene_doctor_office.ink.json",
         ),
+        "frederick_phone_intro": DialogueAsset(
+            id="frederick_phone_intro",
+            title="弗雷德里克的电话",
+            compiled_path=ASSET_DIR / "frederick_phone_intro.ink.json",
+        ),
     }
 
 

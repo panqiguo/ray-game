@@ -5,6 +5,8 @@ Encounter / World SCM 速查
 ```scheme
 (include "common.scm")
 (define name expr)
+(define-node name node-expr)
+(define-scene name scene-expr)
 
 (content
   :meta meta-expr
@@ -14,6 +16,12 @@ Encounter / World SCM 速查
   :on-fail (list effect...)
   :root node-expr)
 ```
+
+- 顶层 `define` 会在模块加载时立即求值，和标准 Scheme 更接近。
+- `define-node` / `define-scene` 是零参数过程糖，适合动态 node/scene。
+- 使用 `define-node` / `define-scene` 后，引用时要显式调用：`(office)`、`(room_search)`。
+- `define-node` / `define-scene` 的直接 `(node ...)` / `(scene ...)` 没写 `:title` 时，会自动使用定义名作为标题。
+- 如果只是静态常量、文本、helper lambda，用普通 `define`。
 
 `meta`：
 
@@ -45,7 +53,7 @@ Encounter / World SCM 速查
 - world 全局字段：`day` `health` `stress` `money` `cigarettes`
 - world 还包括：world `:state` 绑定、初始 inventory 物品计数
 - encounter 局部字段：encounter `:state` 绑定
-- encounter 改全局字段时，推荐写 quoted symbol：`'money`、`'villa_job_taken`
+- 修改字段统一直接写字段名：`money`、`health`、`stress`、`villa_job_taken`
 - `day` 是特例：修改只用 `(effect 'advance-day)`
 
 `node` / `scene`：
@@ -73,13 +81,14 @@ Encounter / World SCM 速查
   :position '(120 80)
   :conditions (list condition...)
   :inputs (list input...)
-  :before (list effect...)
+  :always (list effect...)
   :effects (list effect...)
   :check check-expr)
 ```
 
 - 必填：`:title`
-- 选填：`:desc` `:position` `:conditions` `:inputs` `:before` `:effects` `:check`
+- 选填：`:desc` `:position` `:conditions` `:inputs` `:always` `:effects` `:check`
+- `:always` 会在行动执行时先触发，可与 `:effects` 或 `:check` 共存
 - `:check` 与 `:effects` 互斥
 
 `check`：
@@ -95,8 +104,8 @@ Encounter / World SCM 速查
 
 - `:risk`：`'low` `'mid` `'high`
 - `:suits`：`'logic` `'perception` `'willpower`
-- 不写 `:suits` 或写空列表时，表示三种精神都可用，且没有额外加值
-- 写了适配精神时，适配精神会获得 `+2`
+- 不写 `:suits` 或写空列表时，表示三种精力都可用，且没有额外加值
+- 写了适配精力时，适配精力会获得 `+2`
 
 `outcome`：
 
@@ -139,7 +148,7 @@ Encounter / World SCM 速查
 (card 'negative "负面牌")
 ```
 
-- `card` 输入现在表示“消耗一个本回合可用的精神槽位”
+- `card` 输入现在表示“要求放入一项本回合可用的精力”
 
 `effects`：
 
@@ -148,8 +157,6 @@ Encounter / World SCM 速查
 (effect 'clock- clock-field amount)
 (effect 'set field value)
 (effect 'add field amount)
-(effect 'health amount)
-(effect 'stress amount)
 (effect 'start-dialogue 'dialogue_id)
 (effect 'start-quick-dialogue "对白内容")
 (effect 'start-encounter 'encounter_id)
@@ -161,7 +168,9 @@ Encounter / World SCM 速查
 (effect 'reset-hand)
 ```
 
-- `(effect 'reset-hand)` 现在的语义是“恢复全部精神槽位可用”
+- `(effect 'reset-hand)` 现在的语义是“恢复全部精力可用”
+- 已废弃短名效果：不要写 `(effect 'health -1)` / `(effect 'stress 1)`
+- 推荐写法：`(effect 'add health -1)`、`(effect 'add stress 1)`、`(effect 'add money 20)`
 
 时钟查询：
 
@@ -191,6 +200,7 @@ Encounter / World SCM 速查
 (or ...)
 (not expr)
 (let ((name expr)) body)
+(let* ((name expr)) body)
 (lambda (args...) body)
 (begin ...)
 (quote x)
@@ -198,6 +208,10 @@ Encounter / World SCM 速查
 (log ...)
 ```
 
+- `let` 是标准并行绑定：绑定表达式在外层环境求值。
+- `let*` 是顺序绑定：后一个绑定可以使用前一个绑定。
+- truthiness：只有 `false` 和 `nil` 为假；`0` 和空列表都是真。
+- `(- x)` 是一元取负。
 - `(log ...)` 会打印到 Python 终端，返回最后一个参数；常用于调试脚本
 
 列表：
@@ -223,17 +237,16 @@ alist：
 ```scheme
 (assoc 'key table)
 (assoc-ref table 'key)
+(assoc-set table 'key value)
+(assoc-remove table 'key)
 ```
 
 精神与成长：
 
 - 初始精神：`logic = 2`，`perception = 1`，`willpower = 1`
-- 每个精神默认 1 个槽位；重大升级可以增加额外槽位
+- 每种精力默认 1 项；重大升级可以增加额外精力项
 - 每个槽位每回合只能使用 1 次
 - 受伤会按固定顺序给槽位叠加创伤；每层创伤让该槽位当前值 `-2`
-(assoc-set table 'key value)
-(assoc-remove table 'key)
-```
 
 数值/比较：
 

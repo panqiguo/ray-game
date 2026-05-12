@@ -5,6 +5,7 @@ from typing import Any
 
 from raygame.content_lang.runtime_core import (
     build_check as _build_check,
+    eval_react_condition as _eval_react_condition,
     eval_effect_list as _eval_effect_list,
     flatten_scene as _flatten_scene,
     host_values as _host_values,
@@ -34,7 +35,7 @@ from .defs import (
     StateBindingValue,
     StoreFieldSpec,
 )
-from .lispy import Environment, _MISSING, base_environment, evaluate, expand_includes, truthy
+from .lispy import Environment, Procedure, SpecialFormProcedure, StringAtom, _MISSING, base_environment, evaluate, expand_includes, truthy
 
 
 MAX_REACT_STEPS = 64
@@ -63,36 +64,33 @@ ENCOUNTER_COMPLETION_EFFECTS = frozenset({
 def compile_encounter_program(source: str, *, source_path: str | Path | None = None) -> CompiledEncounterProgram:
     path = Path(source_path) if source_path is not None else None
     forms = expand_includes(source, source_path=path, include_stack=(() if path is None else (path,)))
-    definitions: dict[str, Any] = {}
+    raw_definitions: dict[str, Any] = {}
     content_form: Any | None = None
-    top_level_exprs: list[Any] = []
     for form in forms:
-        if _is_call(form, "define"):
+        if _is_call(form, "define") or _is_call(form, "define-node") or _is_call(form, "define-scene"):
             assert len(form) == 3 and isinstance(form[1], str), "`define` expects name and expr."
-            definitions[form[1]] = form[2]
+            raw_definitions[form[1]] = form[2]
             continue
         if _is_call(form, "content"):
             assert content_form is None, "Encounter module can contain only one top-level `(content ...)` form."
             content_form = form
             continue
-        top_level_exprs.append(form)
     assert content_form is not None, "Encounter module must contain a `(content ...)` form."
     kwargs = _keyword_args(content_form[1:], allowed={":meta", ":state", ":reacts", ":on-success", ":on-fail", ":root"})
-    root_expr = _resolve_expr(kwargs.get(":root"), definitions)
+    root_expr = kwargs.get(":root")
     assert root_expr is not None, "Encounter content is missing required field: :root"
     module = ModuleState(root_expr=root_expr)
-    _load_state_expr(_resolve_expr(kwargs.get(":state"), definitions), definitions, module)
-    runtime_env = _runtime_env(definitions=definitions, store=initial_store_from_specs(module.store_specs), store_specs=module.store_specs)
-    for expr in top_level_exprs:
-        evaluate(expr, runtime_env)
-    meta_expr = _resolve_expr(kwargs.get(":meta"), definitions)
+    _load_state_expr(_resolve_expr(kwargs.get(":state"), raw_definitions), raw_definitions, module)
+    runtime_env = _runtime_env(definitions={}, store=initial_store_from_specs(module.store_specs), store_specs=module.store_specs)
+    definitions = _eval_top_level_definitions(forms, runtime_env)
+    meta_expr = kwargs.get(":meta")
     if meta_expr is not None:
         module.metadata = _eval_meta_expr(meta_expr, runtime_env)
-    reacts_expr = _resolve_expr(kwargs.get(":reacts"), definitions)
+    reacts_expr = kwargs.get(":reacts")
     if reacts_expr is not None:
         _eval_reacts_expr(reacts_expr, runtime_env, module)
-    module.rewards = _eval_effect_list(_resolve_expr(kwargs.get(":on-success"), definitions), runtime_env)
-    module.fail_effects = _eval_effect_list(_resolve_expr(kwargs.get(":on-fail"), definitions), runtime_env)
+    module.rewards = _eval_effect_list(kwargs.get(":on-success"), runtime_env)
+    module.fail_effects = _eval_effect_list(kwargs.get(":on-fail"), runtime_env)
     metadata = module.metadata or EncounterMeta(key=(path.stem if path is not None else "encounter"), title=(path.stem if path is not None else "Encounter"), description="")
     program = CompiledEncounterProgram(
         id=metadata.key,
@@ -164,7 +162,7 @@ def next_react_rule(program: CompiledEncounterProgram, store: dict[str, int | bo
 
 def react_rule_matches(program: CompiledEncounterProgram, store: dict[str, int | bool | str], rule: ReactRule) -> bool:
     env = _runtime_env(definitions=program.definitions, store=store, store_specs=program.store_specs)
-    value = evaluate(rule.condition_expr, env)
+    value = _eval_react_condition(rule.condition, env)
     return truthy(_unwrap(value))
 
 
@@ -172,11 +170,8 @@ def validate_encounter_program(program: CompiledEncounterProgram) -> None:
     assert program.store_specs, f"{program.id}: encounter missing state."
     env = _runtime_env(definitions=program.definitions, store=initial_store(program), store_specs=program.store_specs)
     _validate_all_schema_forms(program, env)
-    for name, expr in program.definitions.items():
-        if _is_call(expr, "state"):
-            continue
+    for name, value in program.definitions.items():
         try:
-            value = env.lookup(name)
             _validate_template(value)
         except EncounterSchemeError as exc:
             raise EncounterSchemeError(f"{program.id}: definition `{name}` has Scheme error: {exc}") from exc
@@ -200,11 +195,10 @@ def validate_encounter_program(program: CompiledEncounterProgram) -> None:
 
 
 def _validate_all_schema_forms(program: CompiledEncounterProgram, env: Environment) -> None:
-    for name, expr in program.definitions.items():
-        _validate_schema_forms(expr, env, context=f"{program.id}: definition `{name}`")
     _validate_schema_forms(program.view_expr, env, context=f"{program.id}: root scene")
     for rule in program.react_rules:
-        _validate_schema_forms(rule.condition_expr, env, context=f"{program.id}: react `{rule.source}` condition")
+        assert isinstance(rule.condition, Procedure) and not rule.condition.params, f"{program.id}: react `{rule.source}` condition must be a zero-argument procedure"
+        _validate_schema_forms(rule.condition.body, env, context=f"{program.id}: react `{rule.source}` condition")
         for effect in rule.effects:
             assert isinstance(effect, Effect), f"{program.id}: react `{rule.source}` contains non-effect value: {effect!r}"
 
@@ -245,7 +239,32 @@ def _eval_reacts_expr(expr: Any, env: Environment, module: ModuleState) -> None:
             continue
         assert isinstance(item, ReactTemplate), f"reacts expects react or nil, got: {item!r}"
         _validate_react_template(item)
-        module.react_rules.append(ReactRule(condition_expr=item.condition_expr, effects=item.effects, source=f"react[{index}]"))
+        module.react_rules.append(ReactRule(condition=item.condition, effects=item.effects, source=f"react[{index}]"))
+
+
+def _eval_top_level_definitions(forms: list[Any], env: Environment) -> dict[str, Any]:
+    definitions: dict[str, Any] = {}
+    for form in forms:
+        if not isinstance(form, list) or not form:
+            evaluate(form, env)
+            continue
+        head = form[0]
+        if head == "content":
+            continue
+        if head == "define":
+            assert len(form) == 3 and isinstance(form[1], str), "`define` expects name and expr."
+            value = evaluate(form[2], env)
+            env.values[form[1]] = value
+            definitions[form[1]] = value
+            continue
+        if head in {"define-node", "define-scene"}:
+            assert len(form) == 3 and isinstance(form[1], str), f"`{head}` expects name and expr."
+            value = _dynamic_template_proc(form[1], "node" if head == "define-node" else "scene", form[2])
+            env.values[form[1]] = value
+            definitions[form[1]] = value
+            continue
+        evaluate(form, env)
+    return definitions
 
 
 def _resolve_expr(expr: Any, definitions: dict[str, Any]) -> Any:
@@ -254,24 +273,63 @@ def _resolve_expr(expr: Any, definitions: dict[str, Any]) -> Any:
     return expr
 
 
+def _default_titled_body(name: str, constructor: str, body: Any) -> Any:
+    if not isinstance(body, list) or not body or body[0] != constructor:
+        return body
+    if ":title" in body[1:]:
+        return body
+    return [constructor, ":title", StringAtom(name), *body[1:]]
+
+
+def _dynamic_template_proc(name: str, constructor: str, body: Any) -> SpecialFormProcedure:
+    titled_body = _default_titled_body(name, constructor, body)
+
+    def _call(args: list[Any], call_env: Environment) -> Any:
+        assert not args, f"`{name}` expects no arguments."
+        return evaluate(titled_body, call_env)
+
+    return SpecialFormProcedure(_call)
+
+
 def _runtime_env(*, definitions: dict[str, Any], store: dict[str, int | bool | str], store_specs: dict[str, StoreFieldSpec]) -> Environment:
     builtins = _host_values(store_specs=store_specs, store=store)
     return Environment(
         parent=base_environment(),
-        values=builtins,
-        lazy_values=definitions,
+        values={**builtins, **definitions},
         resolver=lambda name: _state_resolver(name, store=store, store_specs=store_specs),
     )
 
 
 def _schema_env(*, definitions: dict[str, Any]) -> Environment:
-    return Environment(parent=base_environment(), values=_host_values(store_specs={}, store={}), lazy_values=definitions)
+    return Environment(parent=base_environment(), values={**_host_values(store_specs={}, store={}), **_schema_definition_values(definitions)})
+
+
+def _schema_definition_values(definitions: dict[str, Any]) -> dict[str, Any]:
+    values: dict[str, Any] = {}
+    env = Environment(parent=base_environment(), values={**_host_values(store_specs={}, store={}), **values})
+    for name, expr in definitions.items():
+        if not _is_schema_definition_expr(expr):
+            continue
+        value = evaluate(expr, env)
+        env.values[name] = value
+        values[name] = value
+    return values
+
+
+def _is_schema_definition_expr(expr: Any) -> bool:
+    if isinstance(expr, (bool, int, StringAtom)):
+        return True
+    if not isinstance(expr, list) or not expr:
+        return False
+    return expr[0] in {"quote", "lambda"}
 
 
 def _state_resolver(name: str, *, store: dict[str, int | bool | str], store_specs: dict[str, StoreFieldSpec]) -> Any:
     if name in store_specs:
         spec = store_specs[name]
         return StateBindingValue(name=name, spec=spec, value=store.get(name, spec.initial))
+    if name in {"health", "stress", "money", "cigarettes"}:
+        return StateBindingValue(name=name, spec=StoreFieldSpec(id=name, kind="value", initial=0, persist="run"), value=0)
     return _MISSING
 
 

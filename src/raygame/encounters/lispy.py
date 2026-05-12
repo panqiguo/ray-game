@@ -32,14 +32,11 @@ class Environment:
         *,
         parent: Environment | None = None,
         values: dict[str, Any] | None = None,
-        lazy_values: dict[str, Any] | None = None,
         resolver: Callable[[str], Any] | None = None,
     ) -> None:
         self.parent = parent
         self.values = {} if values is None else dict(values)
-        self.lazy_values = {} if lazy_values is None else dict(lazy_values)
         self.resolver = resolver
-        self.cache: dict[str, Any] = {}
 
     def child(self, values: dict[str, Any] | None = None) -> "Environment":
         return Environment(parent=self, values=values)
@@ -49,12 +46,6 @@ class Environment:
             return name
         if name in self.values:
             return self.values[name]
-        if name in self.cache:
-            return self.cache[name]
-        if name in self.lazy_values:
-            value = evaluate(self.lazy_values[name], self)
-            self.cache[name] = value
-            return value
         if self.resolver is not None:
             value = self.resolver(name)
             if value is not _MISSING:
@@ -172,10 +163,20 @@ def evaluate(expr: Any, env: Environment) -> Any:
     if head == "let":
         assert len(expr) >= 3 and isinstance(expr[1], list), "`let` expects bindings and body."
         local_values: dict[str, Any] = {}
-        local_env = env.child(local_values)
         for binding in expr[1]:
             assert isinstance(binding, list) and len(binding) == 2, "Each let binding must have name and expr."
-            local_values[binding[0]] = evaluate(binding[1], local_env)
+            local_values[binding[0]] = evaluate(binding[1], env)
+        local_env = env.child(local_values)
+        result: Any = None
+        for body in expr[2:]:
+            result = evaluate(body, local_env)
+        return result
+    if head == "let*":
+        assert len(expr) >= 3 and isinstance(expr[1], list), "`let*` expects bindings and body."
+        local_env = env.child({})
+        for binding in expr[1]:
+            assert isinstance(binding, list) and len(binding) == 2, "Each let binding must have name and expr."
+            local_env.values[binding[0]] = evaluate(binding[1], local_env)
         result: Any = None
         for body in expr[2:]:
             result = evaluate(body, local_env)
@@ -216,8 +217,8 @@ def apply(proc: Any, args: list[Any]) -> Any:
 
 def truthy(value: Any) -> bool:
     if hasattr(value, "value") and hasattr(value, "name"):
-        return bool(getattr(value, "value"))
-    return bool(value)
+        return truthy(getattr(value, "value"))
+    return value is not False and value is not None
 
 
 def base_environment() -> Environment:
@@ -281,7 +282,7 @@ def _log_builtin(*items: Any) -> Any:
 def _sub(first: Any, *rest: Any) -> int:
     start = int(_scalar(first))
     if not rest:
-        return start
+        return -start
     return start - sum(int(_scalar(item)) for item in rest)
 
 

@@ -22,7 +22,7 @@
   (action
    :title "原地喘口气"
    :desc "靠在墙上深呼吸，试图把肺里的药味和眩晕感排出去。"
-   :before (list
+   :always (list
             (effect 'reset-hand)
             (effect 'clock+ alert_clock 1))))
 
@@ -65,7 +65,7 @@
 ;; ==========================================
 ;; Scene 1: 房间脱困
 ;; ==========================================
-(define scene1
+(define-scene scene1
   (scene
    :title "拘禁室"
    :desc "我的脑袋像塞满了浸水的棉花，双手被皮带死死捆在椅子上。门外偶尔传来胶底鞋走过的声音。我得尽快弄断这些束缚。"
@@ -81,7 +81,7 @@
                       :risk 'high
                       :ok (outcome "粗糙的皮带被你硬生生崩开了一个扣子" (list (effect 'clock+ 挣脱束缚钟 2)))
                       :partial (outcome "你的手腕磨破了皮，铁椅摩擦地板弄出了点声响" (list (effect 'clock+ 挣脱束缚钟 1) (effect 'clock+ alert_clock 1)))
-                      :fail (outcome "该死，皮带没断，床腿摩擦地板的声音反而引起了外面的注意" (list (effect 'health -1) (effect 'clock+ alert_clock 2)))))
+                      :fail (outcome "该死，皮带没断，床腿摩擦地板的声音反而引起了外面的注意" (list (effect 'add health -1) (effect 'clock+ alert_clock 2)))))
              ;; 方式二：靠感知寻找可用边角
              (action
               :title "寻找尖锐物割裂"
@@ -91,7 +91,7 @@
                       :risk 'mid
                       :ok (outcome "你利用椅子底部的锋利铁片，成功割裂了部分皮带" (list (effect 'clock+ 挣脱束缚钟 2)))
                       :partial (outcome "进展缓慢，你的手指被铁片划破了" (list (effect 'clock+ 挣脱束缚钟 1) (effect 'clock+ alert_clock 1)))
-                      :fail (outcome "你不仅没割开皮带，反而打翻了旁边的点滴架" (list (effect 'health -1) (effect 'clock+ alert_clock 1)))))
+                      :fail (outcome "你不仅没割开皮带，反而打翻了旁边的点滴架" (list (effect 'add health -1) (effect 'clock+ alert_clock 1)))))
              ;; 方式三：靠逻辑拆解搭扣
              (action
               :title "分析搭扣结构"
@@ -106,7 +106,7 @@
 ;; ==========================================
 ;; Scene 2: 二楼探索
 ;; ==========================================
-(define scene2
+(define-scene scene2
   (scene
    :title "疗养院走廊"
    :desc "你跌跌撞撞地溜出病房。走廊里的灯光昏暗得像劣质威士忌。前方有三条岔路，桑德堡医生的狗腿子随时会巡逻过来。"
@@ -122,7 +122,7 @@
                :show-clocks (list 左侧探索进度 alert_clock)
                :actions (list
                          (if path_a_revealed
-                             (action :title "左侧道路 (死路) " :desc "这条路已经被证实不通。" :before (list))
+                             (action :title "左侧道路 (死路) " :desc "这条路已经被证实不通。" :always (list))
                              (make_logic_path_action
                               "观察巡逻节奏"
                               "先听清巡逻脚步和停顿，再按节奏推进。"
@@ -155,7 +155,7 @@
                :show-clocks (list 右侧探索进度 alert_clock)
                :actions (list
                          (if path_b_revealed
-                             (action :title "右侧道路 (死路) " :desc "这边的门被挂锁锁死了。" :before (list))
+                             (action :title "右侧道路 (死路) " :desc "这边的门被挂锁锁死了。" :always (list))
                              (make_logic_path_action
                               "先判路线再推进"
                               "你停下脚步，先判断锁门位置与遮挡，再择机前压。"
@@ -188,7 +188,7 @@
                :show-clocks (list 前方探索进度 alert_clock)
                :actions (list
                          (if path_c_revealed
-                             (action :title "正前道路 (通路) " :desc "这条路能通向自由。" :before (list))
+                             (action :title "正前道路 (通路) " :desc "这条路能通向自由。" :always (list))
                              (make_logic_path_action
                               "推演视线盲区"
                               "你先判断拐角监视死角，再沿着盲区推进。"
@@ -216,7 +216,7 @@
 ;; ==========================================
 ;; Scene 3: 一楼大门
 ;; ==========================================
-(define scene3
+(define-scene scene3
   (scene
    :title "疗养院一楼大厅"
    :desc "你顺着楼梯摸到了一楼。大门就在不远处，外面的洛杉矶夜景正向你招手。但在门旁边，桑德堡医生的办公室亮着灯，那个老狐狸肯定坐在里面。"
@@ -230,14 +230,14 @@
                  (action
                   :title "进入桑德堡的办公室"
                   :desc "就这么夹着尾巴逃跑可不是菲利普·马洛的作风。你决定进去跟桑德堡好好‘谈谈’，顺便找回你的柯尔特左轮手枪。"
-                  :before (list
+                  :always (list
                            (effect 'start-dialogue 'first_scene_doctor_office)
                            (effect 'set boss_defeated true))))
              ;; 选择2：直接离开 (行动)
              (action
               :title "离开这个鬼地方"
               :desc "推开那扇沉重的大门，回到属于你的冷酷街头。"
-              :before (list (effect 'end-encounter 'success))))))
+              :always (list (effect 'end-encounter 'success))))))
 
 ;; ==========================================
 ;; 元数据与状态定义
@@ -304,7 +304,7 @@
  :on-success (list
               (effect 'start-quick-dialogue
                       "# 洛杉矶的夜风\n\n你推开沉重的大门，洛杉矶夜晚的冷空气像一盆冰水，把你脑子里残存的麻醉药味冲得一干二净。\n身后的桑德堡疗养院亮着几盏惨白的灯，像个专门吞噬死人的怪物。你没有回头。你只是把手插进皱巴巴的风衣口袋，摸到了那把失而复得的左轮手枪，顺着街边的黑影快步走向马路。\n你终于又回到了这座冷酷的城市。至于桑德堡和那些黑帮的烂摊子，你发誓等弄到一杯威士忌后，会跟他们一笔一笔地算清楚。")
-              (effect 'add 'money 40))
+              (effect 'add money 40))
  :on-fail (list
            (effect 'start-quick-dialogue
                    "# 重回深渊\n\n你离出口只差最后几步，几乎能闻到外面潮湿的沥青味。\n但走廊拐角处的阴影里突然伸出一把枪管，接着是某个壮汉粗暴的闷棍。你的后脑勺一阵剧痛，地板迎面砸向你的鼻子。\n你听见有人冷笑：“马洛先生，你的疗程还没结束呢。”\n接着，黑暗像一块巨大的湿毛巾，再次死死捂住了你的脸。")
@@ -312,6 +312,6 @@
  :state all-state
  :reacts all-reacts
  :root (cond
-        ((not escaped) scene1)
-        ((not path_c_revealed) scene2)
-        (else scene3)))
+        ((not escaped) (scene1))
+        ((not path_c_revealed) (scene2))
+        (else (scene3))))

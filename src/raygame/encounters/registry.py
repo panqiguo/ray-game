@@ -23,6 +23,7 @@ ENCOUNTER_FILES = (
     "潜入别墅.scm",
     "酒吧艳遇.scm",
     "逃离疗养院.scm",
+    "望月旅馆搜寻.scm",
 )
 
 

@@ -6,6 +6,7 @@ from typing import Any
 
 from raygame.content_lang.runtime_core import (
     flatten_scene as _flatten_scene,
+    eval_react_condition as _eval_react_condition,
     host_values as _host_values,
     keyword_args as _keyword_args,
     render_scene as _render_scene,
@@ -15,7 +16,7 @@ from raygame.content_lang.runtime_core import (
     validate_scene_template as _validate_scene_template,
 )
 from raygame.encounters.defs import ActionTemplate, ClockTemplate, EncounterMeta, EncounterSchemaError, EncounterSchemeError, ReactRule, ReactTemplate, SceneTemplate, StateBindingValue, StoreFieldSpec
-from raygame.encounters.lispy import Environment, _MISSING, base_environment, evaluate, expand_includes, truthy
+from raygame.encounters.lispy import Environment, Procedure, SpecialFormProcedure, StringAtom, _MISSING, base_environment, evaluate, expand_includes, truthy
 from raygame.model.defs import CompiledScenario, Effect, LocationNode, ProgressClockSpec
 from raygame.model.enums import ScreenName
 from raygame.model.state import GameState, ProgressClockState
@@ -67,34 +68,26 @@ def compile_world_program(
 ) -> CompiledWorldProgram:
     path = Path(source_path) if source_path is not None else None
     forms = expand_includes(source, source_path=path, include_stack=(() if path is None else (path,)))
-    definitions: dict[str, Any] = {}
+    raw_definitions: dict[str, Any] = {}
     content_form: Any | None = None
-    top_level_exprs: list[Any] = []
     for form in forms:
-        if isinstance(form, list) and form and form[0] == "define":
+        if isinstance(form, list) and form and form[0] in {"define", "define-node", "define-scene"}:
             assert len(form) == 3 and isinstance(form[1], str), "`define` expects name and expr."
-            definitions[form[1]] = form[2]
+            raw_definitions[form[1]] = form[2]
             continue
         if isinstance(form, list) and form and form[0] == "content":
             assert content_form is None, "World module can contain only one top-level `(content ...)` form."
             content_form = form
             continue
-        top_level_exprs.append(form)
     assert isinstance(content_form, list) and content_form and content_form[0] == "content", "World module must end with a `(content ...)` form."
     kwargs = _keyword_args(content_form[1:], allowed={":meta", ":state", ":reacts", ":root"})
-    clocks, state_values = _resolve_state_specs(kwargs.get(":state"), definitions)
-    env = _world_schema_env(definitions=definitions, clocks_by_id=clocks, initial_values=state_values, initial_inventory=dict(initial_inventory or {}))
-    for expr in top_level_exprs:
-        evaluate(expr, env)
-    metadata = _resolve_meta(kwargs.get(":meta"), env, definitions, path)
-    react_rules = _resolve_reacts(kwargs.get(":reacts"), env, definitions)
-    root_expr = _resolve_expr(kwargs.get(":root"), definitions)
+    clocks, state_values = _resolve_state_specs(kwargs.get(":state"), raw_definitions)
+    env = _world_schema_env(definitions={}, clocks_by_id=clocks, initial_values=state_values, initial_inventory=dict(initial_inventory or {}))
+    definitions = _eval_top_level_definitions(forms, env)
+    metadata = _resolve_meta(kwargs.get(":meta"), env, path)
+    react_rules = _resolve_reacts(kwargs.get(":reacts"), env)
+    root_expr = kwargs.get(":root")
     assert root_expr is not None, "Content is missing required field: :root"
-    runtime_definitions = {
-        name: expr
-        for name, expr in definitions.items()
-        if name not in clocks and not (isinstance(expr, list) and expr and expr[0] == "state")
-    }
     program = CompiledWorldProgram(
         id=metadata.key,
         title=metadata.title,
@@ -102,7 +95,7 @@ def compile_world_program(
         source_path=path,
         screen=ScreenName.CITY,
         clocks_by_id=clocks,
-        definitions=runtime_definitions,
+        definitions=definitions,
         react_rules=tuple(react_rules),
         view_expr=root_expr,
         initial_health=initial_health,
@@ -162,12 +155,8 @@ def render_world(program: CompiledWorldProgram, state: GameState) -> CompiledSce
 def validate_world_program(program: CompiledWorldProgram) -> None:
     dummy_state = _dummy_state(program)
     env = _world_env(program, dummy_state)
-    for name, expr in program.definitions.items():
-        _validate_world_schema_forms(expr, env, context=f"{program.id}: definition `{name}`")
-        if isinstance(expr, list) and expr and expr[0] == "state":
-            continue
+    for name, value in program.definitions.items():
         try:
-            value = env.lookup(name)
             if isinstance(value, SceneTemplate):
                 _validate_scene_template(value)
             elif isinstance(value, ActionTemplate):
@@ -180,7 +169,8 @@ def validate_world_program(program: CompiledWorldProgram) -> None:
             raise EncounterSchemaError(f"{program.id}: definition `{name}` has schema error: {exc}") from exc
     _validate_world_schema_forms(program.view_expr, env, context=f"{program.id}: root node")
     for rule in program.react_rules:
-        _validate_world_schema_forms(rule.condition_expr, env, context=f"{program.id}: react `{rule.source}` condition")
+        assert isinstance(rule.condition, Procedure) and not rule.condition.params, f"{program.id}: react `{rule.source}` condition must be a zero-argument procedure"
+        _validate_world_schema_forms(rule.condition.body, env, context=f"{program.id}: react `{rule.source}` condition")
         for effect in rule.effects:
             assert isinstance(effect, Effect), f"{program.id}: react `{rule.source}` contains non-effect value: {effect!r}"
     snapshot = render_world(program, dummy_state)
@@ -203,7 +193,7 @@ def _validate_world_schema_forms(expr: Any, env: Environment, *, context: str) -
 
 
 def react_rule_matches(program: CompiledWorldProgram, state: GameState, rule: ReactRule) -> bool:
-    return truthy(evaluate(rule.condition_expr, _world_env(program, state)))
+    return truthy(_eval_react_condition(rule.condition, _world_env(program, state)))
 
 
 def next_react_rule(program: CompiledWorldProgram, state: GameState, blocked_sources: set[str]) -> ReactRule | None:
@@ -215,13 +205,56 @@ def next_react_rule(program: CompiledWorldProgram, state: GameState, blocked_sou
     return None
 
 
-def _resolve_meta(expr: Any, env: Environment, definitions: dict[str, Any], path: Path | None) -> EncounterMeta:
+def _eval_top_level_definitions(forms: list[Any], env: Environment) -> dict[str, Any]:
+    definitions: dict[str, Any] = {}
+    for form in forms:
+        if not isinstance(form, list) or not form:
+            evaluate(form, env)
+            continue
+        head = form[0]
+        if head == "content":
+            continue
+        if head == "define":
+            assert len(form) == 3 and isinstance(form[1], str), "`define` expects name and expr."
+            value = evaluate(form[2], env)
+            env.values[form[1]] = value
+            definitions[form[1]] = value
+            continue
+        if head in {"define-node", "define-scene"}:
+            assert len(form) == 3 and isinstance(form[1], str), f"`{head}` expects name and expr."
+            value = _dynamic_template_proc(form[1], "node" if head == "define-node" else "scene", form[2])
+            env.values[form[1]] = value
+            definitions[form[1]] = value
+            continue
+        evaluate(form, env)
+    return definitions
+
+
+def _resolve_meta(expr: Any, env: Environment, path: Path | None) -> EncounterMeta:
     if expr is None:
         stem = path.stem if path is not None else "content"
         return EncounterMeta(key=stem, title=stem, description="")
-    value = evaluate(_resolve_expr(expr, definitions), env)
+    value = evaluate(expr, env)
     assert isinstance(value, EncounterMeta), f"meta form did not produce meta: {value!r}"
     return value
+
+
+def _default_titled_body(name: str, constructor: str, body: Any) -> Any:
+    if not isinstance(body, list) or not body or body[0] != constructor:
+        return body
+    if ":title" in body[1:]:
+        return body
+    return [constructor, ":title", StringAtom(name), *body[1:]]
+
+
+def _dynamic_template_proc(name: str, constructor: str, body: Any) -> SpecialFormProcedure:
+    titled_body = _default_titled_body(name, constructor, body)
+
+    def _call(args: list[Any], call_env: Environment) -> Any:
+        assert not args, f"`{name}` expects no arguments."
+        return evaluate(titled_body, call_env)
+
+    return SpecialFormProcedure(_call)
 
 
 def _resolve_state_specs(expr: Any, definitions: dict[str, Any]) -> tuple[dict[str, ProgressClockSpec], dict[str, int | bool | str]]:
@@ -229,7 +262,7 @@ def _resolve_state_specs(expr: Any, definitions: dict[str, Any]) -> tuple[dict[s
         return {}, {}
     expr = _resolve_expr(expr, definitions)
     assert isinstance(expr, list) and expr and expr[0] == "state", "World :state must be a `(state ...)` form."
-    env = Environment(parent=base_environment(), values=_host_values(store_specs={}, store={}), lazy_values=definitions)
+    env = Environment(parent=base_environment(), values={**_host_values(store_specs={}, store={}), **_schema_definition_values(definitions)})
     clocks_by_id: dict[str, ProgressClockSpec] = {}
     initial_values: dict[str, int | bool | str] = {}
     for binding in expr[1:]:
@@ -244,17 +277,43 @@ def _resolve_state_specs(expr: Any, definitions: dict[str, Any]) -> tuple[dict[s
     return clocks_by_id, initial_values
 
 
-def _resolve_reacts(expr: Any, env: Environment, definitions: dict[str, Any]) -> list[ReactRule]:
+def _resolve_expr(expr: Any, definitions: dict[str, Any]) -> Any:
+    if isinstance(expr, str) and expr in definitions:
+        return definitions[expr]
+    return expr
+
+
+def _schema_definition_values(definitions: dict[str, Any]) -> dict[str, Any]:
+    values: dict[str, Any] = {}
+    env = Environment(parent=base_environment(), values={**_host_values(store_specs={}, store={}), **values})
+    for name, expr in definitions.items():
+        if not _is_schema_definition_expr(expr):
+            continue
+        value = evaluate(expr, env)
+        env.values[name] = value
+        values[name] = value
+    return values
+
+
+def _is_schema_definition_expr(expr: Any) -> bool:
+    if isinstance(expr, (bool, int, StringAtom)):
+        return True
+    if not isinstance(expr, list) or not expr:
+        return False
+    return expr[0] in {"quote", "lambda"}
+
+
+def _resolve_reacts(expr: Any, env: Environment) -> list[ReactRule]:
     if expr is None:
         return []
-    value = evaluate(_resolve_expr(expr, definitions), env)
+    value = evaluate(expr, env)
     items = value if isinstance(value, list) else [value]
     rules: list[ReactRule] = []
     for index, item in enumerate(items):
         if item is None:
             continue
         _validate_react_template(item)
-        rules.append(ReactRule(condition_expr=item.condition_expr, effects=item.effects, source=f"react[{index}]"))
+        rules.append(ReactRule(condition=item.condition, effects=item.effects, source=f"react[{index}]"))
     return rules
 
 
@@ -267,8 +326,7 @@ def _world_schema_env(
 ) -> Environment:
     return Environment(
         parent=base_environment(),
-        values=_host_values(store_specs={}, store={}),
-        lazy_values=definitions,
+        values={**_host_values(store_specs={}, store={}), **definitions},
         resolver=lambda name: _world_schema_resolver(name, clocks_by_id=clocks_by_id, initial_values=initial_values, initial_inventory=initial_inventory),
     )
 
@@ -296,17 +354,10 @@ def _world_schema_resolver(
     return _MISSING
 
 
-def _resolve_expr(expr: Any, definitions: dict[str, Any]) -> Any:
-    if isinstance(expr, str) and expr in definitions:
-        return definitions[expr]
-    return expr
-
-
 def _world_env(program: CompiledWorldProgram, state: GameState) -> Environment:
     return Environment(
         parent=base_environment(),
-        values=_host_values(store_specs={}, store={}),
-        lazy_values=program.definitions,
+        values={**_host_values(store_specs={}, store={}), **program.definitions},
         resolver=lambda name: _world_resolver(name, program, state),
     )
 

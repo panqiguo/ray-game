@@ -3,14 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from raygame.model.state import ActiveDialogueState, GameState
+from raygame.model.state import ActiveDialogueState, DialogueLine, GameState
 
 from .defs import DialogueAsset
 
 
 @dataclass
 class QuickDialogueRuntime:
-    blocks: tuple[str, ...]
+    blocks: tuple[DialogueLine, ...]
     index: int = 0
 
 
@@ -20,7 +20,7 @@ def create_dialogue_session(asset: DialogueAsset, state: GameState) -> ActiveDia
         return ActiveDialogueState(
             dialogue_id=asset.id,
             title=asset.title,
-            history=[error],
+            history=[DialogueLine(error)],
             finished=True,
             error=error,
         )
@@ -59,7 +59,7 @@ def continue_dialogue_session(session: ActiveDialogueState) -> None:
     while story.canContinue:
         text = story.Continue().strip()
         if text:
-            session.history.append(text)
+            session.history.append(DialogueLine(text=text, speaker=_speaker_from_tags(story.currentTags)))
             break
         if story.currentChoices:
             break
@@ -91,7 +91,7 @@ def _refresh_state(session: ActiveDialogueState) -> None:
     session.finished = not session.can_continue and not session.choices
 
 
-def _parse_quick_dialogue(raw_text: str) -> tuple[str, tuple[str, ...]]:
+def _parse_quick_dialogue(raw_text: str) -> tuple[str, tuple[DialogueLine, ...]]:
     lines = [line.rstrip() for line in raw_text.strip().splitlines()]
     assert lines, "Quick dialogue cannot be empty."
     title = ""
@@ -110,7 +110,19 @@ def _parse_quick_dialogue(raw_text: str) -> tuple[str, tuple[str, ...]]:
     if current:
         blocks.append("\n".join(current).strip())
     assert blocks, "Quick dialogue must contain at least one text block."
-    return title, tuple(blocks)
+    return title, tuple(_parse_quick_block(block) for block in blocks)
+
+
+def _parse_quick_block(block: str) -> DialogueLine:
+    lines = block.splitlines()
+    speaker = ""
+    if lines and lines[0].startswith("# speaker:"):
+        speaker = lines[0].partition(":")[2].strip()
+        assert speaker, "Quick dialogue speaker tag cannot be empty."
+        lines = lines[1:]
+    text = "\n".join(line.strip() for line in lines).strip()
+    assert text, "Quick dialogue block cannot be empty."
+    return DialogueLine(text=text, speaker=speaker)
 
 
 def _continue_quick_dialogue(runtime: QuickDialogueRuntime, session: ActiveDialogueState) -> None:
@@ -118,6 +130,16 @@ def _continue_quick_dialogue(runtime: QuickDialogueRuntime, session: ActiveDialo
         session.history.append(runtime.blocks[runtime.index])
         runtime.index += 1
     _refresh_state(session)
+
+
+def _speaker_from_tags(tags: list[str]) -> str:
+    for tag in tags:
+        key, sep, value = tag.partition(":")
+        if sep and key.strip() == "speaker":
+            speaker = value.strip()
+            assert speaker, "Ink speaker tag cannot be empty."
+            return speaker
+    return ""
 
 
 def _bind_story(story: Any, state: GameState) -> None:

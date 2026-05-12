@@ -5,6 +5,7 @@ INCLUDE ./external.ink
 === start ===
 酒保拿着一块脏布擦杯子，眼睛却一直盯着你。
 
+# speaker: 酒保
 “你不是来喝酒的。你是来问事的。”
 
 + [先问街上的风声]
@@ -25,6 +26,7 @@ INCLUDE ./external.ink
 === rumor ===
 酒保哼了一声。
 
+# speaker: 酒保
 “最近每个人都在找一个想离开这里的人。你最好别问得太多。”
 
 + [继续]
@@ -33,6 +35,7 @@ INCLUDE ./external.ink
 === paid ===
 酒保把钱压到杯垫下面，终于肯把声音放轻一点。
 
+# speaker: 酒保
 “如果你真想找活，去看看告示板。最近那边贴出来的私活比平时多。”
 
 ~ give_item("clothes", 1)

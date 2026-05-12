@@ -48,7 +48,7 @@ class StoreFieldSpec:
 
 @dataclass(frozen=True)
 class ReactRule:
-    condition_expr: Any
+    condition: Any
     effects: tuple[Effect, ...]
     source: str
 
@@ -178,7 +178,7 @@ class SceneTemplate:
 
 @dataclass(frozen=True)
 class ReactTemplate:
-    condition_expr: Any
+    condition: Any
     effects: tuple[Effect, ...]
 
 

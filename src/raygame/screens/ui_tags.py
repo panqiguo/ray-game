@@ -144,8 +144,19 @@ def requirement_labels(requirements: tuple[InputRequirement, ...]) -> tuple[str,
 
 def action_corner_labels(action: ActionDef) -> tuple[str, ...]:
     labels = list(condition_labels(action.conditions))
+    if action_starts_encounter(action):
+        labels.append("外出")
     labels.extend(requirement_labels(action.inputs))
     return tuple(labels)
+
+
+def action_starts_encounter(action: ActionDef) -> bool:
+    effects = list(action.effects)
+    if action.check is not None:
+        effects.extend(action.check.success.effects)
+        effects.extend(action.check.cost.effects)
+        effects.extend(action.check.fail.effects)
+    return any(effect.kind == "start_encounter" for effect in effects)
 
 
 def location_corner_labels(location) -> tuple[str, ...]:

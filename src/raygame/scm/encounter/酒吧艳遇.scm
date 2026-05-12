@@ -5,7 +5,7 @@
     :title "直白搭话"
     :desc "你没有铺垫，直接把话扔到他面前。"
     :check (check
-    :suits (list 感知 逻辑)
+    :suits (list 感知)
     :risk low
     :ok (outcome "他抬眼看了你一眼，开始愿意接话。" (list (effect 'clock+ rapport 2)))
     :partial (outcome "他回了你一句，话匣子松了一点。" (list (effect 'clock+ rapport 1)))
@@ -17,7 +17,7 @@
   (action
     :title "喘息一下"
     :desc "你拉开半口气，重新整理手里的节奏，但也会挨上一下。"
-    :before (list (effect 'reset-hand) (effect 'health -1))
+    :always (list (effect 'reset-hand) (effect 'add health -1))
   ))
 
 (define cold_ask_help
@@ -25,7 +25,7 @@
     :title "寻求帮助"
     :desc "你借一个无害的小问题，把自己的目的藏进请教里。"
     :check (check
-    :suits (list 逻辑 感知)
+    :suits (list 逻辑)
     :risk low
     :ok (outcome "他很自然地开始解释，戒心松了一层。" (list (effect 'clock+ rapport 2)))
     :partial (outcome "他给了个简短答案，但没有彻底关门。" (list (effect 'clock+ rapport 1)))
@@ -51,7 +51,7 @@
     :title "留个钩子"
     :desc "你故意停在半句上，让他忍不住追问。"
     :check (check
-    :suits (list 逻辑 感知)
+    :suits (list 逻辑)
     :risk mid
     :ok (outcome "他果然追了上来，主动权开始往你手里滑。" (list (effect 'clock+ rapport 2)))
     :partial (outcome "他没追问，但眼神明显被你钩住了。" (list (effect 'clock+ rapport 1)))
@@ -64,7 +64,7 @@
     :title "引起兴趣"
     :desc "你抛出一个他没想到的观点，让这段聊天开始有重量。"
     :check (check
-    :suits (list 逻辑 感知)
+    :suits (list 逻辑)
     :risk mid
     :ok (outcome "他往前倾了一点，开始认真听你说话。" (list (effect 'clock+ rapport 2)))
     :partial (outcome "他表示认同，话题顺势延续。" (list (effect 'clock+ rapport 1)))
@@ -90,7 +90,7 @@
     :title "展示判断力"
     :desc "你说出他没说出口的那半句，让他知道你听懂了。"
     :check (check
-    :suits (list 逻辑 感知)
+    :suits (list 逻辑)
     :risk mid
     :ok (outcome "他愣了一下，防备明显松了。" (list (effect 'clock+ rapport 2)))
     :partial (outcome "他嘴上没承认，但表情已经出卖了他。" (list (effect 'clock+ rapport 1)))
@@ -129,7 +129,7 @@
     :title "许诺"
     :desc "你给他一个理由，相信继续说是值得的。"
     :check (check
-    :suits (list 逻辑 感知)
+    :suits (list 逻辑)
     :risk mid
     :ok (outcome "他决定相信你，话明显多了起来。" (list (effect 'clock+ rapport 2)))
     :partial (outcome "他半信半疑，但已经开始松口。" (list (effect 'clock+ rapport 1)))
@@ -155,7 +155,7 @@
     :title "顺势套话"
     :desc "你抓住他刚刚那句无心的话，从口子里继续往里切。"
     :check (check
-    :suits (list 逻辑 感知)
+    :suits (list 逻辑)
     :risk mid
     :ok (outcome "情报浮了出来，他已经挡不住这条线了。" (list (effect 'clock+ rapport 2)))
     :partial (outcome "他只吐出了一半，还差一步。" (list (effect 'clock+ rapport 1)))
@@ -168,7 +168,7 @@
     :title "回应试探"
     :desc "他在测试你，你的回答决定他会不会把最后那层门打开。"
     :check (check
-    :suits (list 逻辑 感知)
+    :suits (list 逻辑)
     :risk high
     :ok (outcome "你通过了他的测试，他最后的防线松开了。" (list (effect 'clock+ rapport 2)))
     :partial (outcome "你稳稳接住了试探，局面没有散。" (list (effect 'clock+ rapport 1)))
@@ -180,7 +180,7 @@
   (action
     :title "找借口离开"
     :desc "你编一个合理的理由，把今晚收得体面一点。"
-    :before (list (effect 'set ending 'clean) (effect 'end-encounter 'success))
+    :always (list (effect 'set ending 'clean) (effect 'end-encounter 'success))
   ))
 
 (define walk_away
@@ -209,7 +209,7 @@
   )
   ))
 
-(define stage_cold
+(define-scene stage_cold
   (scene
     :title "冷淡"
     :desc "目标把自己裹在沉默里。你得先让他愿意继续说话。"
@@ -217,7 +217,7 @@
     :actions (list breathe (when (and (< (clock-value rapport) 3) (= cold_direct_talk_used false)) cold_direct_talk) (when (and (< (clock-value rapport) 3) (= cold_ask_help_used false)) cold_ask_help) (when (and (< (clock-value rapport) 3) (= cold_use_room_used false)) cold_use_room) (when (and (< (clock-value rapport) 3) (= cold_leave_hook_used false)) cold_leave_hook))
   ))
 
-(define stage_warm
+(define-scene stage_warm
   (scene
     :title "熟络"
     :desc "话题已经打开了。你要让他意识到，这次偶遇有点不一样。"
@@ -225,7 +225,7 @@
     :actions (list breathe (when (and (>= (clock-value rapport) 3) (< (clock-value rapport) 6) (= warm_interest_used false)) warm_interest) (when (and (>= (clock-value rapport) 3) (< (clock-value rapport) 6) (= warm_flirt_used false)) warm_flirt) (when (and (>= (clock-value rapport) 3) (< (clock-value rapport) 6) (= warm_read_him_used false)) warm_read_him) (when (and (>= (clock-value rapport) 3) (< (clock-value rapport) 6) (= warm_keep_distance_used false)) warm_keep_distance))
   ))
 
-(define stage_soft
+(define-scene stage_soft
   (scene
     :title "松动"
     :desc "他的防备已经松了。现在只差最后一层，情报就在那后面。"
@@ -233,7 +233,7 @@
     :actions (list breathe (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_follow_lead_used false)) soft_follow_lead) (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_make_promise_used false)) soft_make_promise) (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_tempt_used false)) soft_tempt) (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_pull_thread_used false)) soft_pull_thread) (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_answer_probe_used false)) soft_answer_probe))
   ))
 
-(define stage_exit
+(define-scene stage_exit
   (scene
     :title "离场"
     :desc "情报已经到手。你只剩下决定今晚怎么收尾。"
@@ -269,7 +269,7 @@
     (react :when (>= (clock-value rapport) 9) :then (list (effect 'set attitude 'loose))))
   :root
   (cond 
-    ((< (clock-value rapport) 3) stage_cold)
-    ((< (clock-value rapport) 6) stage_warm)
-    ((< (clock-value rapport) 9) stage_soft)
-    (else stage_exit)))
+    ((< (clock-value rapport) 3) (stage_cold))
+    ((< (clock-value rapport) 6) (stage_warm))
+    ((< (clock-value rapport) 9) (stage_soft))
+    (else (stage_exit))))

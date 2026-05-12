@@ -10,7 +10,7 @@
 ## 一、核心原则
 
 1. 先用 Scheme 组织内容，再考虑底层扩展。
-2. 复用优先用 `define`、`lambda`、list/alist helper，不要先想着加新语法。
+2. 复用优先用 `define`、`lambda`、list/alist helper；动态节点/场景可用 `define-node` / `define-scene`。
 3. 可见性优先用 `if / when / cond` 表达，不要把“显示/隐藏”塞进专门字段。
 4. `conditions` 只表示“可见但不可执行”。
 5. 顶层统一用 `(content ...)` 组装；只有 `meta :key` 是稳定标识。
@@ -27,19 +27,22 @@
 (define scene-meta ...)
 (define local-state ...)
 (define local-reacts ...)
-(define root-node ...)
+(define-node root-node
+  (node ...))
 
 (content
   :meta scene-meta
   :state local-state
   :reacts local-reacts
-  :root root-node)
+  :root (root-node))
 ```
 
 关键点：
 
 - 顶层允许 `include`
-- 顶层允许多个 `define`
+- 顶层允许多个 `define`，顶层 `define` 会在模块加载时立即求值
+- `define-node` / `define-scene` 是零参数过程糖；引用时要写成调用：`(root-node)`
+- `define-node` / `define-scene` 的直接 `(node ...)` / `(scene ...)` 没写 `:title` 时，会自动使用定义名作为标题
 - 最终必须有一个 `(content ...)`
 - 不再写旧式顶层 `meta/state/reacts` 裸声明
 
@@ -285,7 +288,7 @@ encounter `:state` 里定义的字段，只属于当前任务：
   :desc "花点钱让自己缓下来。"
   :conditions (list ...)
   :inputs (list ...)
-  :before (list effect...)
+  :always (list effect...)
   :effects (list effect...)
   :check (check ...))
 ```
@@ -297,7 +300,7 @@ encounter `:state` 里定义的字段，只属于当前任务：
 | `:position` | ❌ | 位置 |
 | `:conditions` | ❌ | 可执行条件 |
 | `:inputs` | ❌ | 输入消耗 |
-| `:before` | ❌ | 执行前立即触发 |
+| `:always` | ❌ | 执行时先触发 |
 | `:effects` | ❌ | 无检定行动的结果 |
 | `:check` | ❌ | 检定结果 |
 
@@ -305,7 +308,7 @@ encounter `:state` 里定义的字段，只属于当前任务：
 
 - `:check` 与 `:effects` 互斥
 - 有 `:check` 时，结果写在 `:ok / :partial / :fail`
-- `:before` 可与两者任意一种共存
+- `:always` 可与两者任意一种共存
 
 ---
 
@@ -332,7 +335,7 @@ encounter `:state` 里定义的字段，只属于当前任务：
 
 - `:risk`：`'low` / `'mid` / `'high`
 - `:suits`：`'logic` / `'perception` / `'willpower`
-- 不写 `:suits` 或写空列表时，三种基础精神都可以放
+- 不写 `:suits` 或写空列表时，三种基础精力都可以放
 
 ---
 
@@ -416,8 +419,8 @@ encounter `:state` 里定义的字段，只属于当前任务：
 (effect 'clock- alert 1)
 (effect 'set hotel_pass true)
 (effect 'add money -20)
-(effect 'health 1)
-(effect 'stress -1)
+(effect 'add health 1)
+(effect 'add stress -1)
 (effect 'start-dialogue 'intro)
 (effect 'start-quick-dialogue "一段短对白")
 (effect 'start-encounter 'villa_infiltration)
@@ -432,6 +435,8 @@ encounter `:state` 里定义的字段，只属于当前任务：
 说明：
 
 - 统一使用最准确的 effect 名称
+- 修改字段统一用 `(effect 'set field value)` / `(effect 'add field amount)`
+- 不再使用 `(effect 'health amount)` / `(effect 'stress amount)` 短名
 - 不再使用 `resource`
 - 不再使用 `start-content`
 
@@ -446,6 +451,7 @@ encounter `:state` 里定义的字段，只属于当前任务：
 - `cond`
 - `and` / `or` / `not`
 - `let`
+- `let*`
 - `lambda`
 - `begin`
 - `quote` / `'`
@@ -488,6 +494,9 @@ encounter `:state` 里定义的字段，只属于当前任务：
 
 - `log`
 - `(log ...)` 会打印到 Python 终端，返回最后一个参数；适合临时排查脚本状态
+- `let` 是标准并行绑定；`let*` 是顺序绑定
+- 只有 `false` 和 `nil` 为假；`0` 和空列表都是真
+- `(- x)` 是一元取负
 
 ---
 
@@ -501,7 +510,7 @@ encounter `:state` 里定义的字段，只属于当前任务：
     (action
       :title title
       :inputs (list (item 'money cost "美钞"))
-      :effects (list (effect 'stress (- 0 stress-down))))))
+      :effects (list (effect 'add stress (- 0 stress-down))))))
 ```
 
 ### 2. 用 `when` 在列表里做条件插入

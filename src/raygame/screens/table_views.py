@@ -13,7 +13,7 @@ from raygame.rules import (
     open_modal,
     open_overlay,
     perform_current_action,
-    toggle_action_check_slot,
+    toggle_action_energy_slot,
     toggle_action_requirement_slot,
 )
 
@@ -184,7 +184,15 @@ def draw_action_attachment(
     if presented.attachment.row:
         draw_result_strip(font, Rectangle(rect.x + 10.0 * scale, rect.y + 28.0 * scale, rect.width - 20.0 * scale, 20.0 * scale), presented.attachment.row, scale=scale)
     elif presented.attachment.hint:
-        draw_text(font, presented.attachment.hint, int(rect.x + 10.0 * scale), int(rect.y + 28.0 * scale), body_style.size, body_style.color)
+        hint_rect = Rectangle(rect.x + 8.0 * scale, rect.y + 26.0 * scale, rect.width - 16.0 * scale, rect.height - 30.0 * scale)
+        hint_width = max(20.0, hint_rect.width - 12.0 * scale)
+        hint_x = int(hint_rect.x + 6.0 * scale)
+        hint_y = int(hint_rect.y + 4.0 * scale)
+        begin_scissor_mode(int(hint_rect.x), int(hint_rect.y), int(hint_rect.width), int(hint_rect.height))
+        for line in wrap_text_lines_any(font, presented.attachment.hint, hint_width, body_style.size)[:3]:
+            draw_text(font, line, hint_x, hint_y, body_style.size, body_style.color)
+            hint_y += body_style.line_height - 1
+        end_scissor_mode()
     if pill(font, Rectangle(button_rect.x, button_rect.y, 78.0 * scale, 22.0 * scale), "收回", False, scale=scale):
         clear_assembly(state)
     if pill(font, Rectangle(button_rect.x + button_rect.width - 78.0 * scale, button_rect.y, 78.0 * scale, 22.0 * scale), "执行", False, disabled=not presented.attachment.can_execute, scale=scale):
@@ -227,8 +235,8 @@ def draw_pending_attachment(font: Font | None, state: GameState, rect: Rectangle
 
 
 def toggle_presented_slot(state: GameState, action: ActionDef, slot: ActionSlotModel) -> None:
-    if slot.slot_kind == "check":
-        toggle_action_check_slot(state, action)
+    if slot.slot_kind == "energy":
+        toggle_action_energy_slot(state, action)
         return
     if slot.slot_kind == "requirement":
         assert slot.requirement is not None
@@ -249,11 +257,11 @@ def draw_inline_resolution_strip(font: Font | None, rect: Rectangle, pending: Pe
     x = rect.x
     for index, result in enumerate(row):
         if result.value == "fail":
-            fill, label = Color(124, 66, 66, 255), "失"
+            fill, label = Color(124, 66, 66, 255), "坏"
         elif result.value == "cost":
-            fill, label = Color(144, 126, 70, 255), "代"
+            fill, label = Color(144, 126, 70, 255), "中"
         else:
-            fill, label = Color(74, 134, 92, 255), "成"
+            fill, label = Color(74, 134, 92, 255), "好"
         cell = Rectangle(x, rect.y, cell_w - 4, rect.height)
         draw_frame(cell, fill, Color(22, 22, 22, 180))
         if index == active_index:

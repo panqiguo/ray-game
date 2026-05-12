@@ -4,6 +4,7 @@ import math
 
 from pyray import *  # type: ignore
 
+from raygame.constants import MAX_LOG_LINES
 from raygame.content import CARD_DEFS, GROWTH_DEFS
 from raygame.labels import ITEM_LABELS
 from raygame.model.defs import ActionDef, InputRequirement
@@ -15,12 +16,10 @@ from raygame.rules import (
     card_hint_flash_active,
     card_matches_action_check,
     claim_growth,
-    choose_dialogue_option,
     close_modal,
     count_spirit_cards,
-    continue_dialogue,
     encounter_action_points,
-    finish_dialogue,
+    open_modal,
     requirement_is_slotted,
     clear_selected_input,
     select_card_input,
@@ -32,7 +31,9 @@ from raygame.rules import (
     slot_trauma_count,
 )
 
-from .ui_core import begin_layer, centered_rect, clickable, draw_frame, draw_scrim, end_layer, layout, measure_text_width, mouse_point, text_button, wrap_text_lines, wrap_text_lines_any
+from .dialogue_view import draw_dialogue_overlay
+from .task_panel import draw_task_panel
+from .ui_core import begin_layer, click_pressed, clickable, draw_frame, draw_scrim, end_layer, layout, measure_text_width, mouse_point, text_button, wrap_text_lines, wrap_text_lines_any
 from .ui_text import ui_text_color, ui_text_size, ui_text_style
 
 INVENTORY_PANEL_WIDTH = 324
@@ -75,32 +76,46 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
     draw_frame(hand, Color(18, 20, 26, 250))
     hand_title_style = ui_text_style("subtitle")
     subtitle_style = ui_text_style("body", "muted")
-    draw_text(font, "精神槽位", int(hand.x) + 18, int(hand.y) + 14, hand_title_style.size, hand_title_style.color)
+    draw_text(font, "精力", int(hand.x) + 18, int(hand.y) + 14, hand_title_style.size, hand_title_style.color)
     encounter_points = encounter_action_points(state)
+    energy_exhausted = False
     if encounter_points is not None:
         current, cap = encounter_points
-        subtitle = f"精力 {current}/{cap}。每次行动消耗 1 点。"
+        energy_exhausted = current <= 0
+        energy_style = ui_text_style("subtitle", "danger" if energy_exhausted else "accent", scale=0.8, minimum_size=18)
+        energy_label = f"精力 {current}/{cap}"
+        energy_x = int(hand.x) + 166
+        draw_text(font, energy_label, energy_x, int(hand.y) + 14, energy_style.size, energy_style.color)
+        detail = "行动需要放入对应精力；执行后消耗 1 点精力。"
+        detail_style = ui_text_style("body", "danger" if energy_exhausted else "muted")
+        detail_x = energy_x + int(measure_text_width(font, energy_label, energy_style.size)) + 10
+        draw_text(font, detail, detail_x, int(hand.y) + 17, detail_style.size, detail_style.color)
     else:
         subtitle = "灰掉表示已使用或创伤导致当前不可用。"
-    draw_text(font, subtitle, int(hand.x) + 166, int(hand.y) + 17, subtitle_style.size, subtitle_style.color)
+        draw_text(font, subtitle, int(hand.x) + 166, int(hand.y) + 17, subtitle_style.size, subtitle_style.color)
     x = int(hand.x) + 18
     y = int(hand.y) + 48
+    clicked_exhausted_card = False
+    pointer = mouse_point()
     for index, slot_id in enumerate(list_spirit_slots(state.deck)):
         rect = Rectangle(x, y, 150, 106)
-        disabled = slot_is_exhausted(state, slot_id) or not slot_is_available(state, slot_id)
+        disabled = energy_exhausted or slot_is_exhausted(state, slot_id) or not slot_is_available(state, slot_id)
         if disabled and state.selected_input.kind == "card" and state.selected_input.index == index:
             clear_selected_input(state)
         selected = (state.selected_input.kind == "card" and state.selected_input.index == index) and not disabled
         slotted = (state.assembly.slotted_card_index == index) and not disabled
         hinted = (not disabled) and card_hint_flash_active(state, action) and card_matches_action_check(action, slot_id)
+        if energy_exhausted and click_pressed() and check_collision_point_rec(pointer, rect):
+            clicked_exhausted_card = True
         if draw_compact_card(
             font,
             rect,
             slot_id,
             selected or slotted,
-            interactive=slot_is_available(state, slot_id) and not disabled,
+            interactive=(not energy_exhausted) and slot_is_available(state, slot_id) and not disabled,
             hinted=hinted,
             disabled=disabled,
+            no_energy=energy_exhausted,
             state=state,
             action=action,
         ):
@@ -108,6 +123,9 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
         x += 162
         if x > hand.x + hand.width - 260:
             break
+    if clicked_exhausted_card:
+        state.action_log.append("精力已耗尽：先执行“喘息一下”恢复精力。")
+        del state.action_log[:-MAX_LOG_LINES]
     inventory_rect = _inventory_panel_rect()
     draw_inventory_panel(font, inventory_rect, state, action)
 def draw_compact_card(
@@ -119,6 +137,7 @@ def draw_compact_card(
     *,
     hinted: bool = False,
     disabled: bool | None = None,
+    no_energy: bool = False,
     state: GameState | None = None,
     action: ActionDef | None = None,
 ) -> bool:
@@ -141,7 +160,7 @@ def draw_compact_card(
     if disabled:
         draw_scrim(rect)
     _draw_hand_card_head(font, rect, card, card_id=card_id, state=state, disabled=disabled)
-    _draw_hand_card_suit(font, rect, card, card_id=card_id, state=state, action=action, disabled=disabled)
+    _draw_hand_card_suit(font, rect, card, card_id=card_id, state=state, action=action, disabled=disabled, no_energy=no_energy)
     return clicked
 
 
@@ -162,7 +181,17 @@ def _draw_hand_card_head(font: Font | None, rect: Rectangle, card, *, card_id: s
         draw_text(font, f"创伤 {trauma}", x, y + 34, trauma_style.size, trauma_style.color)
 
 
-def _draw_hand_card_suit(font: Font | None, rect: Rectangle, card, *, card_id: str, state: GameState | None, action: ActionDef | None, disabled: bool) -> None:
+def _draw_hand_card_suit(
+    font: Font | None,
+    rect: Rectangle,
+    card,
+    *,
+    card_id: str,
+    state: GameState | None,
+    action: ActionDef | None,
+    disabled: bool,
+    no_energy: bool,
+) -> None:
     if card.suit is None:
         return
     suit_label = SUIT_LABELS[card.suit]
@@ -176,6 +205,8 @@ def _draw_hand_card_suit(font: Font | None, rect: Rectangle, card, *, card_id: s
         suffix = (
             "已使用"
             if slot_is_exhausted(state, card_id)
+            else "精力不足"
+            if no_energy
             else "不可用"
             if disabled
             else "不匹配"
@@ -324,11 +355,11 @@ def draw_result_strip(font: Font | None, rect: Rectangle, row: tuple[ResultType,
     x = rect.x
     for result in row:
         if result == ResultType.FAIL:
-            fill, label = Color(124, 66, 66, 255), "失"
+            fill, label = Color(124, 66, 66, 255), "坏"
         elif result == ResultType.COST:
-            fill, label = Color(144, 126, 70, 255), "代"
+            fill, label = Color(144, 126, 70, 255), "中"
         else:
-            fill, label = Color(74, 134, 92, 255), "成"
+            fill, label = Color(74, 134, 92, 255), "好"
         cell = Rectangle(x, rect.y, cell_w - 4, rect.height)
         draw_frame(cell, fill, Color(22, 22, 22, 180))
         label_style = ui_text_style("body", scale=scale, minimum_size=10)
@@ -338,6 +369,16 @@ def draw_result_strip(font: Font | None, rect: Rectangle, row: tuple[ResultType,
 
 def draw_message_feed(font: Font | None, rect: Rectangle, state: GameState) -> None:
     draw_frame(rect, Color(16, 18, 24, 232), Color(78, 84, 96, 210))
+    task_height = min(max(132.0, rect.height * 0.34), max(96.0, rect.height - 156.0))
+    task_rect = Rectangle(rect.x, rect.y, rect.width, task_height)
+    draw_task_panel(font, task_rect, state)
+    separator_y = rect.y + task_height
+    draw_rectangle_rec(Rectangle(rect.x + 12, separator_y, rect.width - 24, 1), Color(70, 74, 84, 180))
+    log_rect = Rectangle(rect.x, separator_y + 1, rect.width, rect.height - task_height - 1)
+    _draw_message_log(font, log_rect, state)
+
+
+def _draw_message_log(font: Font | None, rect: Rectangle, state: GameState) -> None:
     feed_title_style = ui_text_style("subtitle", scale=(20 / 24))
     section_style = ui_text_style("body_sm", "accent")
     body_style = ui_text_style("body_sm", "muted")
@@ -451,7 +492,7 @@ def draw_profile_modal(font: Font | None, state: GameState, growth_defs=GROWTH_D
         draw_text(font, f"· {label} 值 {value} / 槽位 {slots}", int(right.x) + 12, owned_y, meta_style.size, meta_style.color)
         owned_y += 24
     owned_y += 16
-    draw_text(font, "每点生命损失会按固定顺序给精神槽位叠加创伤。每层创伤让该槽位的值 -2。", int(right.x) + 12, owned_y, faint_style.size, faint_style.color)
+    draw_text(font, "每点生命损失会按固定顺序给精力叠加创伤。每层创伤让该项精力的值 -1。", int(right.x) + 12, owned_y, faint_style.size, faint_style.color)
     end_layer("profile")
 
 
@@ -460,70 +501,7 @@ def draw_card_pile_modal(font: Font | None, state: GameState) -> None:
 
 
 def draw_dialogue_modal(font: Font | None, state: GameState) -> None:
-    if state.modal.kind != "dialogue" or state.active_dialogue is None:
-        return
-    begin_layer("dialogue_modal", interactive=True)
-    rect = centered_rect(920, 560, -6)
-    draw_scrim(layout().stage)
-    draw_frame(rect, Color(16, 18, 24, 250), Color(118, 118, 118, 220))
-    title_style = ui_text_style("title")
-    body_style = ui_text_style("body", "muted")
-    draw_text(font, state.active_dialogue.title, int(rect.x) + 24, int(rect.y) + 18, title_style.size, title_style.color)
-    if text_button(font, Rectangle(rect.x + rect.width - 98, rect.y + 18, 70, 28), "关闭", ui_text_size("body")):
-        finish_dialogue(state)
-        end_layer("dialogue_modal")
-        return
-    history_rect = Rectangle(rect.x + 24, rect.y + 64, rect.width - 48, rect.height - 180)
-    line_height = body_style.line_height
-    block_gap = 12
-    rendered_lines: list[tuple[str, bool]] = []
-    for block in state.active_dialogue.history:
-        for line in wrap_text_lines_any(font, block, history_rect.width, body_style.size):
-            rendered_lines.append((line, False))
-        rendered_lines.append(("", True))
-    if rendered_lines and rendered_lines[-1][1]:
-        rendered_lines.pop()
-    max_visible_lines = max(1, int((history_rect.height + block_gap) // line_height))
-    max_scroll = max(0, len(rendered_lines) - max_visible_lines)
-    if check_collision_point_rec(mouse_point(), history_rect):
-        wheel = int(get_mouse_wheel_move())
-        if wheel != 0:
-            state.active_dialogue.history_scroll = max(
-                0,
-                min(max_scroll, state.active_dialogue.history_scroll - wheel * 3),
-            )
-    scroll = max(0, min(max_scroll, state.active_dialogue.history_scroll))
-    state.active_dialogue.history_scroll = scroll
-    start = max(0, len(rendered_lines) - max_visible_lines - scroll)
-    visible_lines = rendered_lines[start : start + max_visible_lines]
-    y = int(history_rect.y)
-    for line, spacer in visible_lines:
-        if spacer:
-            y += block_gap
-            continue
-        draw_text(font, line, int(history_rect.x), y, body_style.size, body_style.color)
-        y += line_height
-    button_y = rect.y + rect.height - 76
-    if state.active_dialogue.choices:
-        x = rect.x + 24
-        for index, choice in enumerate(state.active_dialogue.choices):
-            button = Rectangle(x, button_y, rect.width - 48, 36)
-            if text_button(font, button, choice, ui_text_size("body")):
-                choose_dialogue_option(state, index)
-                end_layer("dialogue_modal")
-                return
-            button_y += 44
-    elif state.active_dialogue.finished:
-        if text_button(font, Rectangle(rect.x + rect.width - 118, rect.y + rect.height - 48, 94, 30), "结束", ui_text_size("body")):
-            finish_dialogue(state)
-            end_layer("dialogue_modal")
-            return
-    else:
-        if text_button(font, Rectangle(rect.x + rect.width - 118, rect.y + rect.height - 48, 94, 30), "继续", ui_text_size("body")):
-            continue_dialogue(state)
-            end_layer("dialogue_modal")
-            return
-    end_layer("dialogue_modal")
+    draw_dialogue_overlay(font, state)
 
 
 def _hud_block(font: Font | None, rect: Rectangle, label: str, value: str, color: Color) -> None:

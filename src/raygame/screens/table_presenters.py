@@ -7,10 +7,12 @@ from raygame.model.enums import ResultType, RISK_LABELS, SUIT_LABELS
 from raygame.model.state import GameState, PendingResolutionState
 from raygame.rules import (
     action_can_accept_selected_input,
+    action_requires_energy_slot,
     action_is_available,
     action_is_visible,
     action_ready_to_execute,
     action_slot_ready,
+    first_usable_energy_slot,
     location_is_available,
     location_is_visible,
     slot_effective_value,
@@ -139,15 +141,15 @@ def _present_action_slots(state: GameState, action: ActionDef, has_pending: bool
     available = action_is_available(action, state)
     executable = action.check is not None or bool(action.effects)
     slots: list[ActionSlotModel] = []
-    if action.check is not None:
+    if action_requires_energy_slot(action):
         slots.append(
             ActionSlotModel(
                 key="check",
-                label="精神槽位",
-                filled=action_slot_ready(state, action, check_slot=True),
-                receptive=available and (not locked) and action_can_accept_selected_input(state, action, check_slot=True),
+                label="精力",
+                filled=action_slot_ready(state, action, energy_slot=True),
+                receptive=available and (not locked) and first_usable_energy_slot(state, action) is not None,
                 disabled=not available,
-                slot_kind="check",
+                slot_kind="energy",
             )
         )
     for requirement in action.inputs:
@@ -162,7 +164,7 @@ def _present_action_slots(state: GameState, action: ActionDef, has_pending: bool
                 requirement=requirement,
             )
         )
-    if action.check is None and not action.inputs and executable:
+    if action.check is None and not action_requires_energy_slot(action) and not action.inputs and executable:
         slots.append(
             ActionSlotModel(
                 key="auto",
@@ -209,7 +211,7 @@ def _present_action_attachment(
     if action.check is not None:
         return ActionAttachmentModel(
             mode="hint",
-            title="先从下方选一个精神槽位，再把它放进卡槽。",
+            title="先放入一项可用精力。",
             can_execute=False,
         )
     return ActionAttachmentModel(

@@ -73,6 +73,7 @@ class CompiledEncounterProgram:
     view_expr: Any
     rewards: tuple[Effect, ...]
     fail_effects: tuple[Effect, ...]
+    cycle_effects: tuple[Effect, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -190,4 +191,5 @@ class ModuleState:
     react_rules: list[ReactRule] = field(default_factory=list)
     rewards: tuple[Effect, ...] = ()
     fail_effects: tuple[Effect, ...] = ()
+    cycle_effects: tuple[Effect, ...] = ()
     root_expr: Any | None = None

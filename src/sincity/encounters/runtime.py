@@ -59,6 +59,7 @@ ENCOUNTER_COMPLETION_EFFECTS = frozenset({
     "start_dialogue",
     "start_quick_dialogue",
 })
+ENCOUNTER_CYCLE_EFFECTS = ENCOUNTER_ACTION_EFFECTS
 
 
 def compile_encounter_program(source: str, *, source_path: str | Path | None = None) -> CompiledEncounterProgram:
@@ -76,7 +77,7 @@ def compile_encounter_program(source: str, *, source_path: str | Path | None = N
             content_form = form
             continue
     assert content_form is not None, "Encounter module must contain a `(content ...)` form."
-    kwargs = _keyword_args(content_form[1:], allowed={":meta", ":state", ":reacts", ":on-success", ":on-fail", ":root"})
+    kwargs = _keyword_args(content_form[1:], allowed={":meta", ":state", ":reacts", ":on-success", ":on-fail", ":on-cycle", ":root"})
     root_expr = kwargs.get(":root")
     assert root_expr is not None, "Encounter content is missing required field: :root"
     module = ModuleState(root_expr=root_expr)
@@ -91,6 +92,7 @@ def compile_encounter_program(source: str, *, source_path: str | Path | None = N
         _eval_reacts_expr(reacts_expr, runtime_env, module)
     module.rewards = _eval_effect_list(kwargs.get(":on-success"), runtime_env)
     module.fail_effects = _eval_effect_list(kwargs.get(":on-fail"), runtime_env)
+    module.cycle_effects = _eval_effect_list(kwargs.get(":on-cycle"), runtime_env)
     metadata = module.metadata or EncounterMeta(key=(path.stem if path is not None else "encounter"), title=(path.stem if path is not None else "Encounter"), description="")
     program = CompiledEncounterProgram(
         id=metadata.key,
@@ -104,6 +106,7 @@ def compile_encounter_program(source: str, *, source_path: str | Path | None = N
         view_expr=root_expr,
         rewards=module.rewards,
         fail_effects=module.fail_effects,
+        cycle_effects=module.cycle_effects,
     )
     validate_encounter_program(program)
     return program
@@ -188,6 +191,7 @@ def validate_encounter_program(program: CompiledEncounterProgram) -> None:
                 _assert_effects_allowed(outcome.effects, allowed=ENCOUNTER_ACTION_EFFECTS, context=f"{program.id}: action `{action.title}` {outcome_name}")
     for rule in program.react_rules:
         _assert_effects_allowed(rule.effects, allowed=ENCOUNTER_ACTION_EFFECTS, context=f"{program.id}: react `{rule.source}`")
+    _assert_effects_allowed(program.cycle_effects, allowed=ENCOUNTER_CYCLE_EFFECTS, context=f"{program.id}: on-cycle")
     for clock_id, spec in program.clocks_by_id.items():
         assert clock_id in program.store_specs, f"{program.id}: clock missing store spec: {clock_id}"
         assert spec.segments >= 1, f"{program.id}: invalid clock segments: {clock_id}"
@@ -220,6 +224,10 @@ def _load_state_expr(expr: Any, definitions: dict[str, Any], module: ModuleState
             spec = StoreFieldSpec(id=name, kind="clock", initial=value.initial, title=value.title, maximum=value.maximum, persist="encounter")
             module.store_specs[name] = spec
             module.clocks_by_id[name] = ProgressClockSpec(id=name, title=value.title, description=value.description, segments=value.maximum)
+        elif isinstance(value, StateBindingValue):
+            assert value.name == name, f"Imported state binding `{name}` must use the same source key."
+            assert value.spec.persist in {"world_value", "world_inventory"}, f"Unsupported imported state binding for {name}: {value.spec.persist}"
+            module.store_specs[name] = value.spec
         else:
             assert isinstance(value, (bool, int, str)), f"Unsupported state value for {name}: {value!r}"
             module.store_specs[name] = StoreFieldSpec(id=name, kind="value", initial=value)

@@ -120,7 +120,13 @@ def _sync_state_to_content(state: GameState) -> None:
     if state.active_encounter is None:
         return
     encounter = get_encounter(state.active_encounter.encounter_id)
-    for key, value in initial_store(encounter).items():
+    for key, spec in encounter.store_specs.items():
+        if spec.persist == "world_inventory":
+            value = state.world.inventory.get(key, spec.initial)
+        elif spec.persist == "world_value":
+            value = state.world.values.get(key, spec.initial)
+        else:
+            value = initial_store(encounter)[key]
         state.active_encounter.store.setdefault(key, value)
 
 

@@ -12,6 +12,7 @@ from sincity.model.enums import ResultType, SUIT_LABELS, ScreenName
 from sincity.model.state import GameState
 from sincity.rendering import draw_text
 from sincity.rules.deck import list_spirit_slots
+from sincity.rules.rng import RandomSource
 from sincity.rules import (
     card_hint_flash_active,
     card_matches_action_check,
@@ -21,6 +22,7 @@ from sincity.rules import (
     encounter_action_points,
     open_modal,
     requirement_is_slotted,
+    rest_during_encounter,
     clear_selected_input,
     select_card_input,
     select_item_input,
@@ -77,7 +79,7 @@ def draw_hud(font: Font | None, state: GameState) -> None:
     end_layer("hud")
 
 
-def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = None) -> None:
+def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = None, rng: RandomSource | None = None) -> None:
     hand = layout().hand
     draw_frame(hand, Color(18, 20, 26, 250))
     hand_title_style = ui_text_style("subtitle")
@@ -96,6 +98,10 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
         detail_style = ui_text_style("body", "danger" if energy_exhausted else "muted")
         detail_x = energy_x + int(measure_text_width(font, energy_label, energy_style.size)) + 10
         draw_text(font, detail, detail_x, int(hand.y) + 17, detail_style.size, detail_style.color)
+        rest_rect = Rectangle(hand.x + hand.width - INVENTORY_PANEL_RIGHT_OFFSET - 104, hand.y + 12, 84, 30)
+        rest_disabled = state.active_dialogue is not None or state.pending_resolution is not None
+        if text_button(font, rest_rect, "休整", ui_text_size("body"), disabled=rest_disabled):
+            rest_during_encounter(state, rng if rng is not None else RandomSource(state.seed))
     else:
         subtitle = "灰掉表示今天已经使用。行动卡本身无属性，点数受健康影响。"
         draw_text(font, subtitle, int(hand.x) + 166, int(hand.y) + 17, subtitle_style.size, subtitle_style.color)

@@ -36,6 +36,7 @@ from .progression import (
     perform_current_action,
     choose_dialogue_option,
     requirement_is_slotted,
+    rest_during_encounter,
     select_card_input,
     select_item_input,
     slot_card,

@@ -10,6 +10,7 @@ from sincity.content.runtime import render_world
 from sincity.dialogues import choose_dialogue_option as choose_runtime_dialogue_option
 from sincity.dialogues import continue_dialogue_session, create_dialogue_session, create_quick_dialogue_session, get_dialogue
 from sincity.encounters import MAX_REACT_STEPS, get_encounter, initial_store, next_react_rule, react_rule_matches, render_encounter
+from sincity.encounters.defs import CompiledEncounterProgram
 from sincity.model.defs import ActionDef, Effect, InputRequirement
 from sincity.model.enums import ResultType, ScreenName
 from sincity.model.state import (
@@ -122,6 +123,8 @@ def _sync_encounter_action_cycle(state: GameState) -> None:
 
 
 def encounter_action_points(state: GameState) -> tuple[int, int] | None:
+    if state.screen != ScreenName.ENCOUNTER or state.active_encounter is None:
+        return None
     _sync_encounter_action_cycle(state)
     return (state.encounter_action_points, state.encounter_action_point_cap)
 
@@ -859,19 +862,21 @@ def perform_current_action(state: GameState, rng: RandomSource) -> None:
             outcome = action.check.fail
         resolved_effects = action.effects + outcome.effects
         effect_lines = _describe_effects(resolved_effects, action.id, state)
+        resolution_text = _compose_resolution_text(result, effect_lines, outcome.text)
         resolution = ActionResolution(
             action_id=action.id,
             card_id=card_id,
             result=result,
             die_roll=die_roll,
             value=value,
-            text=_compose_resolution_text(result, effect_lines, outcome.text),
+            text=resolution_text,
             effect_lines=effect_lines,
         )
+        log_text = resolution_text or "，".join(effect_lines[:2])
         state.pending_resolution = PendingResolutionState(
             resolution=resolution,
             effects=resolved_effects,
-            log_text=f"{action.title}: {_compose_resolution_text(result, effect_lines, outcome.text)}",
+            log_text=f"{action.title}: {log_text}",
             location_id=location_id or "",
         )
     clear_selected_input(state)
@@ -1188,6 +1193,21 @@ def reset_hand(state: GameState, rng: RandomSource) -> None:
     _mark_content_dirty(state)
 
 
+def rest_during_encounter(state: GameState, rng: RandomSource) -> None:
+    assert state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None, "Encounter rest is only available during encounters."
+    encounter = _encounter(state)
+    clear_assembly(state)
+    clear_selected_input(state)
+    extra_lines: list[str] = []
+    change_energy(state, -1)
+    if state.screen == ScreenName.ENCOUNTER:
+        _apply_effects(encounter.cycle_effects, state, rng, extra_lines)
+    if state.screen == ScreenName.ENCOUNTER:
+        reset_hand(state, rng)
+    cycle_text = f"；{'，'.join(extra_lines[:2])}" if extra_lines else ""
+    _push_log(state, f"你短暂休整了一下：精力 -1，重抽行动卡{cycle_text}。")
+
+
 def advance_clock(state: GameState, clock_id: str, amount: int = 1, extra_lines: list[str] | None = None) -> None:
     spec = SCENARIO.clocks_by_id[clock_id]
     clock_state = state.world.progress_clocks[clock_id]
@@ -1228,9 +1248,10 @@ def shift_clock(state: GameState, clock_id: str, amount: int, extra_lines: list[
 
 def start_encounter(state: GameState, encounter_id: str) -> None:
     encounter = get_encounter(encounter_id)
+    store = _initial_encounter_store(state, encounter)
     state.active_encounter = ActiveEncounterState(
         encounter_id=encounter_id,
-        store=initial_store(encounter),
+        store=store,
     )
     state.screen = ScreenName.ENCOUNTER
     state.modal.kind = ""
@@ -1243,6 +1264,16 @@ def start_encounter(state: GameState, encounter_id: str) -> None:
     _mark_content_dirty(state)
     _push_log(state, f"进入侦探任务：{encounter.title}")
     _resolve_encounter_reacts(state, RandomSource(state.seed), [])
+
+
+def _initial_encounter_store(state: GameState, encounter: CompiledEncounterProgram) -> dict[str, int | bool | str]:
+    store = initial_store(encounter)
+    for key, spec in encounter.store_specs.items():
+        if spec.persist == "world_inventory":
+            store[key] = state.world.inventory.get(key, spec.initial)
+        elif spec.persist == "world_value":
+            store[key] = state.world.values.get(key, spec.initial)
+    return store
 
 
 def start_encounter_from_dialogue(state: GameState, encounter_id: str) -> None:
@@ -1359,16 +1390,7 @@ def _check_endings(state: GameState) -> None:
 
 
 def _compose_resolution_text(result: ResultType, effect_lines: tuple[str, ...], fallback: str) -> str:
-    if fallback:
-        return fallback
-    if effect_lines:
-        prefix = {
-            ResultType.SUCCESS: "成功",
-            ResultType.COST: "代价成功",
-            ResultType.FAIL: "失败",
-        }[result]
-        return f"{prefix}：{'，'.join(effect_lines[:2])}"
-    return ""
+    return fallback
 
 
 def _describe_effects(effects: tuple[Effect, ...], action_id: str, state: GameState) -> tuple[str, ...]:

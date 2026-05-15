@@ -68,9 +68,9 @@
       :check (check
         :suits (list suit)
         :risk risk
-        :ok (outcome "活儿完成得干净。钱到手，身体还能撑。" (list (effect 'add money ok-money) (effect 'add energy -1)))
-        :partial (outcome "钱拿到了，但这一天把你磨得发紧。" (list (effect 'add money partial-money) (effect 'add energy -2)))
-        :fail (outcome "事情不顺。你拿到一点钱，也付了一点身体的账。" (list (effect 'add money fail-money) (effect 'add energy -2) (when (> fail-health 0) (effect 'add health (- fail-health)))))))))
+        :ok (outcome (list (effect 'add money ok-money)))
+        :partial (outcome (list (effect 'add money partial-money) (effect 'add energy -2)))
+        :fail (outcome (list (effect 'add money fail-money) (effect 'add energy -2) (when (> fail-health 0) (effect 'add health (- fail-health)))))))))
 
 (define make-book-action
   (lambda (title desc clock suit)
@@ -80,9 +80,9 @@
       :check (check
         :suits (list suit)
         :risk 'low
-        :ok (outcome "你读进去了，页边的字开始连成路。" (list (effect 'clock+ clock 2)))
-        :partial (outcome "你读得慢，但今天没有白坐。" (list (effect 'clock+ clock 1) (effect 'add energy -1)))
-        :fail (outcome "纸上的字浮起来，脑子却沉下去。" (list (effect 'add energy -1)))))))
+        :ok (outcome (list (effect 'clock+ clock 2)))
+        :partial (outcome (list (effect 'clock+ clock 1) (effect 'add energy -1)))
+        :fail (outcome (list (effect 'add energy -1)))))))
 
 (define make-investigate-action
   (lambda (title desc clock suit)
@@ -92,9 +92,9 @@
       :check (check
         :suits (list suit)
         :risk 'mid
-        :ok (outcome "线索露出了一小截。你把它按在纸上。" (list (effect 'clock+ clock 2) (effect 'add energy -1)))
-        :partial (outcome "你得到了一点碎片，足够继续往下问。" (list (effect 'clock+ clock 1) (effect 'add energy -1)))
-        :fail (outcome "你问得太快，周围的人开始闭嘴。" (list (effect 'add energy -1)))))))
+        :ok (outcome (list (effect 'clock+ clock 2)) "线索露出了一小截。你把它按在纸上。")
+        :partial (outcome (list (effect 'clock+ clock 1) (effect 'add energy -1)) "你得到了一点碎片，足够继续往下问。")
+        :fail (outcome (list (effect 'add energy -1)) "你问得太快，周围的人开始闭嘴。")))))
 
 (define-node 办公室
   (node
@@ -125,7 +125,7 @@
           :check (check
             :suits (list 意志 感知)
             :risk 'low
-            :ok (outcome "你花了很久，把能处理的痕迹都处理掉。" (list (effect 'clock+ blood_clean_progress 2) (effect 'add energy -1)))
+            :ok (outcome "你花了很久，把能处理的痕迹都处理掉。" (list (effect 'clock+ blood_clean_progress 2)))
             :partial (outcome "你清掉一部分，但有些颜色已经吃进木缝。" (list (effect 'clock+ blood_clean_progress 1) (effect 'add energy -1)))
             :fail (outcome "你盯着那片颜色太久，手上反而没了力气。" (list (effect 'add energy -1))))))
       (when (and item_recovered (not item_auth_sent))
@@ -163,7 +163,7 @@
           :check (check
             :suits (list 感知)
             :risk 'mid
-            :ok (outcome "你从摊贩的闲谈里拼出了一个方向。" (list (effect 'clock+ investigation_progress 1) (effect 'set stall_investigated true) (effect 'add energy -1)))
+            :ok (outcome "你从摊贩的闲谈里拼出了一个方向。" (list (effect 'clock+ investigation_progress 1) (effect 'set stall_investigated true)))
             :partial (outcome "碎片不多，但足够让你继续往前走。" (list (effect 'clock+ investigation_progress 1) (effect 'set stall_investigated true) (effect 'add energy -1)))
             :fail (outcome "他今天不想提中枪的事，你的出现反而让他闭了嘴。" (list (effect 'add energy -1)))))))))
 
@@ -180,9 +180,9 @@
         :check (check
           :suits (list 意志)
           :risk 'mid
-          :ok (outcome "他手很快，针脚也还算直。" (list (effect 'add health 2)))
-          :partial (outcome "伤口处理好了，但你开始发冷。" (list (effect 'add health 2) (effect 'add energy -1)))
-          :fail (outcome "处理得太脏。你活下来了，但身体记了一笔账。" (list (effect 'add health 1) (effect 'add energy -2) (effect 'set infected true)))))
+          :ok (outcome (list (effect 'add health 2)))
+          :partial (outcome (list (effect 'add health 2) (effect 'add energy -1)))
+          :fail (outcome (list (effect 'add health 1) (effect 'add energy -2) (effect 'set infected true)))))
       (when (and intrusion_seen (not market_investigated))
         (action
           :title "问枪伤药品的去向"
@@ -190,7 +190,7 @@
           :check (check
             :suits (list 逻辑)
             :risk 'mid
-            :ok (outcome "黑市的人记性比诊所好。他记得那个买绷带的人。" (list (effect 'clock+ investigation_progress 1) (effect 'set market_investigated true) (effect 'add energy -1)))
+            :ok (outcome "黑市的人记性比诊所好。他记得那个买绷带的人。" (list (effect 'clock+ investigation_progress 1) (effect 'set market_investigated true)))
             :partial (outcome "他半遮半掩地说了几个细节，够你接着查。" (list (effect 'clock+ investigation_progress 1) (effect 'set market_investigated true) (effect 'add energy -1)))
             :fail (outcome "黑市的人嘴很严，你用错方式了。" (list (effect 'add energy -1)))))))))
 
@@ -214,8 +214,7 @@
           :effects (list
             (effect 'set rehab_started true)
             (effect 'set rehab_done false)
-            (effect-reset-clock rehab_progress)
-            (effect 'start-quick-dialogue rehab-intro-text))))
+            (effect-reset-clock rehab_progress))))
       (when (and rehab_started (not rehab_done) (not (clock-filled? rehab_progress)))
         (action
           :title "进行康复训练"
@@ -223,9 +222,9 @@
           :check (check
             :suits (list 意志)
             :risk 'low
-            :ok (outcome "你今天的状态不错，训练效果很好。" (list (effect 'clock+ rehab_progress 2)))
-            :partial (outcome "你坚持完成了训练，虽然有些吃力。" (list (effect 'clock+ rehab_progress 1)))
-            :fail (outcome "今天身体不太配合，但至少没有更糟。" (list)))))
+            :ok (outcome (list (effect 'clock+ rehab_progress 2)))
+            :partial (outcome (list (effect 'clock+ rehab_progress 1)))
+            :fail (outcome (list)))))
       (when gunshot_wound
         (action
           :title "处理枪伤"
@@ -243,7 +242,7 @@
           :check (check
             :suits (list 逻辑)
             :risk 'mid
-            :ok (outcome "登记簿上没有他，但护士记得那件血衣。" (list (effect 'clock+ investigation_progress 1) (effect 'set clinic_investigated true) (effect 'add energy -1)))
+            :ok (outcome "登记簿上没有他，但护士记得那件血衣。" (list (effect 'clock+ investigation_progress 1) (effect 'set clinic_investigated true)))
             :partial (outcome "你翻到了一些记录，不全，但有用。" (list (effect 'clock+ investigation_progress 1) (effect 'set clinic_investigated true) (effect 'add energy -1)))
             :fail (outcome "护士警惕地看了你一眼，你没敢继续问。" (list (effect 'add energy -1)))))))))
 
@@ -295,9 +294,9 @@
           :check (check
             :suits (list 感知)
             :risk 'mid
-            :ok (outcome "装卸工见过那个方向有车急刹的声音。" (list (effect 'clock+ investigation_progress 1) (effect 'set warehouse_investigated true) (effect 'add energy -1)))
-            :partial (outcome "他不能确定，但给你指了可能的方向。" (list (effect 'clock+ investigation_progress 1) (effect 'set warehouse_investigated true) (effect 'add energy -1)))
-            :fail (outcome "码头风大，人的记性也容易被吹散。" (list (effect 'add energy -1))))))
+            :ok (outcome (list (effect 'clock+ investigation_progress 1) (effect 'set warehouse_investigated true)) "装卸工见过那个方向有车急刹的声音。")
+            :partial (outcome (list (effect 'clock+ investigation_progress 1) (effect 'set warehouse_investigated true)) "他不能确定，但给你指了可能的方向。")
+            :fail (outcome (list (effect 'add energy -1)) "码头风大，人的记性也容易被吹散。"))))
       (when (and police_investigation_done (not item_recovered) (not item_recovery_started))
         (action
           :title "挑战 - 取回神秘物品"
@@ -357,9 +356,9 @@
           :check (check
             :suits (list 感知 逻辑)
             :risk 'mid
-            :ok (outcome "你看穿了他的手法，也看穿了他的恐惧。" (list (effect 'clock+ gambler_debt_progress 2)))
-            :partial (outcome "你没赢漂亮，但逼他说出了地下入口的名字。" (list (effect 'clock+ gambler_debt_progress 1)))
-            :fail (outcome "你输了一点钱，也换来一点教训。" (list (effect 'add money -8) (effect 'add energy -1)))))))))
+            :ok (outcome (list (effect 'clock+ gambler_debt_progress 2)) "你看穿了他的手法，也看穿了他的恐惧。")
+            :partial (outcome (list (effect 'clock+ gambler_debt_progress 1)) "你没赢漂亮，但逼他说出了地下入口的名字。")
+            :fail (outcome (list (effect 'add money -8) (effect 'add energy -1)) "你输了一点钱，也换来一点教训。")))))))
 
 (define-node 老街
   (node
@@ -374,9 +373,9 @@
           :check (check
             :suits (list 感知 逻辑)
             :risk 'mid
-            :ok (outcome "你找到了通向望月旅馆的关键证词。" (list (effect 'clock+ frederick_trace_progress 2)))
-            :partial (outcome "老街给了你半句真话，足够继续追。" (list (effect 'clock+ frederick_trace_progress 1) (effect 'add energy -1)))
-            :fail (outcome "老街今天只给你关门声。" (list (effect 'add energy -1))))))
+            :ok (outcome (list (effect 'clock+ frederick_trace_progress 2)) "你找到了通向望月旅馆的关键证词。")
+            :partial (outcome (list (effect 'clock+ frederick_trace_progress 1) (effect 'add energy -1)) "老街给了你半句真话，足够继续追。")
+            :fail (outcome (list (effect 'add energy -1)) "老街今天只给你关门声。"))))
       (when (and hotel_infiltrated (not vera_apartment_found))
         (make-investigate-action
           "跟踪旅馆后门的人"
@@ -429,9 +428,9 @@
         :check (check
           :suits (list 感知)
           :risk 'high
-          :ok (outcome "你赢得很快，也收得很快。" (list (effect 'add money 30)))
-          :partial (outcome "你保住本金，还多拿了一点。" (list (effect 'add money 8) (effect 'add energy -1)))
-          :fail (outcome "桌子吃掉了你的钱。" (list (effect 'add energy -1))))))))
+          :ok (outcome (list (effect 'add money 30)))
+          :partial (outcome (list (effect 'add money 8) (effect 'add energy -1)))
+          :fail (outcome (list (effect 'add energy -1))))))))
 
 (define world-state
   (state

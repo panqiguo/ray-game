@@ -13,18 +13,18 @@
         :check (check
           :suits (list 逻辑)
           :risk 'mid
-          :ok (outcome "锁开得干净，后门没有呻吟。" (list (effect 'clock+ access 2)))
-          :partial (outcome "门开了，合页却叫了一声。" (list (effect 'clock+ access 1) (effect 'clock+ noise 1)))
-          :fail (outcome "锁芯卡住，楼上有人停下脚步。" (list (effect 'clock+ noise 1)))))
+          :ok (outcome (list (effect 'clock+ access 2)) "锁开得干净，后门没有呻吟。")
+          :partial (outcome (list (effect 'clock+ access 1) (effect 'clock+ noise 1)) "门开了，合页却叫了一声。")
+          :fail (outcome (list (effect 'clock+ noise 1)) "锁芯卡住，楼上有人停下脚步。")))
       (action
         :title "装成送货工"
         :desc "托盘、旧围裙和一张不看人的脸。有时候身份就是一套动作。"
         :check (check
           :suits (list 感知)
           :risk 'mid
-          :ok (outcome "你从老板眼皮底下走了过去。" (list (effect 'clock+ access 2)))
-          :partial (outcome "你混进去了，但有人记住了你的背影。" (list (effect 'clock+ access 1) (effect 'clock+ noise 1)))
-          :fail (outcome "老板抬头看了你一眼，太久。" (list (effect 'clock+ noise 1)))))
+          :ok (outcome (list (effect 'clock+ access 2)) "你从老板眼皮底下走了过去。")
+          :partial (outcome (list (effect 'clock+ access 1) (effect 'clock+ noise 1)) "你混进去了，但有人记住了你的背影。")
+          :fail (outcome (list (effect 'clock+ noise 1)) "老板抬头看了你一眼，太久。")))
       (when (clock-at-least-half? access)
         (action
           :title "搜查 302 房间"
@@ -32,9 +32,9 @@
           :check (check
             :suits (list 感知)
             :risk 'mid
-            :ok (outcome "你找到了旅馆后门的暗号和一张公寓收据。" (list (effect 'clock+ clue 2)))
-            :partial (outcome "你找到一张收据，但走廊的脚步逼近。" (list (effect 'clock+ clue 1) (effect 'clock+ noise 1)))
-            :fail (outcome "房间太干净，干净得像被人重新摆过。" (list (effect 'clock+ noise 1))))))
+            :ok (outcome (list (effect 'clock+ clue 2)) "你找到了旅馆后门的暗号和一张公寓收据。")
+            :partial (outcome (list (effect 'clock+ clue 1) (effect 'clock+ noise 1)) "你找到一张收据，但走廊的脚步逼近。")
+            :fail (outcome (list (effect 'clock+ noise 1)) "房间太干净，干净得像被人重新摆过。"))))
       (when (> (clock-value noise) 0)
         (action
           :title "压低动静"
@@ -42,9 +42,9 @@
           :check (check
             :suits (list 意志)
             :risk 'low
-            :ok (outcome "走廊重新安静。" (list (effect 'clock- noise 1)))
-            :partial (outcome "你等到了空档，但时间被耗掉。" (list (effect 'clock- noise 1) (effect 'add energy -1)))
-            :fail (outcome "越安静，越像有人在听。" (list (effect 'clock+ noise 1)))))))))
+            :ok (outcome (list (effect 'clock- noise 1)) "走廊重新安静。")
+            :partial (outcome (list (effect 'clock- noise 1) (effect 'add energy -1)) "你等到了空档，但时间被耗掉。")
+            :fail (outcome (list (effect 'clock+ noise 1)) "越安静，越像有人在听。")))))))
 
 (content
   :meta (meta :key '潜入旅馆 :title "潜入旅馆" :desc "进入望月旅馆 302，找到薇拉离开后的下一处线索。")
@@ -53,6 +53,8 @@
   :on-fail (list
     (effect 'add 'police_relation -1)
     (effect 'add 'energy -2))
+  :on-cycle (list
+    (effect 'clock- noise 1))
   :reacts (reacts
     (react :when (clock-filled? clue) :then (list (effect 'end-encounter 'success)))
     (react :when (>= (clock-value noise) 4) :then (list (effect 'end-encounter 'fail))))

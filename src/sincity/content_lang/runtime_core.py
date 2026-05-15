@@ -218,11 +218,13 @@ def host_values(*, store_specs: dict[str, StoreFieldSpec], store: dict[str, int 
         "field-truthy": builtin_field_truthy_condition,
         "reacts": lambda *args: [item for item in args if item is not None],
         "react": SpecialFormProcedure(builtin_react),
+        "world-value": builtin_world_value,
+        "world-item": builtin_world_item,
         "node": lambda *args: builtin_scene(args),
         "scene": lambda *args: builtin_scene(args),
         "action": lambda *args: builtin_action(args),
         "check": lambda *args: builtin_check(args),
-        "outcome": lambda text, effects=None: OutcomeTemplate(text=str(text), effects=as_effect_tuple(effects)),
+        "outcome": lambda *args: builtin_outcome(args),
         "effect": lambda *args: builtin_effect(args),
         "item": builtin_item_input,
         "card": builtin_card_input,
@@ -248,6 +250,37 @@ def builtin_clock(*args: Any) -> ClockTemplate:
     maximum = int(unwrap(kwargs[":max"]))
     assert 0 <= initial <= maximum, "Clock initial must be within range."
     return ClockTemplate(title=title, description=description, initial=initial, maximum=maximum)
+
+
+def builtin_outcome(args: tuple[Any, ...]) -> OutcomeTemplate:
+    assert 1 <= len(args) <= 2, "outcome expects effects plus an optional description."
+    first = unwrap(args[0])
+    if isinstance(first, str):
+        # Backward-compatible authoring form: (outcome "description" effects).
+        return OutcomeTemplate(text=first, effects=as_effect_tuple(args[1] if len(args) == 2 else None))
+    description = "" if len(args) == 1 else str(unwrap(args[1]))
+    return OutcomeTemplate(text=description, effects=as_effect_tuple(args[0]))
+
+
+def builtin_world_value(key: Any, initial: Any = False) -> StateBindingValue:
+    name = binding_name(key)
+    value = unwrap(initial)
+    assert isinstance(value, (bool, int, str)), f"Unsupported world value initial for {name}: {value!r}"
+    return StateBindingValue(
+        name=name,
+        spec=StoreFieldSpec(id=name, kind="value", initial=value, persist="world_value"),
+        value=value,
+    )
+
+
+def builtin_world_item(key: Any, initial: Any = 0) -> StateBindingValue:
+    name = binding_name(key)
+    value = int(unwrap(initial))
+    return StateBindingValue(
+        name=name,
+        spec=StoreFieldSpec(id=name, kind="value", initial=value, persist="world_inventory"),
+        value=value,
+    )
 
 
 def builtin_scene(args: tuple[Any, ...]) -> SceneTemplate:

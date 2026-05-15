@@ -44,7 +44,7 @@ def draw_encounter_screen(font: Font | None, state: GameState, rng) -> None:
     end_layer("encounter_root")
     draw_card_pile_modal(font, state)
     begin_layer("hand", interactive=state.modal.kind in {"", "location"} and not resolving)
-    draw_hand(font, state, current_action(state))
+    draw_hand(font, state, current_action(state), rng)
     end_layer("hand")
     draw_message_feed(font, message_rect, state)
     if state.modal.kind == "location" and state.modal.primary_id is not None:

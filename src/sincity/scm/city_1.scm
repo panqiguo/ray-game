@@ -144,7 +144,7 @@
   (node
     :desc "铁锅、热汤、油烟和零钱。这里不问你从哪里来，只问你要不要加辣。"
     :position '(245 280)
-    :show-clocks (list )
+    :show-clocks (list (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress))
     :actions (list
       (action
         :title "吃一碗热汤"
@@ -171,7 +171,7 @@
   (node
     :desc "修表铺后门、药味、假章和压低的声音。这里什么都能办，只是从不保证干净。"
     :position '(450 280)
-    :show-clocks (list )
+    :show-clocks (list (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress))
     :actions (list
       (action
         :title "找黑市医生处理伤口"
@@ -183,7 +183,7 @@
           :ok (outcome (list (effect 'add health 2)))
           :partial (outcome (list (effect 'add health 2) (effect 'add energy -1)))
           :fail (outcome (list (effect 'add health 1) (effect 'add energy -2) (effect 'set infected true)))))
-      (when (and intrusion_seen (not market_investigated))
+      (when (and intrusion_seen (not item_recovered) (not market_investigated))
         (action
           :title "问枪伤药品的去向"
           :desc "正规诊所会登记，黑市不会。不会登记的地方，反而更容易留下口风。"
@@ -198,7 +198,7 @@
   (node
     :desc "白墙、玻璃柜、登记表。正规两个字的意思是：他们会救你，也会记住你。"
     :position '(655 280)
-    :show-clocks (list)
+    :show-clocks (list (when (and rehab_started (not rehab_done)) rehab_progress) (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress))
     :actions (list
       (action
         :title "标准治疗"
@@ -235,7 +235,7 @@
             (effect 'add health 4)
             (effect 'set gunshot_wound false)
             (effect 'add police_relation -1))))
-      (when (and intrusion_seen (not clinic_investigated))
+      (when (and intrusion_seen (not item_recovered) (not clinic_investigated))
         (action
           :title "查急诊登记"
           :desc "中枪的人不一定敢进诊室，但附近总有人看见过他。"
@@ -284,10 +284,10 @@
   (node
     :desc "仓库按小时结钱，也按小时消耗人。白天搬货，夜里有人谈不该谈的路线。"
     :position '(40 520)
-    :show-clocks (list (when (and intrusion_seen (not wounded_man_lead_obtained)) investigation_progress))
+    :show-clocks (list (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress))
     :actions (list
       (make-work-action "搬货打散工" "现金来得快，代价也直接。" 意志 'mid 24 16 8 1)
-      (when (and intrusion_seen (not warehouse_investigated))
+      (when (and intrusion_seen (not item_recovered) (not warehouse_investigated))
         (action
           :title "问码头装卸工"
           :desc "死者鞋底带着码头泥。仓库的人也许见过他从哪条路上来。"
@@ -527,7 +527,7 @@
         (effect 'set blood_cleaned true)))
 
     (react
-      :when (and (clock-filled? investigation_progress) (not wounded_man_lead_obtained))
+      :when (and (clock-filled? investigation_progress) (not item_recovered) (not wounded_man_lead_obtained))
       :then (list
         (effect 'set wounded_man_lead_obtained true)
         (effect 'add wounded_man_lead 1)
@@ -662,7 +662,7 @@
   (node
     :title "贝城县"
     :desc "贝城县不大。办公室、诊所、酒吧、老街和那些没写在地图上的入口，足够装下一个人继续追问的代价。"
-    :show-clocks (list (when (and intrusion_seen (not wounded_man_lead_obtained)) investigation_progress))
+    :show-clocks (list (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress))
     :children (list
       (办公室)
       (街边摊贩)

@@ -104,30 +104,43 @@ class GameApp:
         width, height = self._initial_window_size()
         set_window_min_size(960, 640)
         set_window_size(width, height)
-        set_window_position(*self._centered_window_position(width, height))
+        position = self._centered_window_position(width, height)
+        if position is not None:
+            set_window_position(*position)
         set_window_focused()
 
     def _initial_window_size(self) -> tuple[int, int]:
-        work_x, work_y, work_w, work_h = self._monitor_workarea()
+        workarea = self._monitor_workarea()
+        if workarea is None:
+            return WINDOW_WIDTH, WINDOW_HEIGHT
+        work_x, work_y, work_w, work_h = workarea
         del work_x, work_y
         width = min(WINDOW_WIDTH, max(960, work_w - WINDOW_WORKAREA_MARGIN_X))
         height = min(WINDOW_HEIGHT, max(640, work_h - WINDOW_WORKAREA_MARGIN_Y))
         return int(width), int(height)
 
-    def _centered_window_position(self, width: int, height: int) -> tuple[int, int]:
-        work_x, work_y, work_w, work_h = self._monitor_workarea()
+    def _centered_window_position(self, width: int, height: int) -> tuple[int, int] | None:
+        workarea = self._monitor_workarea()
+        if workarea is None:
+            return None
+        work_x, work_y, work_w, work_h = workarea
         x = work_x + max(0, (work_w - width) // 2)
         y = work_y + max(0, (work_h - height) // 2)
         return int(x), int(y)
 
-    def _monitor_workarea(self) -> tuple[int, int, int, int]:
-        monitor = glfw_get_primary_monitor()
-        assert monitor != ffi.NULL, "GLFW primary monitor is not available after window initialization."
+    def _monitor_workarea(self) -> tuple[int, int, int, int] | None:
+        primary_monitor = globals().get("glfw_get_primary_monitor")
+        monitor_workarea = globals().get("glfw_get_monitor_workarea")
+        if primary_monitor is None or monitor_workarea is None:
+            return None
+        monitor = primary_monitor()
+        if monitor == ffi.NULL:
+            return None
         x = ffi.new("int *")
         y = ffi.new("int *")
         width = ffi.new("int *")
         height = ffi.new("int *")
-        glfw_get_monitor_workarea(monitor, x, y, width, height)
+        monitor_workarea(monitor, x, y, width, height)
         assert width[0] > 0 and height[0] > 0, f"Invalid monitor workarea: {width[0]}x{height[0]}"
         return int(x[0]), int(y[0]), int(width[0]), int(height[0])
 

@@ -16,7 +16,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 LOCAL_FONT_FILE = PROJECT_ROOT / "font.ttf"
 TEXT_SOURCE_SUFFIXES = {".py", ".scm", ".ink", ".json"}
 TEXT_SPACING = 1.0
-PRELOAD_FONT_SIZES = (9, 10, 11, 12, 14, 16, 18, 20, 24, 30, 40)
+PRELOAD_FONT_SIZES = (9, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 22, 24, 28, 30, 40)
+COMMON_UI_CHARS = "　，。！？；：（）《》“”‘’、…—·￥¥→←↑↓•+-*/=<>[]{}|"
 
 
 def _color_u32(color: Color) -> int:
@@ -43,22 +44,9 @@ def configure_gui_theme() -> None:
 
 
 def _build_codepoints() -> list[int]:
-    ranges = (
-        (0x0020, 0x007E),  # Basic Latin: English letters, digits, punctuation
-        (0x00A0, 0x00FF),  # Latin-1 Supplement: ·, accents, common Western symbols
-        (0x2000, 0x206F),  # General Punctuation: … — • “ ” and similar marks
-        (0x20A0, 0x20CF),  # Currency Symbols: €, ¥ and related signs
-        (0x2100, 0x214F),  # Letterlike Symbols: ™, №, ℡ and related signs
-        (0x2190, 0x21FF),  # Arrows: useful for UI and logs
-        (0x2200, 0x22FF),  # Mathematical Operators: ∞, ≈, ± and similar signs
-        (0x25A0, 0x25FF),  # Geometric Shapes: UI glyphs and bullets
-        (0x3000, 0x303F),  # CJK Symbols and Punctuation
-        (0x4E00, 0x7FFF),  # CJK Unified Ideographs: common Chinese chars (练 etc.)
-        (0xFF00, 0xFFEF),  # Halfwidth and Fullwidth Forms
-    )
     codepoints: set[int] = set()
-    for start, end in ranges:
-        codepoints.update(range(start, end + 1))
+    codepoints.update(range(0x0020, 0x007F))
+    codepoints.update(ord(char) for char in COMMON_UI_CHARS)
     for text in _iter_project_text():
         codepoints.update(ord(char) for char in text)
     return sorted(codepoints)
@@ -82,6 +70,10 @@ class UIFont:
     codepoints: tuple[int, ...]
     default_size: int = DEFAULT_FONT_SIZE
     _fonts: dict[int, Font] = field(default_factory=dict)
+    _codepoint_set: set[int] = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        self._codepoint_set = set(self.codepoints)
 
     def font_for_size(self, size: int) -> Font:
         normalized_size = int(round(size))
@@ -94,6 +86,18 @@ class UIFont:
 
     def default_font(self) -> Font:
         return self.font_for_size(self.default_size)
+
+    def ensure_text(self, text: str) -> None:
+        missing = tuple(sorted({ord(char) for char in text} - self._codepoint_set))
+        if not missing:
+            return
+        loaded_sizes = tuple(sorted(self._fonts))
+        self.unload()
+        self.codepoints = tuple(sorted((*self.codepoints, *missing)))
+        self._codepoint_set.update(missing)
+        for size in loaded_sizes:
+            self.font_for_size(size)
+        gui_set_font(self.default_font())
 
     def unload(self) -> None:
         for font in self._fonts.values():
@@ -123,6 +127,8 @@ def draw_text(font: UIFont | Font | None, text: str, x: int, y: int, size: int, 
     if font is None:
         rl_draw_text(text, x, y, size, color)
         return
+    if isinstance(font, UIFont):
+        font.ensure_text(text)
     selected_font = _select_font(font, size)
     rl_draw_text_ex(selected_font, text, Vector2(float(x), float(y)), float(size), TEXT_SPACING, color)
 
@@ -130,6 +136,8 @@ def draw_text(font: UIFont | Font | None, text: str, x: int, y: int, size: int, 
 def measure_text_width(font: UIFont | Font | None, text: str, size: int) -> float:
     if font is None:
         return float(rl_measure_text(text, size))
+    if isinstance(font, UIFont):
+        font.ensure_text(text)
     selected_font = _select_font(font, size)
     return float(rl_measure_text_ex(selected_font, text, float(size), TEXT_SPACING).x)
 

@@ -148,6 +148,8 @@ def _bind_story(story: Any, state: GameState) -> None:
     story.BindExternalFunction("change_money", lambda amount: _change_money(state, int(amount)))
     story.BindExternalFunction("change_health", lambda amount: _change_health(state, int(amount)))
     story.BindExternalFunction("change_stress", lambda amount: _change_stress(state, int(amount)))
+    story.BindExternalFunction("set_value", lambda key, value: _set_value(state, str(key), value))
+    story.BindExternalFunction("add_value", lambda key, amount: _add_value(state, str(key), int(amount)))
     story.BindExternalFunction("start_encounter", lambda encounter_id: _start_encounter(state, str(encounter_id)))
     story.BindExternalFunction("finish_encounter", lambda outcome="abort": _finish_encounter(state, str(outcome)))
     story.BindExternalFunction("log", lambda text: state.action_log.append(str(text)))
@@ -189,6 +191,33 @@ def _change_stress(state: GameState, amount: int) -> None:
     from sincity.rules.progression import change_stress
 
     change_stress(state, amount, [])
+
+
+def _set_value(state: GameState, key: str, value: Any) -> None:
+    from sincity.rules.progression import _set_field
+
+    if isinstance(value, str):
+        raw = value.strip()
+        if raw == "true":
+            parsed: int | bool | str = True
+        elif raw == "false":
+            parsed = False
+        else:
+            try:
+                parsed = int(raw)
+            except ValueError:
+                parsed = raw
+    elif isinstance(value, bool):
+        parsed = value
+    else:
+        parsed = int(value)
+    _set_field(state, key, parsed, [])
+
+
+def _add_value(state: GameState, key: str, amount: int) -> None:
+    from sincity.rules.progression import _add_field
+
+    _add_field(state, key, amount, [])
 
 
 def _start_encounter(state: GameState, encounter_id: str) -> None:

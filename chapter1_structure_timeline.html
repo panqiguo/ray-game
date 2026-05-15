@@ -1,0 +1,292 @@
+<style>
+:root{
+  --dot:#d8d8d8;
+  --ink:#191919;
+  --muted:#666;
+  --line:#a9a9a9;
+  --district:#7b2cf2;
+  --place:#55bee9;
+  --challenge:#ffd447;
+  --main:#ffffff;
+  --note:#fff9db;
+  --person:#e8f4ff;
+}
+body{
+  margin:0;
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  background:
+    radial-gradient(circle,var(--dot) 1.4px,transparent 1.4px) 0 0/22px 22px,
+    #fff;
+}
+.board{
+  position:relative;
+  width:2100px;
+  min-height:2520px;
+  padding:42px 48px 80px;
+  box-sizing:border-box;
+}
+.section-title{
+  position:absolute;
+  left:48px;
+  width:1760px;
+  height:118px;
+  border:1.5px dotted var(--line);
+  background:rgba(255,255,255,.72);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  font-weight:700;
+  font-size:20px;
+  line-height:1.8;
+}
+.section-title small{
+  display:block;
+  font-size:16px;
+  font-weight:600;
+  color:#333;
+}
+.tile{
+  position:absolute;
+  width:150px;
+  height:150px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  font-size:19px;
+  font-weight:700;
+  line-height:1.35;
+  box-sizing:border-box;
+}
+.district{background:var(--district);color:#0b001c}
+.place{background:var(--place);color:#062232}
+.challenge{
+  background:var(--challenge);
+  color:#342600;
+  height:82px;
+  font-size:17px;
+  border:0;
+}
+.text{
+  position:absolute;
+  width:260px;
+  font-size:17px;
+  line-height:1.55;
+  font-weight:600;
+}
+.text.wide{width:360px}
+.text.narrow{width:210px}
+.text .sub{
+  display:block;
+  margin-top:8px;
+  color:var(--muted);
+  font-size:15px;
+  font-weight:500;
+}
+.text .k{font-weight:800}
+.note{
+  position:absolute;
+  width:300px;
+  min-height:92px;
+  padding:14px 16px;
+  box-sizing:border-box;
+  background:var(--note);
+  border:1px solid #e7c944;
+  font-size:16px;
+  line-height:1.55;
+  font-weight:600;
+}
+.person{
+  position:absolute;
+  width:260px;
+  min-height:96px;
+  padding:14px 16px;
+  box-sizing:border-box;
+  background:var(--person);
+  border:1px solid #9bc8ee;
+  font-size:16px;
+  line-height:1.55;
+  font-weight:600;
+}
+.arrow{
+  position:absolute;
+  border-left:2px solid #777;
+  height:92px;
+}
+.arrow:after{
+  content:"";
+  position:absolute;
+  left:-6px;
+  bottom:-2px;
+  width:10px;
+  height:10px;
+  border-right:2px solid #777;
+  border-bottom:2px solid #777;
+  transform:rotate(45deg);
+}
+.lane-label{
+  position:absolute;
+  font-size:14px;
+  color:#777;
+  font-weight:700;
+  letter-spacing:.08em;
+}
+</style>
+
+<div class="board">
+  <div class="lane-label" style="left:70px;top:16px">地点开放</div>
+  <div class="lane-label" style="left:720px;top:16px">主线调查</div>
+  <div class="lane-label" style="left:1190px;top:16px">压力来源</div>
+  <div class="lane-label" style="left:1530px;top:16px">人物线</div>
+
+  <div class="section-title" style="top:44px">
+    第一节
+    <small>碎片：偶然得到一个东西，发现别人也在找</small>
+  </div>
+
+  <div class="tile district" style="left:48px;top:250px">中心区</div>
+  <div class="tile place" style="left:230px;top:250px">办公室</div>
+  <div class="tile place" style="left:410px;top:250px">饭店</div>
+  <div class="tile place" style="left:230px;top:420px">医院</div>
+  <div class="tile place" style="left:410px;top:420px">书店</div>
+
+  <div class="text wide" style="left:700px;top:260px">
+    科尔收到一封信，或在旧物里发现一张照片/剪报。
+    <span class="sub">它指向十年前的红房间，也和薇拉的名字发生了奇怪的重合。</span>
+  </div>
+  <div class="text" style="left:1080px;top:260px">
+    别人也在找这个东西。
+    <span class="sub">公寓被翻动、信封缺角、有人在街口盯着你。</span>
+  </div>
+  <div class="text narrow" style="left:1440px;top:292px">一封信 / 一张照片 / 一份旧案剪报</div>
+  <div class="person" style="left:1480px;top:430px">
+    老警察的女儿
+    <span class="sub">她知道父亲当年为什么退出红房间案，但她不愿轻易开口。</span>
+  </div>
+
+  <div class="text wide" style="left:700px;top:470px">
+    第一节主线大纲
+    <span class="sub">办公室整理碎片 → 书店查旧报纸 → 警局查旧案报告 → 确认这不是普通失踪案。</span>
+  </div>
+  <div class="note" style="left:1080px;top:500px">
+    倒计时感：在第六天前必须开始行动，否则线索会被别人抢先清理。
+  </div>
+  <div class="tile challenge" style="left:1080px;top:690px">挑战 1<br>取回碎片来源</div>
+
+  <div class="arrow" style="left:1148px;top:785px"></div>
+
+  <div class="section-title" style="top:900px">
+    第二节
+    <small>接下搜寻：开放老街，进入黑帮盘踞的地带</small>
+  </div>
+
+  <div class="tile district" style="left:48px;top:1090px">老街区</div>
+  <div class="tile place" style="left:230px;top:1090px">老街</div>
+  <div class="tile place" style="left:230px;top:1260px">金发<br>酒吧</div>
+  <div class="tile place" style="left:410px;top:1090px">废弃<br>药店</div>
+  <div class="tile place" style="left:410px;top:1260px">后巷<br>诊所</div>
+
+  <div class="text wide" style="left:700px;top:1088px">
+    接下薇拉的搜寻。
+    <span class="sub">玩家并不完全确定薇拉是不是受害者，只知道她留下的东西正在被几方势力寻找。</span>
+  </div>
+  <div class="text wide" style="left:700px;top:1238px">
+    主线调查步骤
+    <span class="sub">老街打听 → 查薇拉住过的旅馆 → 调查相关资料 → 锁定旅馆，尝试潜入调查。</span>
+  </div>
+
+  <div class="text" style="left:1180px;top:1094px">
+    打手正在看着你。
+    <span class="sub">黑帮不是主谋，但他们被雇来阻止你继续问。</span>
+  </div>
+  <div class="text" style="left:1180px;top:1270px">
+    警察罚单仍在倒计时。
+    <span class="sub">资源压力逼玩家在赚钱、治疗、调查之间取舍。</span>
+  </div>
+  <div class="person" style="left:1580px;top:1088px">
+    酒吧“金发”
+    <span class="sub">老街情报人。她知道谁在替黑帮找人，也知道薇拉曾经向谁求助。</span>
+  </div>
+  <div class="person" style="left:1580px;top:1254px">
+    软弱的男人
+    <span class="sub">欠黑帮钱的小人物。他可能是线索，也可能是累赘。</span>
+  </div>
+
+  <div class="tile challenge" style="left:1080px;top:1430px">挑战 2<br>潜入旅馆</div>
+  <div class="text narrow" style="left:1090px;top:1530px">线索、调查、跟踪</div>
+  <div class="tile challenge" style="left:1080px;top:1610px">挑战 3<br>巷口警告</div>
+  <div class="tile challenge" style="left:1280px;top:1520px">挑战 4<br>金发的账本</div>
+
+  <div class="arrow" style="left:1148px;top:1710px"></div>
+
+  <div class="section-title" style="top:1830px">
+    第三节
+    <small>找到薇拉：开放富人飞地，发现她不是单纯失踪，而是在逃</small>
+  </div>
+
+  <div class="tile district" style="left:48px;top:2020px">富人<br>飞地</div>
+  <div class="tile place" style="left:230px;top:2020px">飞地<br>外围</div>
+  <div class="tile place" style="left:410px;top:2020px">花店</div>
+  <div class="tile place" style="left:230px;top:2190px">私人<br>诊所</div>
+  <div class="tile place" style="left:410px;top:2190px">塞勒<br>公寓外部</div>
+
+  <div class="text wide" style="left:700px;top:2026px">
+    发现薇拉的踪迹。
+    <span class="sub">老街线索指向富人飞地：她曾被看见从一辆灰色轿车旁逃走。</span>
+  </div>
+  <div class="text wide" style="left:700px;top:2178px">
+    主线调查步骤
+    <span class="sub">飞地踩点 → 找到薇拉藏身点 → 说服她相信科尔 → 带她脱身。</span>
+  </div>
+  <div class="text" style="left:1180px;top:2028px">
+    财阀代理人出现。
+    <span class="sub">他们给钱，也给警告：交出线索，停止调查。</span>
+  </div>
+  <div class="person" style="left:1580px;top:2020px">
+    飞地人物
+    <span class="sub">可设为护士、花店老板、司机或保安。他/她的命运和薇拉逃亡混在一起。</span>
+  </div>
+
+  <div class="tile challenge" style="left:1080px;top:2350px">挑战 5<br>飞地跟踪</div>
+  <div class="tile challenge" style="left:1280px;top:2350px">挑战 6<br>找到薇拉</div>
+  <div class="tile challenge" style="left:1480px;top:2350px">挑战 7<br>飞地人物线</div>
+
+  <div class="arrow" style="left:1148px;top:2448px"></div>
+
+  <div class="section-title" style="top:2570px">
+    第四节
+    <small>吐露实情：薇拉承认自己是受害者，调查转向弗雷德里克</small>
+  </div>
+
+  <div class="tile district" style="left:48px;top:2760px">权力层</div>
+  <div class="tile place" style="left:230px;top:2760px">弗雷德里克<br>办公室</div>
+  <div class="tile place" style="left:410px;top:2760px">游艇</div>
+  <div class="tile place" style="left:230px;top:2930px">私人<br>会所</div>
+  <div class="tile place" style="left:410px;top:2930px">安全屋</div>
+
+  <div class="text wide" style="left:700px;top:2762px">
+    薇拉吐露实情。
+    <span class="sub">她不是精神失常的妻子，而是红房间体系的受害者。弗雷德里克在说谎。</span>
+  </div>
+  <div class="text wide" style="left:700px;top:2920px">
+    主线调查步骤
+    <span class="sub">调查弗雷德里克办公室 → 追查游艇/私人会所 → 取证 → 保护薇拉或转移证据。</span>
+  </div>
+  <div class="text" style="left:1180px;top:2764px">
+    竞争压力汇合。
+    <span class="sub">警察封锁、黑帮拦路、财阀清理证据。玩家必须决定先拿证据还是先救人。</span>
+  </div>
+  <div class="person" style="left:1580px;top:2760px">
+    人物线结算
+    <span class="sub">金发可能加入、失踪或继续当线人；飞地人物可能成为医疗支援或被带走。</span>
+  </div>
+
+  <div class="tile challenge" style="left:980px;top:3100px">挑战 8<br>办公室取证</div>
+  <div class="tile challenge" style="left:1180px;top:3100px">挑战 9<br>游艇/会所</div>
+  <div class="tile challenge" style="left:1380px;top:3100px">挑战 10<br>转移证据</div>
+  <div class="note" style="left:1580px;top:3100px">
+    第一章收束：获得动机点、伙伴行动、安全屋，或带着代价进入第二章。
+  </div>
+</div>

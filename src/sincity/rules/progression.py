@@ -556,6 +556,8 @@ def choose_dialogue_option(state: GameState, index: int) -> None:
         return
     keep_pinned = state.active_dialogue.history_scroll == 0
     choose_runtime_dialogue_option(state.active_dialogue, index)
+    if state.active_dialogue is None:
+        return
     if keep_pinned and state.active_dialogue is not None:
         state.active_dialogue.history_scroll = 0
     if state.active_dialogue.finished and state.active_dialogue.auto_close_on_finish:

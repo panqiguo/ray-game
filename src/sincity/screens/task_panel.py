@@ -69,51 +69,96 @@ def draw_task_panel(font, rect: Rectangle, state: GameState) -> None:
 
 def _chapter_one_tasks(state: GameState) -> tuple[TaskLine, ...]:
     values = state.world.values
-    old_case_checked = bool(values.get("old_case_checked", False))
-    moon_hotel_unlocked = bool(values.get("moon_hotel_unlocked", False))
-    hotel_search_done = bool(values.get("hotel_search_done", False))
-    red_room_clipping = bool(values.get("red_room_clipping", False))
-    tracker_seen = bool(values.get("tracker_seen", False))
+    police_interview_started = bool(values.get("police_interview_started", False))
+    police_choice_ready = bool(values.get("police_choice_ready", False))
+    police_investigation_done = bool(values.get("police_investigation_done", False))
+    blood_cleaned = bool(values.get("blood_cleaned", False))
+    wounded_man_lead_obtained = bool(values.get("wounded_man_lead_obtained", False))
+    item_recovery_started = bool(values.get("item_recovery_started", False))
+    item_recovered = bool(values.get("item_recovered", False))
+    item_recovery_failed = bool(values.get("item_recovery_failed", False))
+    item_auth_sent = bool(values.get("item_auth_sent", False))
+    vera_thread_unlocked = bool(values.get("vera_thread_unlocked", False))
+    auth_done = bool(values.get("auth_done", False))
+    vera_commission_taken = bool(values.get("vera_commission_taken", False))
+    frederick_talk_done = bool(values.get("frederick_talk_done", False))
+    frederick_real_lead_found = bool(values.get("frederick_real_lead_found", False))
+    hotel_boss_talk_done = bool(values.get("hotel_boss_talk_done", False))
+    hotel_infiltrated = bool(values.get("hotel_infiltrated", False))
+    vera_apartment_found = bool(values.get("vera_apartment_found", False))
+    chapter_2_done = bool(values.get("chapter_2_done", False))
+    recovery_deadline_day = int(values.get("recovery_deadline_day", 5))
+    vera_thread_notice_day = int(values.get("vera_thread_notice_day", 0))
+    auth_done_day = int(values.get("auth_done_day", 0))
 
-    police_fine_active = bool(values.get("police_fine_active", False))
-    police_fine_paid = bool(values.get("police_fine_paid", False))
-    police_fine_failed = bool(values.get("police_fine_failed", False))
-    police_fine_deadline = int(values.get("police_fine_deadline", 0))
-    police_fine_amount = int(values.get("police_fine_amount", 60))
-    gang_warning_active = bool(values.get("gang_warning_active", False))
-    gang_warning_deadline = int(values.get("gang_warning_deadline", 0))
-    gang_pressure_forced = bool(values.get("gang_pressure_forced", False))
-    pressure_phase = int(values.get("pressure_phase", 0))
+    police_interview_forced = bool(values.get("police_interview_forced", False))
 
-    if hotel_search_done:
-        main_text = "主线：整理望月旅馆带回的红房间线索"
-    elif moon_hotel_unlocked:
-        main_text = "主线：前往望月旅馆搜寻 302 房间"
-    elif old_case_checked:
-        main_text = "主线：在城里打听薇拉的去向"
+    if not item_recovered:
+        days_left = recovery_deadline_day - state.day
+        if days_left > 1:
+            main_text = f"主线：{days_left} 天之后去取东西"
+        elif days_left == 1:
+            main_text = "主线：明天去取东西"
+        elif days_left == 0:
+            main_text = "主线：今天去取东西"
+        else:
+            main_text = "主线：立刻去取东西"
+    elif chapter_2_done:
+        main_text = "主线：整理公寓对峙后的真相"
+    elif vera_apartment_found:
+        main_text = "主线：进入无门牌公寓"
+    elif hotel_infiltrated:
+        main_text = "主线：跟踪旅馆后门的人"
+    elif hotel_boss_talk_done:
+        main_text = "主线：潜入望月旅馆"
+    elif frederick_real_lead_found:
+        main_text = "主线：和望月旅馆老板谈"
+    elif frederick_talk_done:
+        main_text = "主线：调查弗雷德里克的踪迹"
+    elif vera_commission_taken:
+        main_text = "主线：和弗雷德里克谈话"
+    elif vera_thread_unlocked:
+        main_text = "主线：去酒吧接下薇拉委托"
+    elif item_auth_sent:
+        main_text = "主线：等待薇拉线索出现"
+    elif item_recovered:
+        main_text = "主线：把神秘物品送去鉴定"
+    elif item_recovery_started:
+        main_text = "主线：取回神秘物品"
+    elif police_investigation_done:
+        main_text = "主线：在第 5 天前取回神秘物品"
+    elif police_interview_started:
+        main_text = "主线：在警方笔录中处理纸条信息"
     else:
-        main_text = "主线：去警局查十年前红房间旧案"
+        main_text = "主线：去警局配合调查"
 
-    lines: list[TaskLine] = [TaskLine(main_text, active=not hotel_search_done, completed=hotel_search_done and red_room_clipping)]
-    lines.append(TaskLine("查阅红房间旧案报告", completed=old_case_checked, active=not old_case_checked))
-    lines.append(TaskLine("在酒吧或老街打听薇拉", completed=moon_hotel_unlocked, active=old_case_checked and not moon_hotel_unlocked))
-    lines.append(TaskLine("搜寻望月旅馆 302 房间", completed=hotel_search_done, active=moon_hotel_unlocked and not hotel_search_done))
-    if tracker_seen:
-        lines.append(TaskLine("有人开始跟踪你", active=True, failed=True))
+    lines: list[TaskLine] = [TaskLine(main_text, active=not chapter_2_done, completed=chapter_2_done)]
+    police_task_failed = police_interview_forced and not police_investigation_done
+    police_task_text = "一天之内去警局配合调查"
+    if police_interview_forced:
+        police_task_text = "警方已经上门强制审问"
+    lines.append(TaskLine(police_task_text, completed=police_investigation_done, active=not police_investigation_done, failed=police_task_failed))
+    lines.append(TaskLine("在笔录中决定纸条信息怎么处理", completed=police_investigation_done, active=police_interview_started and not police_investigation_done))
+    lines.append(TaskLine("取回神秘物品", completed=item_recovered, active=police_investigation_done and not item_recovered, failed=item_recovery_failed))
+    lines.append(TaskLine("送去鉴定", completed=item_auth_sent, active=item_recovered and not item_auth_sent))
+    lines.append(TaskLine("接下薇拉委托", completed=vera_commission_taken, active=vera_thread_unlocked and not vera_commission_taken))
+    lines.append(TaskLine("和弗雷德里克谈话", completed=frederick_talk_done, active=vera_commission_taken and not frederick_talk_done))
+    lines.append(TaskLine("调查弗雷德里克踪迹", completed=frederick_real_lead_found, active=frederick_talk_done and not frederick_real_lead_found))
+    lines.append(TaskLine("潜入旅馆并跟踪到公寓", completed=vera_apartment_found, active=frederick_real_lead_found and not vera_apartment_found))
+    lines.append(TaskLine("完成公寓枪对峙", completed=chapter_2_done, active=vera_apartment_found and not chapter_2_done))
 
-    pressure_lines = _pressure_lines(
-        state_day=state.day,
-        police_fine_active=police_fine_active,
-        police_fine_paid=police_fine_paid,
-        police_fine_failed=police_fine_failed,
-        police_fine_deadline=police_fine_deadline,
-        police_fine_amount=police_fine_amount,
-        gang_warning_active=gang_warning_active,
-        gang_warning_deadline=gang_warning_deadline,
-        gang_pressure_forced=gang_pressure_forced,
-        pressure_phase=pressure_phase,
-    )
-    lines.extend(pressure_lines)
+    if not wounded_man_lead_obtained:
+        lines.append(TaskLine("可选：调查中枪男人，取回东西时会更有把握", active=True))
+    if item_auth_sent and not vera_thread_unlocked:
+        days_left = vera_thread_notice_day - state.day
+        text = "薇拉线索：明天会有人联系你" if days_left > 0 else "薇拉线索：今天应该出现"
+        lines.append(TaskLine(text, active=True))
+    if item_auth_sent and not auth_done:
+        days_left = auth_done_day - state.day
+        if days_left > 0:
+            lines.append(TaskLine(f"鉴定结果：还需等待 {days_left} 天", active=True))
+        else:
+            lines.append(TaskLine("鉴定结果：今天应该送到", active=True))
     return tuple(line for line in lines if line.completed or line.active or line is lines[0])
 
 

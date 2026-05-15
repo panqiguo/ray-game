@@ -101,8 +101,10 @@ class GameApp:
         set_exit_key(KEY_NULL)
         set_target_fps(TARGET_FPS)
         # 确保窗口尺寸正确初始化，避免首帧布局错误
-        set_window_size(WINDOW_WIDTH, WINDOW_HEIGHT)
+        
         self.start()
+
+        set_window_size(WINDOW_WIDTH, WINDOW_HEIGHT)
         try:
             while not window_should_close() and not self.should_exit:
                 self.update()
@@ -116,8 +118,6 @@ class GameApp:
         init_window(WINDOW_WIDTH, WINDOW_HEIGHT, "乌鸦的去向")
         set_exit_key(KEY_NULL)
         set_target_fps(TARGET_FPS)
-        # 确保窗口尺寸正确初始化，避免首帧布局错误
-        set_window_size(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.start()
         try:
             while not window_should_close() and not self.should_exit:

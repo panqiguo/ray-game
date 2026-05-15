@@ -33,6 +33,21 @@ def _register_defaults() -> dict[str, DialogueAsset]:
             title="弗雷德里克的电话",
             compiled_path=ASSET_DIR / "frederick_phone_intro.ink.json",
         ),
+        "police_interview": DialogueAsset(
+            id="police_interview",
+            title="警方调查",
+            compiled_path=ASSET_DIR / "police_interview.ink.json",
+        ),
+        "forced_item_recovery": DialogueAsset(
+            id="forced_item_recovery",
+            title="最后期限",
+            compiled_path=ASSET_DIR / "forced_item_recovery.ink.json",
+        ),
+        "forced_police_interview": DialogueAsset(
+            id="forced_police_interview",
+            title="强制审问",
+            compiled_path=ASSET_DIR / "forced_police_interview.ink.json",
+        ),
     }
 
 

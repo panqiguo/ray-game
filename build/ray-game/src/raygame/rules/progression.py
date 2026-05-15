@@ -1049,7 +1049,7 @@ def change_stress(state: GameState, amount: int, extra_lines: list[str] | None =
         if extra_lines is not None:
             extra_lines.append("压力已满，生命 -1")
         change_health(state, -1, extra_lines)
-        _push_log(state, "压力已经满了，身体替你付了代价。")
+        _push_log(state, "压力已满，生命 -1。")
 
 
 def sync_trauma_cards_with_health(state: GameState) -> None:
@@ -1088,8 +1088,8 @@ def _check_endings(state: GameState) -> None:
     pursuit = state.world.progress_clocks["pursuit"]
     if pursuit.value >= SCENARIO.clocks_by_id["pursuit"].segments:
         state.ending_id = "caught"
-        state.ending_title = "被追上了"
-        state.ending_body = "你每晚都在争时间，但脚步声终究还是追上了你。"
+        state.ending_title = "被追上"
+        state.ending_body = "脚步声还是追上你了。"
         state.screen = ScreenName.ENDING
 
 

@@ -1,56 +1,40 @@
 (include "helper.scm")
 (include "common_clock_macros.scm")
 
-;; 这个文件按“人会怎么理解城市生活”组织：
-;; 1. 先放会被触发的叙事文本。
-;; 2. 再放反复使用的行动模板。
-;; 3. 然后逐个地点写“这个地方能做什么”。
-;; 4. 最后集中写世界状态和因果反应 react。
+;; 城市内容现在按“生存底盘 + 主线章节”组织：
+;; - 诊所、黑市、书店、摊贩、仓库等长期功能保留。
+;; - 第一章围绕中枪男人闯入、警方调查、取回神秘物品。
+;; - 送去鉴定后的第二天开启薇拉委托线；鉴定结果稍后并入主线信息。
 
-(define case-intro-text
-  "# 旧案\n\n# speaker: 科尔\n报纸夹在门缝里，已经被晨雾泡软。版面角落有一行不起眼的小字：红房间旧址将被拆除。\n\n# speaker: 科尔\n十年前，我在那份案卷上签过字。后来有人把案子拿走，把门关上，把所有人的名字从纸上擦掉。\n\n# speaker: 科尔\n我本来不想再管。只是那张照片里，站在红房间门口的女人，长得太像薇拉。")
+(define intrusion-intro-text
+  "# 雨夜闯入者\n\n# speaker: 科尔\n门被撞开的时候，我正试着让一杯冷咖啡变得像晚饭。\n\n# speaker: 男人\n他捂着腹部，血从指缝里往外冒。枪伤。不是新手打的，也不是警告用的。\n\n# speaker: 男人\n“他们会来找这个。”\n\n# speaker: 科尔\n他把一个包着油纸的小东西塞进抽屉，倒在我的地板上。十分钟后，警笛停在楼下。")
 
-(define old-case-checked-text
-  "# 档案室\n\n# speaker: 科尔\n红房间案卷不在普通柜里。值班警员说它十年前就结了，结案原因写得很干净：证据不足。\n\n# speaker: 科尔\n太干净了。干净得像有人拿漂白水洗过。卷宗最后夹着一份被退回的问询单，签名栏里有一个我认识的姓氏：塞勒。")
+(define police-summons-text
+  "# 警方调查\n\n# speaker: 警探\n“一个中枪的男人死在你的办公室里。科尔，你最好让我今天就能把这件事写完。”\n\n# speaker: 科尔\n他要的不是真相，是一份能合上的报告。")
 
-(define police-fine-text
-  "# 罚单\n\n# speaker: 警员\n“科尔先生，有人说你最近重新开张做生意，却没补齐执照税。”\n\n# speaker: 科尔\n他把罚单放在桌上，手指按住日期。\n\n# speaker: 警员\n“五天。别让我们再跑一趟。我们跑第二趟的时候，通常不带钢笔。”")
+(define vera-commission-text
+  "# 薇拉委托\n\n# speaker: 弗雷德里克\n“她不是会突然消失的人。”\n\n# speaker: 科尔\n每个来找侦探的人都会这么说。区别只在于他们是真的相信，还是希望我相信。")
 
-(define police-fine-paid-text
-  "# 收据\n\n# speaker: 科尔\n钱交出去以后，他们给了我一张收据。纸是真的，理由是假的。\n\n# speaker: 科尔\n柜台后面的警员没有看我，只说：“别再翻旧东西了，科尔。”")
+(define vera-thread-text
+  "# 薇拉的线索\n\n# speaker: 科尔\n薇拉离开前去过老街的修鞋铺。她留下过一句话：\"如果我不回来，告诉来找我的人——钥匙在窗台第三块砖下面。\"")
 
-(define police-fine-failed-text
-  "# 第二趟\n\n# speaker: 科尔\n他们果然跑了第二趟。没有钢笔，只有两副拳头和一句公事公办。\n\n# speaker: 警员\n“有些案子已经定了。你以前穿过这身皮，应该懂规矩。”")
+(define wounded-lead-text
+  "# 死者线索\n\n# speaker: 科尔\n零碎的话拼在一起：一个外地口音的男人，最近在码头、饭店后门和医院登记处附近出现过。\n\n# speaker: 科尔\n他不是误闯进我的办公室。他是没能跑到下一个地方。")
 
-(define gang-warning-text
-  "# 巷口记号\n\n# speaker: 科尔\n楼下墙上多了一个粉笔记号。不是催债的记号，是警告。\n\n# speaker: 打手\n“有人花钱让我们提醒你：别再问红房间。三天后，如果你还没听懂，我们换一种说法。”")
+(define frederick-talk-text
+  "# 弗雷德里克\n\n# speaker: 弗雷德里克\n“薇拉最近总去老街。她说那里有人欠她一个解释。”\n\n# speaker: 科尔\n他讲得太完整，完整得像提前背过。")
 
-(define gang-pressure-done-text
-  "# 警告之后\n\n# speaker: 科尔\n巷子重新安静下来。我还站着，但这座城已经给出了答案：红房间不是旧案，是还在跳的脉搏。")
+(define hotel-lead-text
+  "# 旅馆线索\n\n# speaker: 科尔\n三个地点，两个空回音。真正有用的是老街修鞋匠那句：“她从望月旅馆出来时，手里拿着男人的外套。”")
 
-(define first-tracker-text
-  "# 跟踪者\n\n# speaker: 科尔\n傍晚回公寓时，我在橱窗反光里看见同一顶灰帽子第三次停下。\n\n# speaker: 科尔\n警察用罚单，黑帮用拳头。还有人只用眼睛。")
+(define hotel-boss-text
+  "# 望月旅馆老板\n\n# speaker: 老板\n“我不记客人的脸，也不记客人的名字。”\n\n# speaker: 科尔\n“那你记什么？”\n\n# speaker: 老板\n“谁付钱让我别开门。”")
 
-(define enclave-found-text
-  "# 飞地深处\n\n# speaker: 科尔\n那片住宅背后的窄路比地图上画得更深。花墙、铁门、无人认领的后巷，一层一层把县城切开。\n\n# speaker: 科尔\n我在尽头找到一间小花店。玻璃上贴着暂停营业，里面却有人浇水。")
+(define follow-done-text
+  "# 跟踪\n\n# speaker: 科尔\n旅馆后门出来的人没有回头。他走过两条街，进了一栋没有门牌的公寓。\n\n# speaker: 科尔\n薇拉，或者知道薇拉在哪的人，就在里面。")
 
-(define flower-income-text
-  "# 花店分红\n\n# speaker: 科尔\n清晨门缝下塞进一个信封。里面的钱不多，但干净。至少看起来干净。")
-
-(define woman-intro-text
-  "# 酒吧里的女人\n\n# speaker: 女人\n“你是科尔？”\n\n# speaker: 科尔\n“看情况。你问的是欠钱的那个，还是能办事的那个？”\n\n# speaker: 女人\n“如果你能办事，欠钱那部分我可以假装没听说。”")
-
-(define woman-done-text
-  "# 一笔人情\n\n# speaker: 女人\n“你没有把事情办漂亮。”\n\n# speaker: 科尔\n“但办成了。”\n\n# speaker: 女人\n她笑了一下，把杯子推过来。\n\n# speaker: 女人\n“以后如果你需要有人替你说话，来这里找我。”")
-
-(define escape-intro-text
-  "# 仓库里的男人\n\n# speaker: 男人\n“这城不会放过欠账的人，也不会放过知道太多的人。”\n\n# speaker: 科尔\n“你是哪一种？”\n\n# speaker: 男人\n“准备离开的那一种。缺证件，缺船票，缺钱。你要是也想走，就别把警察引到我身上。”")
-
-(define fake-id-intro-text
-  "# 假证件\n\n# speaker: 接头人\n“证件不是商品，科尔。至少不是卖给你这种人的商品。”\n\n# speaker: 科尔\n“那它是什么？”\n\n# speaker: 接头人\n“人情。你替我把一本账册拿回来，我替你弄一个不会在码头第一眼就露馅的名字。”")
-
-(define escape-done-text
-  "# 离开贝城县\n\n# speaker: 科尔\n夜里的货车没有开灯。男人坐在驾驶室里，假证件压在仪表盘下，船票贴着我的胸口。\n\n# speaker: 男人\n“上车以后就别回头。”\n\n# speaker: 科尔\n我没有回头。")
+(define casino-found-text
+  "# 赌场入口\n\n# speaker: 老千\n“别在酒吧问地下入口。会显得你太干净。”\n\n# speaker: 科尔\n他把地址写在火柴盒里侧。字很小，赌债很大。")
 
 (define book-logic-text
   "# 读完：《县城账簿与谎言》\n\n# speaker: 科尔\n数字不会说真话，但它们也不擅长撒谎。读完这本书后，我更知道该从哪里看起。")
@@ -61,14 +45,20 @@
 (define book-willpower-text
   "# 读完：《疼痛之后》\n\n# speaker: 科尔\n有些书不教你赢，只教你不要太快倒下。")
 
+(define auth-sent-text
+  "# 送去鉴定\n\n# speaker: 科尔\n东西已经交给鉴定人。他说三天后给结果。")
+
+(define auth-result-text
+  "# 鉴定结果\n\n# speaker: 鉴定人\n\"这件东西的年代比你想象的久。久到不该出现在这里。\"")
+
+(define item-recovered-text
+  "# 取回物品\n\n# speaker: 科尔\n东西拿到了。现在的问题是——该留着它，还是该用它。")
+
 (define rehab-intro-text
   "# 开始康复治疗\n\n# speaker: 科尔\n诊所的大夫看了看我的伤，说没有快速的办法。\"每天来后面的康复室练一练，慢但管用。\"他说。八块钱换一个疗程，算是我在这城里最便宜的交易。")
 
 (define rehab-done-text
   "# 康复训练完成\n\n# speaker: 科尔\n最后一组动作做完，身体终于不再像一台生锈的机器。虽然离痊愈还远，但至少能喘一口顺畅的气了。\n\n恢复了 3 点健康。")
-
-(define gang-liaison-text
-  "# 黑帮联络处\n\n# speaker: 科尔\n巷口拐角那面墙上的粉笔记号每天都在变。黑帮的人说，有事会在这里留信。如果赶在期限前想先把事情办了，也可以在这里留一个记号，他们自然会派人来找我。")
 
 (define make-work-action
   (lambda (title desc suit risk ok-money partial-money fail-money fail-health)
@@ -94,18 +84,6 @@
         :partial (outcome "你读得慢，但今天没有白坐。" (list (effect 'clock+ clock 1) (effect 'add energy -1)))
         :fail (outcome "纸上的字浮起来，脑子却沉下去。" (list (effect 'add energy -1)))))))
 
-(define make-explore-action
-  (lambda (title desc clock suit)
-    (action
-      :title title
-      :desc desc
-      :check (check
-        :suits (list suit)
-        :risk 'mid
-        :ok (outcome "你把这片地方又摸清了一层。" (list (effect 'clock+ clock 2) (effect 'add energy -1)))
-        :partial (outcome "你没有完全迷路，也没有完全找到路。" (list (effect 'clock+ clock 1) (effect 'add energy -1)))
-        :fail (outcome "这片地方今天不接纳你。" (list (effect 'add energy -2)))))))
-
 (define make-investigate-action
   (lambda (title desc clock suit)
     (action
@@ -118,61 +96,83 @@
         :partial (outcome "你得到了一点碎片，足够继续往下问。" (list (effect 'clock+ clock 1) (effect 'add energy -1)))
         :fail (outcome "你问得太快，周围的人开始闭嘴。" (list (effect 'add energy -1)))))))
 
-(define-node 科尔公寓
+(define-node 办公室
   (node
-    :desc "一张沙发，一部电话，一只永远没洗干净的杯子。公寓不安全，但至少门锁认识你。"
+    :desc "办公桌、沙发、电话和一块还没完全褪色的地板。这里既是工作地点，也是你暂时能睡下的地方。"
     :position '(40 280)
+    :show-clocks (list (when (not blood_cleaned) blood_clean_progress) (when (and item_recovered item_auth_sent (not auth_done)) auth_wait_progress))
     :actions (list
       (action
         :title "在沙发上睡一晚"
-        :desc "睡眠会把今天结束掉。醒来时精力少一点，行动卡重新抽取，期限也更近。"
+        :desc (if (not blood_cleaned)
+          "睡觉 → 天数+1，精力-1，重抽行动卡。地板上有血迹时精力额外减少一点。精力不足时，健康可能受损。"
+          "睡觉 → 天数+1，精力-1，重抽行动卡。精力不足时，健康可能受损。")
         :effects (list
           (effect 'advance-day)
           (effect 'reset-hand)
           (effect 'set bookshop_entered_today false)
-          (when flower_invested (effect 'add money 10))))
+          (when (not blood_cleaned) (effect 'add energy -1))))
       (action
         :title "吃一包随身干粮"
-        :desc "不用找摊贩，也不用花今天的钱。吃掉 1 份干粮，立刻恢复 2 点精力。"
+        :desc "不用找摊贩，也不用花今天的钱。吃掉 1 份干粮，立刻恢复 3 点精力。"
         :conditions (list (has-item 'food 1 "需要干粮"))
         :inputs (list (item 'food 1 "干粮"))
-        :effects (list (effect 'add energy 2)))
-      )))
+        :effects (list (effect 'add energy 3)))
+      (when (and intrusion_seen (not blood_cleaned))
+        (action
+          :title "清理地板上的血迹"
+          :desc "不是为了骗过鉴识科，是为了让自己还能在这里闭眼。"
+          :check (check
+            :suits (list 意志 感知)
+            :risk 'low
+            :ok (outcome "你花了很久，把能处理的痕迹都处理掉。" (list (effect 'clock+ blood_clean_progress 2) (effect 'add energy -1)))
+            :partial (outcome "你清掉一部分，但有些颜色已经吃进木缝。" (list (effect 'clock+ blood_clean_progress 1) (effect 'add energy -1)))
+            :fail (outcome "你盯着那片颜色太久，手上反而没了力气。" (list (effect 'add energy -1))))))
+      (when (and item_recovered (not item_auth_sent))
+        (action
+          :title "把神秘物品送去鉴定"
+          :desc "这东西被太多人追着找。先弄清它是什么，再决定它值不值得继续拿着。"
+          :conditions (list (has-item 'mysterious_item 1 "需要神秘物品") (field-at-least 'money 15 "需要 15 元鉴定费"))
+          :inputs (list (item 'money 15 "鉴定费") (item 'mysterious_item 1 "神秘物品"))
+          :effects (list
+            (effect 'set item_auth_sent true)
+            (effect 'set vera_thread_notice_day (+ day 1))
+            (effect 'set auth_done_day (+ day 3))
+            (effect 'start-quick-dialogue auth-sent-text)))))))
 
 (define-node 街边摊贩
   (node
     :desc "铁锅、热汤、油烟和零钱。这里不问你从哪里来，只问你要不要加辣。"
     :position '(245 280)
+    :show-clocks (list (when (and intrusion_seen (not wounded_man_lead_obtained)) investigation_progress))
     :actions (list
       (action
         :title "吃一碗热汤"
-        :desc "便宜、烫嘴，立刻恢复 2 点精力。"
+        :desc "便宜、烫嘴，立刻恢复 3 点精力。"
         :inputs (list (item 'money 6 "饭钱"))
-        :effects (list (effect 'add energy 2)))
+        :effects (list (effect 'add energy 3)))
       (action
         :title "买一包干粮"
-        :desc "把 2 点精力恢复存成 1 份干粮，之后可以在公寓里吃掉。贵一点，换的是不用当场吃。"
+        :desc "把 2 点精力恢复存成 1 份干粮，之后可以在办公室里吃掉。"
         :inputs (list (item 'money 10 "干粮钱"))
-        :effects (list (effect 'add food 1))))))
+        :effects (list (effect 'add food 1)))
+      (when (and intrusion_seen (not stall_investigated))
+        (action
+          :title "向摊贩打听中枪男人"
+          :desc "饭点时人群最杂。有人也许见过那个捂着腹部从雨里穿过去的男人。"
+          :check (check
+            :suits (list 感知)
+            :risk 'mid
+            :ok (outcome "你从摊贩的闲谈里拼出了一个方向。" (list (effect 'clock+ investigation_progress 1) (effect 'set stall_investigated true) (effect 'add energy -1)))
+            :partial (outcome "碎片不多，但足够让你继续往前走。" (list (effect 'clock+ investigation_progress 1) (effect 'set stall_investigated true) (effect 'add energy -1)))
+            :fail (outcome "他今天不想提中枪的事，你的出现反而让他闭了嘴。" (list (effect 'add energy -1)))))))))
 
 (define-node 黑市
   (node
     :desc "修表铺后门、药味、假章和压低的声音。这里什么都能办，只是从不保证干净。"
     :position '(450 280)
+    :show-clocks (list (when (and intrusion_seen (not wounded_man_lead_obtained)) investigation_progress))
     :actions (list
-      (when (and (not fake_id_job_done) (not fake_id_job_started))
-        (action
-          :title "向接头人打听假证件"
-          :desc "他能做证件，但他不缺钱。他缺一个愿意替他处理麻烦的人。"
-          :effects (list
-            (effect 'set fake_id_job_started true)
-            (effect 'start-quick-dialogue fake-id-intro-text))))
-      (when (and fake_id_job_started (not fake_id_job_done))
-        (action
-          :title "替接头人拿回账册"
-          :desc "这不是购买，是交换。你替他处理一件棘手事，他替你做证件。"
-          :effects (list
-            (effect 'start-encounter '黑市证件人情))))
       (action
         :title "找黑市医生处理伤口"
         :desc "便宜，不报警。坏处是你最好别仔细看他的器械。"
@@ -182,13 +182,23 @@
           :risk 'mid
           :ok (outcome "他手很快，针脚也还算直。" (list (effect 'add health 2)))
           :partial (outcome "伤口处理好了，但你开始发冷。" (list (effect 'add health 2) (effect 'add energy -1)))
-          :fail (outcome "处理得太脏。你活下来了，但身体记了一笔账。" (list (effect 'add health 1) (effect 'add energy -2) (effect 'set infected true))))))))
+          :fail (outcome "处理得太脏。你活下来了，但身体记了一笔账。" (list (effect 'add health 1) (effect 'add energy -2) (effect 'set infected true)))))
+      (when (and intrusion_seen (not market_investigated))
+        (action
+          :title "问枪伤药品的去向"
+          :desc "正规诊所会登记，黑市不会。不会登记的地方，反而更容易留下口风。"
+          :check (check
+            :suits (list 逻辑)
+            :risk 'mid
+            :ok (outcome "黑市的人记性比诊所好。他记得那个买绷带的人。" (list (effect 'clock+ investigation_progress 1) (effect 'set market_investigated true) (effect 'add energy -1)))
+            :partial (outcome "他半遮半掩地说了几个细节，够你接着查。" (list (effect 'clock+ investigation_progress 1) (effect 'set market_investigated true) (effect 'add energy -1)))
+            :fail (outcome "黑市的人嘴很严，你用错方式了。" (list (effect 'add energy -1)))))))))
 
 (define-node 正规诊所
   (node
     :desc "白墙、玻璃柜、登记表。正规两个字的意思是：他们会救你，也会记住你。"
     :position '(655 280)
-    :show-clocks (list (when (and rehab_started (not rehab_done)) rehab_progress))
+    :show-clocks (list (when (and rehab_started (not rehab_done)) rehab_progress) (when (and intrusion_seen (not wounded_man_lead_obtained)) investigation_progress))
     :actions (list
       (action
         :title "标准治疗"
@@ -225,7 +235,17 @@
           :effects (list
             (effect 'add health 4)
             (effect 'set gunshot_wound false)
-            (effect 'add police_relation -1)))))))
+            (effect 'add police_relation -1))))
+      (when (and intrusion_seen (not clinic_investigated))
+        (action
+          :title "查急诊登记"
+          :desc "中枪的人不一定敢进诊室，但附近总有人看见过他。"
+          :check (check
+            :suits (list 逻辑)
+            :risk 'mid
+            :ok (outcome "登记簿上没有他，但护士记得那件血衣。" (list (effect 'clock+ investigation_progress 1) (effect 'set clinic_investigated true) (effect 'add energy -1)))
+            :partial (outcome "你翻到了一些记录，不全，但有用。" (list (effect 'clock+ investigation_progress 1) (effect 'set clinic_investigated true) (effect 'add energy -1)))
+            :fail (outcome "护士警惕地看了你一眼，你没敢继续问。" (list (effect 'add energy -1)))))))))
 
 (define-node 书店
   (node
@@ -241,275 +261,230 @@
           :inputs (list (item 'money 5 "入场费"))
           :effects (list (effect 'set bookshop_entered_today true))))
       (when (and bookshop_entered_today (not logic_book_done))
-        (make-book-action
-          "读《县城账簿与谎言》"
-          "一本讲账本、公司壳和人情债的旧书。读完会提升逻辑。"
-          logic_book
-          逻辑))
+        (make-book-action "读《县城账簿与谎言》" "一本讲账本、公司壳和人情债的旧书。读完会提升逻辑。" logic_book 逻辑))
       (when (and bookshop_entered_today (not perception_book_done))
-        (make-book-action
-          "读《街口观察法》"
-          "一本写给巡警的教材，后来流到旧书架上。读完会提升感知。"
-          perception_book
-          感知))
+        (make-book-action "读《街口观察法》" "一本写给巡警的教材，后来流到旧书架上。读完会提升感知。" perception_book 感知))
       (when (and bookshop_entered_today (not willpower_book_done))
-        (make-book-action
-          "读《疼痛之后》"
-          "关于戒断、疼痛和自我约束。读完会提升意志。"
-          willpower_book
-          意志)))))
+        (make-book-action "读《疼痛之后》" "关于戒断、疼痛和自我约束。读完会提升意志。" willpower_book 意志)))))
 
-(define-node 警局档案室
+(define-node 警局
   (node
-    :desc "铁柜、烟味和一排不愿回答问题的人。旧案不会自己开口，尤其是被人关过一次的旧案。"
-    :position '(1065 520)
+    :desc "铁柜、烟味和一排不愿回答问题的人。警察想要报告，不一定想要真相。"
+    :position '(1065 280)
     :actions (list
-      (when (not old_case_checked)
+      (when (and intrusion_seen (not police_interview_started))
         (action
-          :title "查十年前红房间旧案"
-          :desc "红房间死亡事件的案卷早就结了。你只是想确认它到底怎么结的。"
-          :check (check
-            :suits (list 逻辑 感知)
-            :risk 'mid
-            :ok (outcome "你找到了被抽走后又塞回来的几页。" (list (effect 'set old_case_checked true) (effect 'set pressure_started true) (effect 'set pressure_phase 1) (effect 'set police_fine_notice_day (+ day 1)) (effect 'start-quick-dialogue old-case-checked-text) (effect 'add energy -1)))
-            :partial (outcome "你没拿到完整卷宗，但看见了足够奇怪的空白。" (list (effect 'set old_case_checked true) (effect 'set pressure_started true) (effect 'set pressure_phase 1) (effect 'set police_fine_notice_day (+ day 1)) (effect 'start-quick-dialogue old-case-checked-text) (effect 'add energy -1)))
-            :fail (outcome "档案员不肯放行，但你的老关系还够撬开一道缝。" (list (effect 'set old_case_checked true) (effect 'set pressure_started true) (effect 'set pressure_phase 1) (effect 'set police_fine_notice_day (+ day 1)) (effect 'start-quick-dialogue old-case-checked-text) (effect 'add energy -2) (effect 'add police_relation -1))))))
-      (when (and police_fine_active (not police_fine_paid))
-        (action
-          :title "缴纳执照罚金"
-          :desc "这不是罚款，是他们给你开的第一道价码。"
-          :conditions (list (field-at-least 'money police_fine_amount "需要缴纳罚金"))
-          :inputs (list (item 'money police_fine_amount "执照罚金"))
+          :title "去警局配合调查"
+          :desc "他们已经把这件事当成麻烦，而不是案件。你要先把笔录做完。"
           :effects (list
-            (effect 'set police_fine_paid true)
-            (effect 'set police_fine_active false)
-            (effect 'set pressure_phase 2)
-            (effect 'set gang_warning_notice_day (+ day 2))
-            (effect 'start-quick-dialogue police-fine-paid-text)))))))
+            (effect 'set police_interview_started true)
+            (effect 'set police_choice_ready true)
+            (effect 'start-dialogue 'police_interview)))))))
+
+(define-node 仓库
+  (node
+    :desc "仓库按小时结钱，也按小时消耗人。白天搬货，夜里有人谈不该谈的路线。"
+    :position '(40 520)
+    :show-clocks (list (when (and intrusion_seen (not wounded_man_lead_obtained)) investigation_progress))
+    :actions (list
+      (make-work-action "搬货打散工" "现金来得快，代价也直接。" 意志 'mid 24 16 8 1)
+      (when (and intrusion_seen (not warehouse_investigated))
+        (action
+          :title "问码头装卸工"
+          :desc "死者鞋底带着码头泥。仓库的人也许见过他从哪条路上来。"
+          :check (check
+            :suits (list 感知)
+            :risk 'mid
+            :ok (outcome "装卸工见过那个方向有车急刹的声音。" (list (effect 'clock+ investigation_progress 1) (effect 'set warehouse_investigated true) (effect 'add energy -1)))
+            :partial (outcome "他不能确定，但给你指了可能的方向。" (list (effect 'clock+ investigation_progress 1) (effect 'set warehouse_investigated true) (effect 'add energy -1)))
+            :fail (outcome "码头风大，人的记性也容易被吹散。" (list (effect 'add energy -1))))))
+      (when (and police_investigation_done (not item_recovered) (not item_recovery_started))
+        (action
+          :title "挑战 - 取回神秘物品"
+          :desc "几天后，那东西已经换过手。你必须赶在别人彻底拆开它之前，把它拿回来。"
+          :effects (list
+            (effect 'set item_recovery_started true)
+            (effect 'start-encounter '取回神秘物品)))))))
 
 (define-node 酒吧
   (node
     :desc "酒吧白天像咖啡馆，晚上像供词室。这里没有秘密，只有还没轮到你听见的消息。"
-    :position '(1065 280)
-    :show-clocks (list woman_trust (when (and old_case_checked (not moon_hotel_unlocked)) city_lead_progress))
+    :position '(245 520)
+    :show-clocks (list (when vera_commission_taken frederick_trace_progress) blonde_trust (when gambler_met gambler_debt_progress))
     :actions (list
       (action
         :title "买一杯酒"
         :desc "酒不能解决问题，但能补一点精力。"
         :inputs (list (item 'money 8 "酒钱"))
         :effects (list (effect 'add energy 2)))
-      (when (= woman_phase 0)
+      (when (and vera_thread_unlocked (not vera_commission_taken))
         (action
-          :title "和吧台边的女人说话"
-          :desc "她先叫出了你的名字。那通常不是好事。"
+          :title "接下薇拉的委托"
+          :desc "弗雷德里克要你找到他的妻子。你还不知道这是不是一件好事。"
           :effects (list
-            (effect 'set woman_phase 1)
-            (effect 'start-quick-dialogue woman-intro-text))))
-      (when (= woman_phase 1)
+            (effect 'set vera_commission_taken true)
+            (effect 'set chapter_2_started true)
+            (effect 'start-quick-dialogue vera-commission-text))))
+      (when (and vera_commission_taken (not frederick_talk_done))
         (action
-          :title "替她打听一个名字"
-          :desc "她要找的人欠她一句话，也可能欠她一条命。"
-          :check (check
-            :suits (list 感知)
-            :risk 'mid
-            :ok (outcome "你在几张桌子之间听到了那个名字。" (list (effect 'clock+ woman_trust 2) (effect 'add energy -1)))
-            :partial (outcome "你听到一点线索，她愿意继续相信你。" (list (effect 'clock+ woman_trust 1) (effect 'add energy -1)))
-            :fail (outcome "你问得太直，今晚没人再接你的话。" (list (effect 'add energy -1))))))
-      (when (and old_case_checked (not moon_hotel_unlocked))
+          :title "和弗雷德里克谈话"
+          :desc "他是薇拉的丈夫，也是最想让你相信自己无辜的人。"
+          :effects (list
+            (effect 'set frederick_talk_done true)
+            (effect 'start-quick-dialogue frederick-talk-text))))
+      (when (and frederick_talk_done (not frederick_real_lead_found))
         (make-investigate-action
-          "打听薇拉的去向"
-          "弗雷德里克的妻子在旧城区出现过。酒吧里总有人见过不该见的人。"
-          city_lead_progress
-          感知)))))
-
-(define-node 仓库
-  (node
-    :desc "仓库按小时结钱，也按小时消耗人。白天搬货，夜里有人谈离开的路。"
-    :position '(40 520)
-    :actions (list
-      (make-work-action
-        "搬货打散工"
-        "现金来得快，代价也直接。"
-        意志
-        'mid
-        24
-        16
-        8
-        1)
-      (when (not escape_contact)
+          "调查弗雷德里克的酒吧踪迹"
+          "他来过这里，却没有坐在吧台。有人在角落见过他的影子。"
+          frederick_trace_progress
+          感知))
+      (when (not gambler_met)
         (action
-          :title "听仓库男人谈离城"
-          :desc "他知道一条离开贝城县的路，但那条路不收空手的人。"
-          :effects (list
-            (effect 'set escape_contact true)
-            (effect 'start-quick-dialogue escape-intro-text))))
-      (when (and escape_contact (not passage_known))
+          :title "听绝望的赌徒抱怨"
+          :desc "他输了钱，也输掉了保密的能力。"
+          :effects (list (effect 'set gambler_met true))))
+      (when (and gambler_met (not casino_unlocked))
         (action
-          :title "帮男人处理一件小麻烦"
-          :desc "有个装卸工知道得太多。你不必伤人，只要让他闭嘴。"
+          :title "借钱给赌徒"
+          :desc "十块钱买不到感激，但能买到他下一句真话。"
+          :conditions (list (field-at-least 'money 10 "需要 10 元"))
+          :inputs (list (item 'money 10 "借款"))
+          :effects (list (effect 'clock+ gambler_debt_progress 1))))
+      (when (and gambler_met (not casino_unlocked))
+        (action
+          :title "赌局 - 老千"
+          :desc "他不是好赌，是太相信自己能看穿别人。"
           :check (check
-            :suits (list 意志)
+            :suits (list 感知 逻辑)
             :risk 'mid
-            :ok (outcome "事情压下去了。男人把一张船票交给你。" (list (effect 'set passage_known true) (effect 'add passage_ticket 1) (effect 'add energy -1)))
-            :partial (outcome "事情勉强压住，代价是你欠了一个人情。" (list (effect 'set passage_known true) (effect 'add passage_ticket 1) (effect 'add gang_relation -1) (effect 'add energy -1)))
-            :fail (outcome "那人跑去找警察。男人很不高兴。" (list (effect 'add police_relation -1) (effect 'add energy -2))))))
-      (when (and escape_contact (not main_resolved))
-        (action
-          :title "和男人一起离开城市"
-          :desc "假证件、船票、现金，还有别把警察带到码头的好运气。"
-          :conditions (list
-            (has-item 'fake_id 1 "需要假证件")
-            (has-item 'passage_ticket 1 "需要船票")
-            (field-at-least 'money 50 "需要 50 元")
-            (field-at-least 'police_relation -1 "警察关系不能太差"))
-          :inputs (list
-            (item 'money 50 "离城现金")
-            (item 'fake_id 1 "假证件")
-            (item 'passage_ticket 1 "船票"))
-          :effects (list
-            (effect 'set escaped_city true)
-            (effect 'set main_resolved true)
-            (effect 'start-quick-dialogue escape-done-text)
-            (effect 'end-game "离开城市" "科尔没有还清所有账，但他让账本留在了贝城县。")))))))
-
-(define-node 飞地区域
-  (node
-    :desc "县城边缘新修的富人飞地。铁门后面有草坪，铁门外面有被忘掉的小路。"
-    :position '(245 520)
-    :show-clocks (list enclave_search)
-    :actions (list
-      (make-explore-action
-        "沿着飞地外围探索"
-        "你从保安看不见的地方走，试着弄清这片新钱修出来的迷宫。"
-        enclave_search
-        感知))))
-
-(define-node 花店
-  (node
-    :desc "花店藏在飞地背面。老板不解释为什么暂停营业，也不解释为什么需要现金。"
-    :position '(245 520)
-    :actions (list
-      (when (not flower_invested)
-        (action
-          :title "投资花店"
-          :desc "一百元买不到一间店，但能买到一个每天清晨都会送来信封的人。"
-          :conditions (list (field-at-least 'money 50 "需要 50 元"))
-          :inputs (list (item 'money 50 "投资款"))
-          :effects (list
-            (effect 'set flower_invested true))))
-      (when flower_invested
-        (action
-          :title "查看花店账本"
-          :desc "账本不厚，但每一页都说明这笔钱正在慢慢回来。"
-          :effects (list
-            (effect 'start-quick-dialogue "# 花店账本\n\n# speaker: 科尔\n花店每天清晨结一次账。数字不大，但它们很稳定。")))))))
+            :ok (outcome "你看穿了他的手法，也看穿了他的恐惧。" (list (effect 'clock+ gambler_debt_progress 2)))
+            :partial (outcome "你没赢漂亮，但逼他说出了地下入口的名字。" (list (effect 'clock+ gambler_debt_progress 1)))
+            :fail (outcome "你输了一点钱，也换来一点教训。" (list (effect 'add money -8) (effect 'add energy -1)))))))))
 
 (define-node 老街
   (node
     :desc "旧铺面、窄楼梯、晾衣绳和熟人的眼神。老街没有明确入口，但你总能从这里找到一点活路。"
     :position '(450 520)
-    :show-clocks (list old_street_search (when (and old_case_checked (not moon_hotel_unlocked)) city_lead_progress))
+    :show-clocks (list (when vera_commission_taken frederick_trace_progress) (when (and hotel_infiltrated (not vera_apartment_found)) vera_follow_progress))
     :actions (list
-      (make-explore-action
-        "在老街摸路"
-        "你问修鞋匠、报童和楼下晒太阳的人，慢慢把老街的关系图拼出来。"
-        old_street_search
-        感知)
-      (when (and old_case_checked (not moon_hotel_unlocked))
+      (when (and frederick_talk_done (not frederick_real_lead_found))
+        (action
+          :title "调查弗雷德里克的老街踪迹"
+          :desc "三个地点里，只有老街的人真的见过薇拉和弗雷德里克留下的痕迹。"
+          :check (check
+            :suits (list 感知 逻辑)
+            :risk 'mid
+            :ok (outcome "你找到了通向望月旅馆的关键证词。" (list (effect 'clock+ frederick_trace_progress 2)))
+            :partial (outcome "老街给了你半句真话，足够继续追。" (list (effect 'clock+ frederick_trace_progress 1) (effect 'add energy -1)))
+            :fail (outcome "老街今天只给你关门声。" (list (effect 'add energy -1))))))
+      (when (and hotel_infiltrated (not vera_apartment_found))
         (make-investigate-action
-          "追问望月旅馆"
-          "有人见过薇拉从一辆灰色轿车旁边走开。线索指向老街尽头的廉价旅馆。"
-          city_lead_progress
-          逻辑))
-      (when (and moon_hotel_unlocked (not hotel_search_done))
-        (action
-          :title "前往望月旅馆搜寻"
-          :desc "薇拉住过的 302 房间还没有被清空。有人付了钱，让它保持原样。"
-          :effects (list (effect 'start-encounter '望月旅馆搜寻))))
-      (when (clock-filled? old_street_search)
-        (action
-          :title "从老街人情里拿一张票"
-          :desc "有些票不卖给陌生人。幸好你已经不是完全的陌生人。"
-          :conditions (list (field-at-least 'money 40 "需要 40 元"))
-          :inputs (list (item 'money 40 "打点费用"))
-          :effects (list (effect 'add passage_ticket 1)))))))
+          "跟踪旅馆后门的人"
+          "不要靠太近，也不要跟丢。真正的地址藏在他以为自己安全的时候。"
+          vera_follow_progress
+          感知)))))
 
-(define-node 黑帮联络处
+(define-node 望月旅馆
   (node
-    :desc "巷口拐角有一面用粉笔画记号的墙。黑帮的人说他们会在这里留信。如果想提前把事情办了，也可以在这里等他们的人。"
-    :position '(40 420)
-    :show-clocks (list gang_countdown_clock)
+    :desc "招牌灯一半亮着，一半像从来没亮过。老板记性很差，收费时除外。"
+    :position '(655 520)
     :actions (list
-      (when (and intro_seen (not main_resolved) (= gang_phase 1) (not gang_task_forced) (not gang_task_result_pending))
+      (when (and frederick_real_lead_found (not hotel_boss_talk_done))
         (action
-          :title "去处理黑帮的第一件事"
-          :desc "教训那几个欠教训的小混混。早办完早了结。"
+          :title "和旅馆老板谈"
+          :desc "你需要知道薇拉住过哪间房。他需要假装不知道。"
           :effects (list
-            (effect 'set gang_task_forced true)
-            (effect 'start-encounter '教训小混混))))
-      (when (and intro_seen (not main_resolved) (= gang_phase 2) (not gang_task_forced) (not gang_task_result_pending))
+            (effect 'set hotel_boss_talk_done true)
+            (effect 'start-quick-dialogue hotel-boss-text))))
+      (when (and hotel_boss_talk_done (not hotel_infiltrated))
         (action
-          :title "去处理黑帮的第二件事"
-          :desc "黑帮又找上门了。这次的事更麻烦一点。"
-          :effects (list
-            (effect 'set gang_task_forced true)
-            (effect 'start-encounter '教训小混混))))
-      (when (and intro_seen (not main_resolved) (= gang_phase 3) (not gang_task_forced) (not gang_task_result_pending))
+          :title "挑战 - 潜入旅馆"
+          :desc "老板不让你进去。那只说明需要换一个入口。"
+          :effects (list (effect 'start-encounter '潜入旅馆)))))))
+
+(define-node 公寓
+  (node
+    :desc "没有门牌的公寓楼，走廊闻起来像潮墙、廉价香水和旧火药。"
+    :position '(860 520)
+    :actions (list
+      (when (and vera_apartment_found (not chapter_2_done))
         (action
-          :title "去处理黑帮的第三件事"
-          :desc "最后一件事。办完这桩，账本就暂时能合上。"
+          :title "进入公寓"
+          :desc "房门没有锁。里面有人等你，枪口先开口。"
           :effects (list
-            (effect 'set gang_task_forced true)
-            (effect 'start-encounter '教训小混混))))
-      (when (not main_resolved)
-        (action
-          :title "把钱交给黑帮"
-          :desc "最直接、也最疼的一种自由：把钱装进信封，送到他们桌上。"
-          :conditions (list (field-at-least 'money 100 "需要 100 元"))
-          :inputs (list (item 'money 100 "还债现金"))
-          :effects (list
-            (effect 'set debt_paid true)
-            (effect 'set main_resolved true)
-            (effect 'end-game "债务结清" "科尔用现金买回了十五天后的早晨。黑帮不再敲门，至少暂时如此。")))))))
+            (effect 'set standoff_started true)
+            (effect 'start-encounter '公寓枪对峙)))))))
+
+(define-node 赌场
+  (node
+    :desc "地下室、绿绒桌、假笑和真债。这里能赢钱，也能把明天提前输掉。"
+    :position '(1065 520)
+    :actions (list
+      (make-work-action "替赌场看一晚场子" "不问问题，只看住门口。" 意志 'mid 30 18 6 1)
+      (action
+        :title "小赌一局"
+        :desc "把十块钱放上桌，试试今晚的手气。"
+        :conditions (list (field-at-least 'money 10 "需要 10 元赌本"))
+        :inputs (list (item 'money 10 "赌本"))
+        :check (check
+          :suits (list 感知)
+          :risk 'high
+          :ok (outcome "你赢得很快，也收得很快。" (list (effect 'add money 30)))
+          :partial (outcome "你保住本金，还多拿了一点。" (list (effect 'add money 8) (effect 'add energy -1)))
+          :fail (outcome "桌子吃掉了你的钱。" (list (effect 'add energy -1))))))))
 
 (define world-state
   (state
     (intro_seen false)
+    (intrusion_seen false)
+    (chapter_2_started false)
     (main_resolved false)
 
-    (debt_amount 100)
-    (gang_phase 1)
-    (gang_days_remaining 5)
-    (gang_task_forced false)
-    (gang_task_result_pending false)
-    (debt_paid false)
-    (escaped_city false)
+    (recovery_deadline_day 5)
+    (police_interview_started false)
+    (police_interview_forced false)
+    (police_choice_ready false)
+    (police_investigation_done false)
+    (police_knows_true_info false)
+    (police_got_fake_info false)
+    (police_refused_info false)
+    (police_suspicious false)
+    (police_summons_seen false)
+    (blood_clean_progress (clock :title "血迹清理" :desc "清理办公室里的血迹。未清理时休息效果更差。" :initial 0 :max 3))
+    (blood_cleaned false)
+    (investigation_progress (clock :title "死者线索" :desc "调查3处线索，拼出中枪男人的来路。" :initial 0 :max 3))
+    (stall_investigated false)
+    (market_investigated false)
+    (clinic_investigated false)
+    (warehouse_investigated false)
+    (wounded_man_lead_obtained false)
+    (item_recovery_started false)
+    (item_recovery_forced false)
+    (item_recovered false)
+    (item_recovered_notice_seen false)
+    (item_recovery_failed false)
+    (item_auth_sent false)
+    (vera_thread_notice_day 0)
+    (vera_thread_unlocked false)
+    (auth_done_day 0)
+    (auth_done false)
+    (auth_wait_progress (clock :title "鉴定等待" :desc "鉴定人正在检查神秘物品。" :initial 0 :max 3))
 
-    (case_intro_seen false)
-    (old_case_checked false)
-    (city_lead_progress (clock :title "薇拉线索" :desc "把红房间旧案和薇拉最近的行踪连起来。" :initial 0 :max 4))
-    (moon_hotel_unlocked false)
-    (hotel_search_done false)
-    (note_street_time false)
-    (pills_found false)
-    (red_room_clipping false)
-    (mb_knows false)
-    (corridor_man_seen false)
+    (vera_commission_taken false)
+    (frederick_talk_done false)
+    (frederick_trace_progress (clock :title "弗雷德里克踪迹" :desc "调查他和薇拉在老街一带的活动。" :initial 0 :max 4))
+    (frederick_real_lead_found false)
+    (hotel_boss_talk_done false)
+    (hotel_infiltrated false)
+    (vera_follow_progress (clock :title "跟踪目标" :desc "从旅馆后门跟到真正的公寓。" :initial 0 :max 3))
+    (vera_apartment_found false)
+    (standoff_started false)
+    (chapter_2_done false)
 
-    (pressure_started false)
-    (pressure_phase 0)
-    (police_fine_notice_day 0)
-    (police_fine_active false)
-    (police_fine_deadline 0)
-    (police_fine_amount 60)
-    (police_fine_paid false)
-    (police_fine_failed false)
-    (gang_warning_notice_day 0)
-    (gang_warning_active false)
-    (gang_warning_deadline 0)
-    (gang_pressure_forced false)
-    (gang_pressure_result_pending false)
-    (tracker_seen false)
+    (gambler_met false)
+    (gambler_debt_progress (clock :title "赌徒欠债" :desc "让绝望的赌徒说出地下赌场的位置。" :initial 0 :max 3))
+    (casino_unlocked false)
+    (blonde_trust (clock :title "金发女郎" :desc "酒吧里另一个知道太多的人。后续支线预留。" :initial 0 :max 3))
 
     (gang_relation 0)
     (finance_relation 0)
@@ -518,24 +493,11 @@
     (logic_book (clock :title "《县城账簿与谎言》" :desc "读完后逻辑 +1。" :initial 0 :max 3))
     (perception_book (clock :title "《街口观察法》" :desc "读完后感知 +1。" :initial 0 :max 3))
     (willpower_book (clock :title "《疼痛之后》" :desc "读完后意志 +1。" :initial 0 :max 3))
-    (woman_trust (clock :title "女人的信任" :desc "她会先看你能不能把小事办成。" :initial 0 :max 3))
-    (enclave_search (clock :title "飞地探索" :desc "摸清飞地背后的路，可能发现新的地点。" :initial 0 :max 4))
-    (old_street_search (clock :title "老街探索" :desc "老街的人情和暗门。" :initial 0 :max 3))
-    (gang_countdown_clock (clock :title "剩余天数" :desc "还剩几天截止。" :initial 0 :max 5))
-
     (logic_book_done false)
     (perception_book_done false)
     (willpower_book_done false)
     (bookshop_entered_today false)
-    (woman_phase 0)
-    (woman_done false)
-    (escape_contact false)
-    (fake_id_job_started false)
-    (fake_id_job_done false)
-    (fake_id_job_failed false)
-    (passage_known false)
-    (flower_found false)
-    (flower_invested false)
+
     (infected false)
     (gunshot_wound false)
     (rehab_started false)
@@ -544,76 +506,78 @@
 
 (define world-reacts
   (reacts
-    ;; 开场：先把红房间旧案放到玩家面前，但压力要等玩家真正去查后才启动。
     (react
-      :when (not case_intro_seen)
+      :when (not intro_seen)
       :then (list
-        (effect 'set case_intro_seen true)
         (effect 'set intro_seen true)
-        (effect 'start-quick-dialogue case-intro-text)))
+        (effect 'set intrusion_seen true)
+        (effect 'start-quick-dialogue intrusion-intro-text)))
 
-    ;; 查旧案后的第二天，警察用执照罚单把压力具体化。
     (react
-      :when (and old_case_checked (= pressure_phase 1) (not police_fine_active) (not police_fine_paid) (>= day police_fine_notice_day))
+      :when (and intrusion_seen (not police_interview_started) (not police_interview_forced) (>= day 2))
       :then (list
-        (effect 'set police_fine_active true)
-        (effect 'set police_fine_deadline (+ day 5))
-        (effect 'start-quick-dialogue police-fine-text)))
+        (effect 'set police_interview_started true)
+        (effect 'set police_interview_forced true)
+        (effect 'set police_choice_ready true)
+        (effect 'set police_summons_seen true)
+        (effect 'start-dialogue 'forced_police_interview)))
 
-    ;; 罚单逾期后，警察亲自上门。失败也会推动压力链进入下一段。
     (react
-      :when (and police_fine_active (not police_fine_paid) (> day police_fine_deadline))
+      :when (and (clock-filled? blood_clean_progress) (not blood_cleaned))
       :then (list
-        (effect 'set police_fine_active false)
-        (effect 'set police_fine_failed true)
-        (effect 'set pressure_phase 2)
-        (effect 'set gang_warning_notice_day (+ day 1))
-        (effect 'add health -2)
-        (effect 'add energy -2)
-        (effect 'add police_relation -1)
-        (effect 'start-quick-dialogue police-fine-failed-text)))
+        (effect 'set blood_cleaned true)))
 
-    ;; 罚单之后，黑帮开始接手施压。
     (react
-      :when (and (= pressure_phase 2) (not gang_warning_active) (not gang_pressure_result_pending) (>= day gang_warning_notice_day))
+      :when (and (clock-filled? investigation_progress) (not wounded_man_lead_obtained))
       :then (list
-        (effect 'set gang_warning_active true)
-        (effect 'set gang_warning_deadline (+ day 3))
-        (effect 'start-quick-dialogue gang-warning-text)))
+        (effect 'set wounded_man_lead_obtained true)
+        (effect 'add wounded_man_lead 1)
+        (effect 'start-quick-dialogue wounded-lead-text)))
 
-    ;; 黑帮警告不是交钱能解决的，时间到了就强制进入外出事件。
     (react
-      :when (and gang_warning_active (not gang_pressure_forced) (> day gang_warning_deadline))
+      :when (and police_investigation_done (not item_recovered) (not item_recovery_started) (not item_recovery_forced) (>= day recovery_deadline_day))
       :then (list
-        (effect 'set gang_pressure_forced true)
-        (effect 'start-encounter '教训小混混)))
+        (effect 'set item_recovery_started true)
+        (effect 'set item_recovery_forced true)
+        (effect 'start-dialogue 'forced_item_recovery)))
 
-    ;; 黑帮施压结束后，压力暂时退到暗处。
     (react
-      :when gang_pressure_result_pending
+      :when (and item_recovered (not item_recovered_notice_seen))
       :then (list
-        (effect 'set gang_pressure_result_pending false)
-        (effect 'set gang_pressure_forced false)
-        (effect 'set gang_warning_active false)
-        (effect 'set pressure_phase 3)
-        (effect 'add gang_relation -1)
-        (effect 'start-quick-dialogue gang-pressure-done-text)))
+        (effect 'set item_recovered_notice_seen true)
+        (effect 'start-quick-dialogue item-recovered-text)))
 
-    ;; 城市调查填满后，解锁第一个外出调查目标。
     (react
-      :when (and (clock-filled? city_lead_progress) (not moon_hotel_unlocked))
+      :when (and item_auth_sent (not vera_thread_unlocked) (>= day vera_thread_notice_day))
       :then (list
-        (effect 'set moon_hotel_unlocked true)
-        (effect 'start-quick-dialogue "# 望月旅馆\n\n# speaker: 科尔\n薇拉在望月旅馆住过三晚。老板说她走得很急，但房间一直没人清。有人替她续了钱。")))
+        (effect 'set vera_thread_unlocked true)
+        (effect 'start-quick-dialogue vera-thread-text)))
 
-    ;; 旅馆线索把红房间从旧案变成现在正在发生的事。
     (react
-      :when (and hotel_search_done red_room_clipping (not tracker_seen))
+      :when (and item_auth_sent (not auth_done) (>= day auth_done_day))
       :then (list
-        (effect 'set tracker_seen true)
-        (effect 'start-quick-dialogue first-tracker-text)))
+        (effect 'set auth_done true)
+        (effect 'clock+ auth_wait_progress 3)
+        (effect 'start-quick-dialogue auth-result-text)))
 
-    ;; 读书的结果放在这里：clock 满了，人的能力发生改变。
+    (react
+      :when (and (clock-filled? frederick_trace_progress) (not frederick_real_lead_found))
+      :then (list
+        (effect 'set frederick_real_lead_found true)
+        (effect 'start-quick-dialogue hotel-lead-text)))
+
+    (react
+      :when (and (clock-filled? vera_follow_progress) (not vera_apartment_found))
+      :then (list
+        (effect 'set vera_apartment_found true)
+        (effect 'start-quick-dialogue follow-done-text)))
+
+    (react
+      :when (and (clock-filled? gambler_debt_progress) (not casino_unlocked))
+      :then (list
+        (effect 'set casino_unlocked true)
+        (effect 'start-quick-dialogue casino-found-text)))
+
     (react
       :when (and (clock-filled? logic_book) (not logic_book_done))
       :then (list
@@ -633,51 +597,32 @@
         (effect 'upgrade-spirit-value 'willpower 1)
         (effect 'start-quick-dialogue book-willpower-text)))
 
-    ;; 酒吧女人的短链先在城市层闭合。队友行动卡以后再接。
-    (react
-      :when (and (= woman_phase 1) (clock-filled? woman_trust) (not woman_done))
-      :then (list
-        (effect 'set woman_done true)
-        (effect 'set woman_phase 2)
-        (effect 'add finance_relation 1)
-        (effect 'start-quick-dialogue woman-done-text)))
-
-    ;; 探索区域是“虚地点”：探索满了，虚地点消失，真实地点出现。
-    (react
-      :when (and (clock-filled? enclave_search) (not flower_found))
-      :then (list
-        (effect 'set flower_found true)
-        (effect 'start-quick-dialogue enclave-found-text)))
-
-    ;; 投资项目的收益在“休息醒来”时结算，见公寓的休息行动。这里不写成 react，
-    ;; 是为了避免每帧重复触发，也让“醒来收到信封”的语义更直接。
-
-    ;; 康复训练完成：进度填满后恢复健康。
     (react
       :when (and rehab_started (clock-filled? rehab_progress) (not rehab_done))
       :then (list
         (effect 'set rehab_done true)
         (effect 'add health 3)
-        (effect 'start-quick-dialogue rehab-done-text)))
-
-    ))
+        (effect 'start-quick-dialogue rehab-done-text)))))
 
 (content
-  :meta (meta :key 'city_1 :title "贝城县" :desc "旧案、线索，以及不想让你继续追问的人。")
+  :meta (meta :key 'city_1 :title "贝城县" :desc "雨夜闯入者、警方笔录、薇拉委托，以及被一点点揭开的城市。")
   :state world-state
   :reacts world-reacts
   :root
   (node
     :title "贝城县"
-    :desc "贝城县不大。旧案、工作、诊所、酒吧和那些没写在地图上的小路，足够装下一个人继续追问的代价。"
+    :desc "贝城县不大。办公室、诊所、酒吧、老街和那些没写在地图上的入口，足够装下一个人继续追问的代价。"
+    :show-clocks (list (when (and intrusion_seen (not wounded_man_lead_obtained)) investigation_progress))
     :children (list
-      (科尔公寓)
+      (办公室)
       (街边摊贩)
       (黑市)
       (正规诊所)
       (书店)
-      (酒吧)
+      (警局)
       (仓库)
-      (if flower_found (花店) (飞地区域))
-      (老街)
-      (警局档案室))))
+      (when vera_thread_unlocked (酒吧))
+      (when vera_commission_taken (老街))
+      (when frederick_real_lead_found (望月旅馆))
+      (when vera_apartment_found (公寓))
+      (when casino_unlocked (赌场)))))

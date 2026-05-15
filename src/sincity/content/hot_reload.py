@@ -36,7 +36,7 @@ def _registered_source_paths() -> tuple[Path, ...]:
     return tuple(dict.fromkeys(sources))
 
 
-def _scm_signature() -> tuple[tuple[str, int], ...]:
+def _discover_scm_files() -> tuple[Path, ...]:
     files: list[Path] = []
     for source_path in _registered_source_paths():
         if not _is_real_scm_file(source_path):
@@ -45,7 +45,10 @@ def _scm_signature() -> tuple[tuple[str, int], ...]:
             files.extend(module_dependency_paths(source_path))
         except FileNotFoundError:
             continue
-    files = list(dict.fromkeys(path for path in files if _is_real_scm_file(path)))
+    return tuple(dict.fromkeys(path for path in files if _is_real_scm_file(path)))
+
+
+def _scm_signature(files: tuple[Path, ...]) -> tuple[tuple[str, int], ...]:
     signature: list[tuple[str, int]] = []
     for path in files:
         try:
@@ -57,20 +60,12 @@ def _scm_signature() -> tuple[tuple[str, int], ...]:
 
 class ScmHotReloader:
     def __init__(self) -> None:
-        self._last_signature = _scm_signature()
+        self._watched_files = _discover_scm_files()
+        self._last_signature = _scm_signature(self._watched_files)
         self._last_scan_error = ""
 
     def reload_if_changed(self, state: GameState | None = None) -> bool:
-        try:
-            signature = _scm_signature()
-        except EncounterCompileError as exc:
-            message = str(exc)
-            if message != self._last_scan_error:
-                self._last_scan_error = message
-                print("[SCM hot reload] dependency scan failed, keeping previous content")
-                traceback.print_exc()
-            return False
-        self._last_scan_error = ""
+        signature = _scm_signature(self._watched_files)
         if signature == self._last_signature:
             return False
         self._last_signature = signature
@@ -95,6 +90,16 @@ class ScmHotReloader:
             print("[SCM hot reload] failed, keeping previous content")
             traceback.print_exc()
             return False
+        try:
+            self._watched_files = _discover_scm_files()
+            self._last_signature = _scm_signature(self._watched_files)
+            self._last_scan_error = ""
+        except EncounterCompileError as exc:
+            message = str(exc)
+            if message != self._last_scan_error:
+                self._last_scan_error = message
+                print("[SCM hot reload] dependency scan failed after reload")
+                traceback.print_exc()
         if state is not None:
             _sync_state_to_content(state)
             state.render_cache.revision += 1

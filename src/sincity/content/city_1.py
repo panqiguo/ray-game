@@ -23,6 +23,8 @@ def build_city_1() -> CompiledWorldProgram:
             "passage_ticket": 0,
             "first_aid": 0,
             "food": 0,
+            "mysterious_item": 0,
+            "wounded_man_lead": 0,
         },
     )
 

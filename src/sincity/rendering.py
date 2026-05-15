@@ -16,6 +16,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 LOCAL_FONT_FILE = PROJECT_ROOT / "font.ttf"
 TEXT_SOURCE_SUFFIXES = {".py", ".scm", ".ink", ".json"}
 TEXT_SPACING = 1.0
+PRELOAD_FONT_SIZES = (9, 10, 11, 12, 14, 16, 18, 20, 24, 30, 40)
 
 
 def _color_u32(color: Color) -> int:
@@ -103,6 +104,8 @@ class UIFont:
 def load_ui_font() -> UIFont:
     assert LOCAL_FONT_FILE.exists(), f"Missing required font file: {LOCAL_FONT_FILE}"
     font = UIFont(LOCAL_FONT_FILE, tuple(_build_codepoints()))
+    for size in PRELOAD_FONT_SIZES:
+        font.font_for_size(size)
     gui_set_font(font.default_font())
     return font
 

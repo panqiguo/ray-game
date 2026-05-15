@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>故事时间线 · 全线总览</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#f7f7f5;
+  background-image:radial-gradient(circle,#c8c8c4 1px,transparent 1px);
+  background-size:24px 24px;
+  font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;
+  color:#1a1a1a;
+  padding:40px 32px 80px;
+  overflow-x:auto;
+}
+
+.page-title{text-align:center;margin-bottom:36px}
+.page-title h1{font-size:18px;font-weight:500;color:#333}
+.page-title p{font-size:12px;color:#bbb;margin-top:5px;letter-spacing:.04em}
+
+/* ── Main grid ── */
+.tl{
+  min-width:1320px;
+  display:grid;
+  grid-template-columns:90px 0.85fr 1.5fr 1fr 0.9fr 0.9fr;
+}
+
+/* ── Thread headers ── */
+.corner{}
+.th{margin:0 5px 14px}
+.thi{padding:11px 14px;border-radius:7px;text-align:center}
+.th-name{font-size:13px;font-weight:600;color:#fff;display:block}
+.th-sub{font-size:10px;color:rgba(255,255,255,.7);display:block;margin-top:2px}
+.cp{background:#7c5cf6}
+.cm{background:#2d6a8f}
+.cv{background:#9a3535}
+.cs1{background:#b07020}
+.cs2{background:#3a7a50}
+
+/* ── Chapter label ── */
+.cl{
+  display:flex;flex-direction:column;
+  align-items:flex-end;
+  padding:16px 10px 16px 0;
+  border-right:1.5px solid #ddd;
+}
+.cl-num{font-size:10px;color:#ccc;letter-spacing:.02em}
+.cl-name{font-size:13px;font-weight:500;color:#333;margin-top:2px}
+.cl-day{font-size:10px;color:#ccc;margin-top:2px}
+
+/* ── Thread cell ── */
+.tc{margin:5px;padding:14px 15px;border-radius:7px;align-self:stretch}
+.on{background:rgba(255,255,255,.78);border:1px solid #e2e2e2}
+.off{background:rgba(200,200,195,.06);border:1px dashed #e2e2e2;min-height:48px}
+.fade{background:rgba(124,92,246,.05);border:1px dashed #c0b0f0}
+
+/* ── Beat items ── */
+.b{font-size:12px;color:#444;line-height:1.55;padding:3px 0 3px 9px;border-left:2px solid transparent}
+.b.key{font-weight:500;color:#1a1a1a;border-left-color:#333}
+.b.red{color:#b03030;border-left-color:#b03030}
+.b.note{font-size:11px;color:#999;padding-left:18px;border-left:none}
+.b.mrg{font-size:11px;color:#8060d0;font-style:italic;border-left:2px solid #9070e0;padding-left:9px}
+.g{height:7px}
+
+/* ── Challenge tag ── */
+.ch{
+  display:inline-flex;align-items:center;gap:5px;
+  background:#e6c455;border-radius:5px;
+  padding:5px 10px;font-size:11px;font-weight:500;color:#5a3e00;
+  margin:6px 0;cursor:default;
+}
+.ch .t{font-size:10px;background:rgba(0,0,0,.1);border-radius:3px;padding:1px 5px;font-weight:400}
+
+/* ── Row separator ── */
+.sep{grid-column:1/-1;height:1px;background:linear-gradient(to right,#eee 0,#d4d4d0 30%,#d4d4d0 70%,#eee);margin:0 5px}
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>故事时间线 · 全线总览</h1>
+  <p>各故事线并行推进 &nbsp;·&nbsp; 黄色标注挑战场景 &nbsp;·&nbsp; 紫色标注线索合流</p>
+</div>
+
+<div class="tl">
+
+<!-- ── 列标题 ── -->
+<div class="corner"></div>
+<div class="th"><div class="thi cp"><span class="th-name">序章线</span><span class="th-sub">中枪男人 · 神秘物品</span></div></div>
+<div class="th"><div class="thi cm"><span class="th-name">主线 · 科尔</span><span class="th-sub">调查 · 逃亡 · 最终抉择</span></div></div>
+<div class="th"><div class="thi cv"><span class="th-name">薇拉线</span><span class="th-sub">复仇计划 · 暗中推进</span></div></div>
+<div class="th"><div class="thi cs1"><span class="th-name">金发女人</span><span class="th-sub">酒吧 · 幸存者网络</span></div></div>
+<div class="th"><div class="thi cs2"><span class="th-name">赌徒</span><span class="th-sub">老街 · 地下情报</span></div></div>
+
+<!-- ══════════ 第一章 ══════════ -->
+<div class="cl"><span class="cl-num">第一章</span><span class="cl-name">卷入</span><span class="cl-day">Day 1–3</span></div>
+
+<div class="tc on">
+  <div class="b key">中枪男人闯入公寓</div>
+  <div class="b">神秘物品交到科尔手中</div>
+  <div class="b">死前留下一个名字</div>
+  <div class="g"></div>
+  <div class="b red">当晚有人翻了办公室</div>
+  <div class="b note">是为了物品，还是为了他本人</div>
+</div>
+
+<div class="tc on">
+  <div class="b key">弗雷德里克登门，委托寻找薇拉</div>
+  <div class="b">收集薇拉的背景资料</div>
+  <div class="b note">入院评估 · 医院记录 · 失踪经过</div>
+  <div class="g"></div>
+  <div class="b red">发现自己被跟踪</div>
+  <div class="b note">两件事同时缠上，不知是否相关</div>
+</div>
+
+<div class="tc on">
+  <div class="b key">出逃精神病院</div>
+  <div class="b">知道有人受雇来找她</div>
+  <div class="b note">不信任任何人</div>
+  <div class="g"></div>
+  <div class="b">开始沿着目标方向移动</div>
+  <div class="b note">不是逃亡，是在行动</div>
+</div>
+
+<div class="tc off"></div>
+<div class="tc off"></div>
+<div class="sep"></div>
+
+<!-- ══════════ 第二章 ══════════ -->
+<div class="cl"><span class="cl-num">第二章</span><span class="cl-name">追猎</span><span class="cl-day">Day 4–8</span></div>
+
+<div class="tc fade">
+  <div class="b">委托旧同僚雷奥鉴定神秘物品</div>
+  <div class="b note">需要几天时间</div>
+  <div class="g"></div>
+  <div class="b mrg">↘ 逐渐并入主线</div>
+</div>
+
+<div class="tc on">
+  <div class="b key">锁定薇拉的落脚点</div>
+  <div class="b">调查旅馆，确认她在这里</div>
+  <div class="ch">挑战场景 · 潜入旅馆 <span class="t">渗透</span></div>
+  <div class="b">扑空——她刚刚离开</div>
+  <div class="b note">留下痕迹：不是乱跑，有目的</div>
+  <div class="g"></div>
+  <div class="b red">发现另一批猎人也在追她</div>
+  <div class="b">跟踪她的移动路线</div>
+</div>
+
+<div class="tc on">
+  <div class="b key">沿着线索有目的地移动</div>
+  <div class="b note">收集玛丽·贝尔死亡的相关材料</div>
+  <div class="g"></div>
+  <div class="b">主动留下痕迹引导科尔</div>
+  <div class="b note">让他以为是他自己发现的</div>
+  <div class="g"></div>
+  <div class="b">察觉另一批跟踪者，加快行动</div>
+</div>
+
+<div class="tc on">
+  <div class="b key">在老街酒吧角落出现</div>
+  <div class="b">有人一直在跟踪她</div>
+  <div class="g"></div>
+  <div class="b">与科尔初步接触</div>
+  <div class="b note">她警惕，只说最少的话</div>
+</div>
+
+<div class="tc on">
+  <div class="b key">在老街赌场出现</div>
+  <div class="b">债主压身，需要一条出路</div>
+  <div class="g"></div>
+  <div class="b">他知道这个城市的某些门道</div>
+  <div class="b note">愿意用情报换保护</div>
+</div>
+
+<div class="sep"></div>
+
+<!-- ══════════ 第三章 ══════════ -->
+<div class="cl"><span class="cl-num">第三章</span><span class="cl-name">倾斜</span><span class="cl-day">Day 9–12</span></div>
+
+<div class="tc fade">
+  <div class="b">雷奥：鉴定结果指向一个案卷编号</div>
+  <div class="b note">中枪男人的真实身份开始浮现</div>
+  <div class="g"></div>
+  <div class="b mrg">↘ 完全并入主线</div>
+</div>
+
+<div class="tc on">
+  <div class="b key">找到薇拉——高度紧张的对峙</div>
+  <div class="b note">她持武器，认为科尔是弗雷德里克的人</div>
+  <div class="g"></div>
+  <div class="b red key">关键选择：不把她交出去</div>
+  <div class="b note">帮她躲开追捕，动机当时模糊</div>
+  <div class="g"></div>
+  <div class="b">自己开始验证她的说法</div>
+  <div class="b note">入院评估 · 玛丽·贝尔旧案记录</div>
+  <div class="g"></div>
+  <div class="b">给弗雷德里克报告：「还没找到」</div>
+  <div class="b note">第一次说谎，第一次站边</div>
+</div>
+
+<div class="tc on">
+  <div class="b key">讲述弗雷德里克的控制与玛丽之死</div>
+  <div class="b note">说出的部分是真的，但不是全部</div>
+  <div class="g"></div>
+  <div class="b">请科尔去找一份文件</div>
+  <div class="b note">看起来像求助，实际是计划的一步</div>
+  <div class="g"></div>
+  <div class="b mrg">科尔开始站到她这边</div>
+</div>
+
+<div class="tc on">
+  <div class="b red key">被跟踪者逼到墙角</div>
+  <div class="ch">小挑战 · 从跟踪者手里救出 <span class="t">街头</span></div>
+  <div class="b">说出她知道的：幸存者的下落</div>
+  <div class="b note">她认识红房间的幸存者，开始信任科尔</div>
+</div>
+
+<div class="tc on">
+  <div class="b key">掌握财阀行动的一条内线</div>
+  <div class="b">以情报换债务豁免</div>
+  <div class="g"></div>
+  <div class="b">揭露财阀律师的真实目的</div>
+  <div class="b note">他知道的比他说出来的更多</div>
+</div>
+
+<div class="sep"></div>
+
+<!-- ══════════ 第四章 ══════════ -->
+<div class="cl"><span class="cl-num">第四章</span><span class="cl-name">暗流</span><span class="cl-day">Day 13–16</span></div>
+
+<div class="tc off"></div>
+
+<div class="tc on">
+  <div class="b key">两条调查线正式交汇</div>
+  <div class="b note">神秘物品 · 弗雷德里克 · 红房间——同一张网</div>
+  <div class="g"></div>
+  <div class="b red">弗雷德里克开始施压</div>
+  <div class="b note">律师警告 · 执照被查 · 直接质问</div>
+  <div class="g"></div>
+  <div class="b">确认红房间真实存在</div>
+  <div class="b note">与这座城市的权力核心深度绑定</div>
+  <div class="g"></div>
+  <div class="b red">雷奥出了麻烦</div>
+  <div class="b key">无法回头，必须继续追</div>
+</div>
+
+<div class="tc on">
+  <div class="b key">科尔成为她计划中的棋子</div>
+  <div class="b note">他以为在帮受害者，实际在执行她的剧本</div>
+  <div class="g"></div>
+  <div class="b">联系弗雷德里克，安排最后的见面</div>
+  <div class="b note">以「谈判」为名，实则是终局布局</div>
+</div>
+
+<div class="tc on">
+  <div class="b key">面临最后抉择：正式参与还是退出</div>
+  <div class="b note">她知道代价，在权衡</div>
+  <div class="g"></div>
+  <div class="b mrg">参与 → 并入主线 / 退出 → 故事线结束</div>
+</div>
+
+<div class="tc on">
+  <div class="b key">情报交换完成，目的达到</div>
+  <div class="b">决定是否离城</div>
+  <div class="g"></div>
+  <div class="b mrg">故事线在此结束</div>
+</div>
+
+<div class="sep"></div>
+
+<!-- ══════════ 第五章 ══════════ -->
+<div class="cl"><span class="cl-num">第五章</span><span class="cl-name">崩塌</span><span class="cl-day">Day 17–18</span></div>
+
+<div class="tc off"></div>
+
+<div class="tc on">
+  <div class="b key">弗雷德里克来电，约在老房子见面</div>
+  <div class="b note">不经秘书，直接打来，声音不再体面</div>
+  <div class="g"></div>
+  <div class="b">赴约，楼上谈话</div>
+  <div class="b note">弗雷德里克接近忏悔，但不完全坦白</div>
+  <div class="g"></div>
+  <div class="b red key">楼下——弗雷德里克死亡</div>
+  <div class="g"></div>
+  <div class="b">薇拉出现在门口</div>
+  <div class="b note">表情无法判断——意外？恐惧？早就知道？</div>
+  <div class="g"></div>
+  <div class="b red key">警笛响起——必须逃跑</div>
+  <div class="b note">现场只有他和她，一切都指向科尔</div>
+</div>
+
+<div class="tc on">
+  <div class="b key">出现在老房子</div>
+  <div class="b note">她是否一直知道科尔会来这里？</div>
+  <div class="g"></div>
+  <div class="b">弗雷德里克已死</div>
+  <div class="b note">五年的计划，在这一夜执行完毕</div>
+</div>
+
+<div class="tc off"></div>
+<div class="tc off"></div>
+<div class="sep"></div>
+
+<!-- ══════════ 第六章 ══════════ -->
+<div class="cl"><span class="cl-num">第六章</span><span class="cl-name">真相与抉择</span><span class="cl-day">Day 19–21</span></div>
+
+<div class="tc off"></div>
+
+<div class="tc on">
+  <div class="b key">逃亡中拼凑最后的碎片</div>
+  <div class="b note">通过雷奥 · 多琳 · 之前的调查记录</div>
+  <div class="g"></div>
+  <div class="b key">主动找到薇拉，摊开所有东西</div>
+  <div class="b note">她没有否认</div>
+  <div class="g"></div>
+  <div class="b red key">最终选择</div>
+  <div class="b note">交给警察 / 帮她逃跑 / 一起公布证据 / 什么都不做</div>
+  <div class="b note">每个选择都复杂，没有正确答案</div>
+</div>
+
+<div class="tc on">
+  <div class="b key">真相全部揭露</div>
+  <div class="b note">玛丽之死 · 五年接近弗雷德里克 · 如何利用科尔</div>
+  <div class="g"></div>
+  <div class="b">中枪男人的真实身份</div>
+  <div class="b note">她的棋子，死前完成了意外的任务</div>
+  <div class="g"></div>
+  <div class="b mrg">她从不需要被拯救</div>
+</div>
+
+<div class="tc off"></div>
+<div class="tc off"></div>
+
+</div><!-- end .tl -->
+</body>
+</html>

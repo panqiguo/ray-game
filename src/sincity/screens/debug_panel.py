@@ -6,19 +6,24 @@ from pyray import *  # type: ignore
 
 from sincity.model.state import GameState
 from sincity.rendering import draw_text
-from sincity.rules.debug_save import SAVE_PATH, debug_load, debug_save
+from sincity.rules.debug_save import debug_load, debug_save, slot_path
 from sincity.rules.progression import advance_clock, change_energy, change_health
 from sincity.rules.rng import RandomSource
-from sincity.screens.widgets import text_button
+from sincity.screens.widgets import pill, text_button
 from .ui_text import ui_text_size, ui_text_style
+
+_selected_slot: int = 2
 
 
 def draw_debug_panel(font: Font | None, state: GameState, rng: RandomSource) -> None:
+    global _selected_slot
+
     if not state.debug_open:
         return
     rect = Rectangle(1080, 92, 330, 340)
     draw_rectangle_rounded(rect, 0.08, 8, Color(16, 17, 22, 245))
     title_style = ui_text_style("subtitle")
+    body_style = ui_text_style("body", "muted")
     button_size = ui_text_size("body")
     draw_text(font, "调试", 1096, 104, title_style.size, title_style.color)
     y = 142
@@ -36,12 +41,38 @@ def draw_debug_panel(font: Font | None, state: GameState, rng: RandomSource) -> 
         state.world.inventory["car_key"] = state.world.inventory.get("car_key", 0) + 1
     if text_button(font, Rectangle(1248, y, 140, 30), "追击 +1", button_size):
         advance_clock(state, "pursuit", 1)
-    y += 40
-    save_exists = os.path.exists(SAVE_PATH)
-    file_label = os.path.basename(SAVE_PATH)
-    save_btn = f"{'覆盖' if save_exists else '保存'} {file_label}"
-    load_btn = f"加载 {file_label}"
-    if text_button(font, Rectangle(1096, y, 145, 30), save_btn, button_size):
-        debug_save(state, rng)
-    if text_button(font, Rectangle(1249, y, 145, 30), load_btn, button_size, disabled=not save_exists):
-        debug_load(state, rng)
+
+    y = 258
+    draw_text(font, "━ 存档 ━", 1096, y, body_style.size, body_style.color)
+    y += 20
+
+    # Quick save slot (slot 1) — dedicated buttons
+    has_quick = os.path.exists(slot_path(1))
+    if text_button(font, Rectangle(1096, y, 145, 30), "快速保存", button_size):
+        debug_save(state, rng, slot=1)
+    if text_button(font, Rectangle(1249, y, 145, 30), "快速加载", button_size, disabled=not has_quick):
+        debug_load(state, rng, slot=1)
+    y += 34
+
+    # Manual slots (2-4)
+    for slot_num in (2, 3, 4):
+        exists = os.path.exists(slot_path(slot_num))
+        label = f"{slot_num}  {SLOT_LABELS[slot_num]}  {'已保存' if exists else '空'}"
+        is_selected = _selected_slot == slot_num
+        if pill(font, Rectangle(1096, y, 298, 26), label, selected=is_selected):
+            _selected_slot = slot_num
+        y += 30
+
+    # Save/Load for selected slot
+    selected_exists = os.path.exists(slot_path(_selected_slot))
+    if text_button(font, Rectangle(1096, y, 145, 30), "保存", button_size):
+        debug_save(state, rng, slot=_selected_slot)
+    if text_button(font, Rectangle(1249, y, 145, 30), "加载", button_size, disabled=not selected_exists):
+        debug_load(state, rng, slot=_selected_slot)
+
+
+SLOT_LABELS: dict[int, str] = {
+    2: "save_01",
+    3: "save_02",
+    4: "save_03",
+}

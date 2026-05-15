@@ -8,7 +8,16 @@ from sincity.model.state import GameState, RenderCacheState
 from sincity.rules.progression import _mark_content_dirty
 from sincity.rules.rng import RandomSource
 
-SAVE_PATH = "debug/debug_save.pkl"
+SLOT_NAMES: dict[int, str] = {
+    1: "quick_save.pkl",
+    2: "save_01.pkl",
+    3: "save_02.pkl",
+    4: "save_03.pkl",
+}
+
+
+def slot_path(slot: int) -> str:
+    return os.path.join("debug", SLOT_NAMES[slot])
 
 
 def _ensure_dir(path: str) -> None:
@@ -45,9 +54,9 @@ def _upgrade_dataclass(obj: object, _visited: set[int] | None = None) -> None:
                     _upgrade_dataclass(v, _visited)
 
 
-def debug_save(state: GameState, rng: RandomSource, path: str = SAVE_PATH) -> None:
+def debug_save(state: GameState, rng: RandomSource, slot: int = 1) -> None:
     assert state.active_dialogue is None, "不能对话中存档"
-
+    path = slot_path(slot)
     saved_revision = state.render_cache.revision
     state.render_cache = RenderCacheState()
 
@@ -67,7 +76,8 @@ def debug_save(state: GameState, rng: RandomSource, path: str = SAVE_PATH) -> No
         state.render_cache.revision = saved_revision
 
 
-def debug_load(state: GameState, rng: RandomSource, path: str = SAVE_PATH) -> None:
+def debug_load(state: GameState, rng: RandomSource, slot: int = 1) -> None:
+    path = slot_path(slot)
     with open(path, "rb") as f:
         data = pickle.load(f)
 

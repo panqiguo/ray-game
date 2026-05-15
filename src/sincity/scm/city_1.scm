@@ -125,9 +125,9 @@
           :check (check
             :suits (list 意志 感知)
             :risk 'low
-            :ok (outcome "你花了很久，把能处理的痕迹都处理掉。" (list (effect 'clock+ blood_clean_progress 2)))
-            :partial (outcome "你清掉一部分，但有些颜色已经吃进木缝。" (list (effect 'clock+ blood_clean_progress 1) (effect 'add energy -1)))
-            :fail (outcome "你盯着那片颜色太久，手上反而没了力气。" (list (effect 'add energy -1))))))
+            :ok (outcome (list (effect 'clock+ blood_clean_progress 2)))
+            :partial (outcome  (list (effect 'clock+ blood_clean_progress 1)))
+            :fail (outcome  (list (effect 'add energy -1))))))
       (when (and item_recovered (not item_auth_sent))
         (action
           :title "把神秘物品送去鉴定"
@@ -156,7 +156,7 @@
         :desc "把 2 点精力恢复存成 1 份干粮，之后可以在办公室里吃掉。"
         :inputs (list (item 'money 10 "干粮钱"))
         :effects (list (effect 'add food 1)))
-      (when (and intrusion_seen (not stall_investigated))
+      (when (and intrusion_seen (not item_recovered) (not stall_investigated))
         (action
           :title "向摊贩打听中枪男人"
           :desc "饭点时人群最杂。有人也许见过那个捂着腹部从雨里穿过去的男人。"

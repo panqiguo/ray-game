@@ -91,7 +91,7 @@ class GameApp:
         begin_ui_frame()
         draw_hud(self.ui_font, self.state)
         draw_current_screen(self.ui_font, self.state, self.rng)
-        draw_debug_panel(self.ui_font, self.state)
+        draw_debug_panel(self.ui_font, self.state, self.rng)
         finish_ui_frame()
         end_drawing()
 

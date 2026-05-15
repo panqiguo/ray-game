@@ -6,6 +6,9 @@ INCLUDE ./external.ink
 # 警方调查
 警局的问询室比走廊更冷。桌上有一杯没人喝的水，一支铅笔，和一份已经写好一半的笔录。
 
+~ change_health(-4)
+~ change_stress(2)
+
 # speaker: 警探
 “姓名、时间、他怎么进来的。按顺序说，别加你那些侦探味的修辞。”
 

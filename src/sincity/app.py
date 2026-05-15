@@ -5,6 +5,7 @@ import os
 import time
 import sys
 
+from raylib import ffi
 from pyray import *  # type: ignore
 
 from sincity.constants import TARGET_FPS, WINDOW_HEIGHT, WINDOW_WIDTH
@@ -16,6 +17,10 @@ from sincity.rules.progression import advance_pending_resolution, start_new_run
 from sincity.screens import draw_current_screen
 from sincity.screens.debug_panel import draw_debug_panel
 from sincity.screens.widgets import begin_ui_frame, draw_hud, finish_ui_frame
+
+WINDOW_FLAGS = FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI
+WINDOW_WORKAREA_MARGIN_X = 32
+WINDOW_WORKAREA_MARGIN_Y = 72
 
 
 class GameApp:
@@ -95,13 +100,43 @@ class GameApp:
             unload_ui_font(self.ui_font)
             self.ui_font = None
 
+    def _fit_window_to_workarea(self) -> None:
+        width, height = self._initial_window_size()
+        set_window_min_size(960, 640)
+        set_window_size(width, height)
+        set_window_position(*self._centered_window_position(width, height))
+        set_window_focused()
+
+    def _initial_window_size(self) -> tuple[int, int]:
+        work_x, work_y, work_w, work_h = self._monitor_workarea()
+        del work_x, work_y
+        width = min(WINDOW_WIDTH, max(960, work_w - WINDOW_WORKAREA_MARGIN_X))
+        height = min(WINDOW_HEIGHT, max(640, work_h - WINDOW_WORKAREA_MARGIN_Y))
+        return int(width), int(height)
+
+    def _centered_window_position(self, width: int, height: int) -> tuple[int, int]:
+        work_x, work_y, work_w, work_h = self._monitor_workarea()
+        x = work_x + max(0, (work_w - width) // 2)
+        y = work_y + max(0, (work_h - height) // 2)
+        return int(x), int(y)
+
+    def _monitor_workarea(self) -> tuple[int, int, int, int]:
+        monitor = glfw_get_primary_monitor()
+        assert monitor != ffi.NULL, "GLFW primary monitor is not available after window initialization."
+        x = ffi.new("int *")
+        y = ffi.new("int *")
+        width = ffi.new("int *")
+        height = ffi.new("int *")
+        glfw_get_monitor_workarea(monitor, x, y, width, height)
+        assert width[0] > 0 and height[0] > 0, f"Invalid monitor workarea: {width[0]}x{height[0]}"
+        return int(x[0]), int(y[0]), int(width[0]), int(height[0])
+
     def run(self) -> None:
-        set_config_flags(FLAG_WINDOW_RESIZABLE)
+        set_config_flags(WINDOW_FLAGS)
         init_window(WINDOW_WIDTH, WINDOW_HEIGHT, "乌鸦的去向")
         set_exit_key(KEY_NULL)
         set_target_fps(TARGET_FPS)
-        # 确保窗口尺寸正确初始化，避免首帧布局错误
-        set_window_size(WINDOW_WIDTH, WINDOW_HEIGHT)
+        self._fit_window_to_workarea()
         self.start()
         try:
             while not window_should_close() and not self.should_exit:
@@ -112,12 +147,11 @@ class GameApp:
             close_window()
 
     async def run_async(self) -> None:
-        set_config_flags(FLAG_WINDOW_RESIZABLE)
+        set_config_flags(WINDOW_FLAGS)
         init_window(WINDOW_WIDTH, WINDOW_HEIGHT, "乌鸦的去向")
         set_exit_key(KEY_NULL)
         set_target_fps(TARGET_FPS)
-        # 确保窗口尺寸正确初始化，避免首帧布局错误
-        set_window_size(WINDOW_WIDTH, WINDOW_HEIGHT)
+        self._fit_window_to_workarea()
         self.start()
         try:
             while not window_should_close() and not self.should_exit:

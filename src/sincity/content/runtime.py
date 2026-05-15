@@ -15,7 +15,7 @@ from sincity.content_lang.runtime_core import (
     validate_schema_forms as _validate_schema_forms_generic,
     validate_scene_template as _validate_scene_template,
 )
-from sincity.encounters.defs import ActionTemplate, ClockTemplate, EncounterMeta, EncounterSchemaError, EncounterSchemeError, ReactRule, ReactTemplate, SceneTemplate, StateBindingValue, StoreFieldSpec
+from sincity.encounters.defs import ActionTemplate, ClockTemplate, EncounterMeta, EncounterSchemaError, EncounterSchemeError, ReactRule, ReactTemplate, SceneTemplate, StateBindingValue, StoreFieldSpec, TaskStepTemplate, TaskTemplate
 from sincity.encounters.lispy import Environment, Procedure, SpecialFormProcedure, StringAtom, _MISSING, base_environment, evaluate, expand_includes, truthy
 from sincity.model.defs import CompiledScenario, Effect, LocationNode, ProgressClockSpec
 from sincity.model.enums import ScreenName
@@ -32,6 +32,7 @@ class CompiledWorldProgram:
     clocks_by_id: dict[str, ProgressClockSpec]
     definitions: dict[str, Any]
     react_rules: tuple[ReactRule, ...]
+    task_templates: tuple[TaskTemplate, ...]
     view_expr: Any
     initial_health: int
     initial_stress: int
@@ -40,6 +41,24 @@ class CompiledWorldProgram:
     initial_inventory: dict[str, int]
     initial_values: dict[str, int | bool | str]
     initial_growth_choices: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class RenderedTaskStep:
+    title: str
+    completed: bool
+    active: bool = False
+
+
+@dataclass(frozen=True)
+class RenderedTask:
+    kind: str
+    title: str
+    description: str
+    active: bool
+    completed: bool
+    failed: bool
+    steps: tuple[RenderedTaskStep, ...] = ()
 
 
 WORLD_EFFECTS = frozenset({
@@ -82,12 +101,13 @@ def compile_world_program(
             content_form = form
             continue
     assert isinstance(content_form, list) and content_form and content_form[0] == "content", "World module must end with a `(content ...)` form."
-    kwargs = _keyword_args(content_form[1:], allowed={":meta", ":state", ":reacts", ":root"})
+    kwargs = _keyword_args(content_form[1:], allowed={":meta", ":state", ":reacts", ":tasks", ":root"})
     clocks, state_values = _resolve_state_specs(kwargs.get(":state"), raw_definitions)
     env = _world_schema_env(definitions={}, clocks_by_id=clocks, initial_values=state_values, initial_inventory=dict(initial_inventory or {}))
     definitions = _eval_top_level_definitions(forms, env)
     metadata = _resolve_meta(kwargs.get(":meta"), env, path)
     react_rules = _resolve_reacts(kwargs.get(":reacts"), env)
+    task_templates = _resolve_tasks(kwargs.get(":tasks"), env)
     root_expr = kwargs.get(":root")
     assert root_expr is not None, "Content is missing required field: :root"
     program = CompiledWorldProgram(
@@ -99,6 +119,7 @@ def compile_world_program(
         clocks_by_id=clocks,
         definitions=definitions,
         react_rules=tuple(react_rules),
+        task_templates=task_templates,
         view_expr=root_expr,
         initial_health=initial_health,
         initial_stress=initial_stress,
@@ -154,6 +175,43 @@ def render_world(program: CompiledWorldProgram, state: GameState) -> CompiledSce
     )
 
 
+def render_tasks(program: CompiledWorldProgram, state: GameState) -> tuple[RenderedTask, ...]:
+    env = _world_env(program, state)
+    rendered: list[RenderedTask] = []
+    for task in program.task_templates:
+        active = truthy(_eval_react_condition(task.active, env))
+        completed = truthy(_eval_react_condition(task.completed, env))
+        failed = truthy(_eval_react_condition(task.failed, env))
+        if not (active or completed or failed):
+            continue
+        steps = _render_task_steps(task.steps, env)
+        rendered.append(
+            RenderedTask(
+                kind=task.kind,
+                title=str(evaluate(task.title, env)),
+                description=str(evaluate(task.description, env)),
+                active=active,
+                completed=completed,
+                failed=failed,
+                steps=steps,
+            )
+        )
+    return tuple(rendered)
+
+
+def _render_task_steps(steps: tuple[TaskStepTemplate, ...], env: Environment) -> tuple[RenderedTaskStep, ...]:
+    rendered: list[RenderedTaskStep] = []
+    first_open_seen = False
+    for step in steps:
+        completed = truthy(_eval_react_condition(step.completed, env))
+        active = False
+        if not completed and not first_open_seen:
+            active = True
+            first_open_seen = True
+        rendered.append(RenderedTaskStep(title=str(evaluate(step.title, env)), completed=completed, active=active))
+    return tuple(rendered)
+
+
 def validate_world_program(program: CompiledWorldProgram) -> None:
     dummy_state = _dummy_state(program)
     env = _world_env(program, dummy_state)
@@ -188,6 +246,8 @@ def validate_world_program(program: CompiledWorldProgram) -> None:
             assert condition.kind, f"{program.id}: action contains malformed condition: {condition!r}"
     for rule in program.react_rules:
         _assert_effects_allowed(rule.effects, context=f"{program.id}: react `{rule.source}`")
+    for task in program.task_templates:
+        _validate_task_template(program, task, env)
 
 
 def _validate_world_schema_forms(expr: Any, env: Environment, *, context: str) -> None:
@@ -317,6 +377,38 @@ def _resolve_reacts(expr: Any, env: Environment) -> list[ReactRule]:
         _validate_react_template(item)
         rules.append(ReactRule(condition=item.condition, effects=item.effects, source=f"react[{index}]"))
     return rules
+
+
+def _resolve_tasks(expr: Any, env: Environment) -> tuple[TaskTemplate, ...]:
+    if expr is None:
+        return ()
+    value = evaluate(expr, env)
+    items = value if isinstance(value, list) else [value]
+    tasks: list[TaskTemplate] = []
+    seen_titles: set[str] = set()
+    for item in items:
+        if item is None:
+            continue
+        assert isinstance(item, TaskTemplate), f"tasks expects task forms, got: {item!r}"
+        title = str(evaluate(item.title, env))
+        assert title not in seen_titles, f"Duplicate task title: {title}"
+        assert item.kind in {"主线", "支线", "压力"}, f"Unsupported task kind: {item.kind}"
+        seen_titles.add(title)
+        tasks.append(item)
+    return tuple(tasks)
+
+
+def _validate_task_template(program: CompiledWorldProgram, task: TaskTemplate, env: Environment) -> None:
+    assert task.kind in {"主线", "支线", "压力"}, f"{program.id}: unsupported task kind: {task.kind}"
+    truthy(_eval_react_condition(task.active, env))
+    truthy(_eval_react_condition(task.completed, env))
+    truthy(_eval_react_condition(task.failed, env))
+    evaluate(task.title, env)
+    evaluate(task.description, env)
+    for step in task.steps:
+        assert isinstance(step, TaskStepTemplate), f"{program.id}: task contains non-step: {step!r}"
+        evaluate(step.title, env)
+        _eval_react_condition(step.completed, env)
 
 
 def _world_schema_env(

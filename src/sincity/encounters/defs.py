@@ -183,6 +183,23 @@ class ReactTemplate:
     effects: tuple[Effect, ...]
 
 
+@dataclass(frozen=True)
+class TaskStepTemplate:
+    title: Any
+    completed: Any
+
+
+@dataclass(frozen=True)
+class TaskTemplate:
+    kind: str
+    title: Any
+    description: Any
+    active: Any
+    completed: Any
+    failed: Any
+    steps: tuple[TaskStepTemplate, ...] = ()
+
+
 @dataclass
 class ModuleState:
     metadata: EncounterMeta | None = None

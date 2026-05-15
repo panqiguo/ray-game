@@ -19,6 +19,8 @@ from sincity.encounters.defs import (
     SceneTemplate,
     StateBindingValue,
     StoreFieldSpec,
+    TaskStepTemplate,
+    TaskTemplate,
 )
 from sincity.encounters.lispy import Environment, Procedure, SpecialFormProcedure, evaluate
 from sincity.labels import lookup_input_label
@@ -220,6 +222,8 @@ def host_values(*, store_specs: dict[str, StoreFieldSpec], store: dict[str, int 
         "react": SpecialFormProcedure(builtin_react),
         "world-value": builtin_world_value,
         "world-item": builtin_world_item,
+        "task": SpecialFormProcedure(builtin_task),
+        "step": SpecialFormProcedure(builtin_task_step),
         "node": lambda *args: builtin_scene(args),
         "scene": lambda *args: builtin_scene(args),
         "action": lambda *args: builtin_action(args),
@@ -352,6 +356,28 @@ def builtin_react(args: list[Any], env: Environment) -> ReactTemplate:
     condition = Procedure(params=(), body=normalize_react_condition_body(kwargs[":when"], env), env=env)
     effects = eval_effect_list(kwargs[":then"], env)
     return ReactTemplate(condition=condition, effects=effects)
+
+
+def builtin_task(args: list[Any], env: Environment) -> TaskTemplate:
+    kwargs = keyword_args(list(args), allowed={":kind", ":title", ":desc", ":active", ":completed", ":failed", ":steps"})
+    steps = evaluate(kwargs.get(":steps", []), env)
+    return TaskTemplate(
+        kind=str(unwrap(evaluate(kwargs[":kind"], env))),
+        title=normalize_react_condition_body(kwargs[":title"], env),
+        description=normalize_react_condition_body(kwargs.get(":desc", ["quote", ""]), env),
+        active=Procedure(params=(), body=normalize_react_condition_body(kwargs.get(":active", False), env), env=env),
+        completed=Procedure(params=(), body=normalize_react_condition_body(kwargs.get(":completed", False), env), env=env),
+        failed=Procedure(params=(), body=normalize_react_condition_body(kwargs.get(":failed", False), env), env=env),
+        steps=tuple(item for item in as_list(steps) if item is not None),
+    )
+
+
+def builtin_task_step(args: list[Any], env: Environment) -> TaskStepTemplate:
+    kwargs = keyword_args(list(args), allowed={":title", ":completed"})
+    return TaskStepTemplate(
+        title=normalize_react_condition_body(kwargs[":title"], env),
+        completed=Procedure(params=(), body=normalize_react_condition_body(kwargs.get(":completed", False), env), env=env),
+    )
 
 
 def normalize_react_condition_body(expr: Any, env: Environment) -> Any:

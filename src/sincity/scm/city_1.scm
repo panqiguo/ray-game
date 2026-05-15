@@ -603,10 +603,61 @@
         (effect 'add health 3)
         (effect 'start-quick-dialogue rehab-done-text)))))
 
+(define world-tasks
+  (list
+    (task
+      :kind '主线
+      :title "几天之后去取东西"
+      :desc "那个男人让你第 5 天去取回东西。警察、血迹、死者线索都是你可以提前处理的事。"
+      :active (and intrusion_seen (not item_auth_sent))
+      :completed item_auth_sent
+      :failed item_recovery_failed
+      :steps (list))
+    (task
+      :kind '主线
+      :title "等待鉴定结果"
+      :desc "神秘物品已经送去鉴定。结果出来之前，你只能继续撑住这座城。"
+      :active (and item_auth_sent (not auth_done))
+      :completed auth_done
+      :failed false
+      :steps (list))
+    (task
+      :kind '主线
+      :title "寻找薇拉"
+      :desc "弗雷德里克让你找到他的妻子，但这件事从一开始就不太对。"
+      :active (and vera_thread_unlocked (not chapter_2_done))
+      :completed chapter_2_done
+      :failed false
+      :steps (list
+        (step :title "接下薇拉的委托" :completed vera_commission_taken)
+        (step :title "和弗雷德里克谈话" :completed frederick_talk_done)
+        (step :title "调查弗雷德里克的踪迹" :completed frederick_real_lead_found)
+        (step :title "和旅馆老板谈" :completed hotel_boss_talk_done)
+        (step :title "潜入望月旅馆" :completed hotel_infiltrated)
+        (step :title "跟踪到公寓" :completed vera_apartment_found)
+        (step :title "完成公寓对峙" :completed chapter_2_done)))
+    (task
+      :kind '支线
+      :title "赌徒与赌场"
+      :desc "那个绝望的赌徒知道地下入口在哪。借钱、套话，或者让他在赌局里露怯。"
+      :active (and gambler_met (not casino_unlocked))
+      :completed casino_unlocked
+      :failed false
+      :steps (list))
+    (task
+      :kind '压力
+      :title "警方调查"
+      :desc "警方想尽快结案。你可以主动去警局配合调查；拖到第二天，他们会亲自上门。"
+      :active (and intrusion_seen (not police_investigation_done))
+      :completed police_investigation_done
+      :failed (and police_interview_forced (not police_investigation_done))
+      :steps (list))))
+
 (content
   :meta (meta :key 'city_1 :title "贝城县" :desc "雨夜闯入者、警方笔录、薇拉委托，以及被一点点揭开的城市。")
   :state world-state
   :reacts world-reacts
+  :tasks world-tasks
   :root
   (node
     :title "贝城县"

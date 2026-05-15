@@ -19,6 +19,7 @@ from .progression import (
     current_encounter_snapshot,
     current_world_snapshot,
     dismiss_pending_resolution,
+    fast_forward_dialogue,
     finish_dialogue,
     focus_action,
     first_usable_energy_slot,

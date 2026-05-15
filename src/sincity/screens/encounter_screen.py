@@ -3,7 +3,7 @@ from __future__ import annotations
 from pyray import *  # type: ignore
 
 from sincity.model.state import GameState
-from sincity.rules import close_modal, continue_dialogue, current_action, dismiss_pending_resolution, finish_dialogue, location_is_visible
+from sincity.rules import close_modal, current_action, dismiss_pending_resolution, fast_forward_dialogue, location_is_visible
 from sincity.screens.encounter_presenters import (
     current_encounter_clock_ids,
     current_encounter_root,
@@ -35,13 +35,7 @@ def draw_encounter_screen(font: Font | None, state: GameState, rng) -> None:
         dismiss_pending_resolution(state)
     resolving = state.pending_resolution is not None and not state.pending_resolution.settled
     if is_key_pressed(KEY_ESCAPE) and not resolving:
-        if state.active_dialogue is not None:
-            if state.active_dialogue.can_continue:
-                while state.active_dialogue and state.active_dialogue.can_continue:
-                    continue_dialogue(state)
-            else:
-                finish_dialogue(state)
-        else:
+        if not fast_forward_dialogue(state):
             close_modal(state)
     page = layout()
     table_rect, message_rect = split_desktop_area(page.stage)

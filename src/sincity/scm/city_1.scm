@@ -144,7 +144,7 @@
   (node
     :desc "铁锅、热汤、油烟和零钱。这里不问你从哪里来，只问你要不要加辣。"
     :position '(245 280)
-    :show-clocks (list (when (and intrusion_seen (not wounded_man_lead_obtained)) investigation_progress))
+    :show-clocks (list )
     :actions (list
       (action
         :title "吃一碗热汤"
@@ -171,7 +171,7 @@
   (node
     :desc "修表铺后门、药味、假章和压低的声音。这里什么都能办，只是从不保证干净。"
     :position '(450 280)
-    :show-clocks (list (when (and intrusion_seen (not wounded_man_lead_obtained)) investigation_progress))
+    :show-clocks (list )
     :actions (list
       (action
         :title "找黑市医生处理伤口"
@@ -198,7 +198,7 @@
   (node
     :desc "白墙、玻璃柜、登记表。正规两个字的意思是：他们会救你，也会记住你。"
     :position '(655 280)
-    :show-clocks (list (when (and rehab_started (not rehab_done)) rehab_progress) (when (and intrusion_seen (not wounded_man_lead_obtained)) investigation_progress))
+    :show-clocks (list)
     :actions (list
       (action
         :title "标准治疗"

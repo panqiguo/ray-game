@@ -551,6 +551,21 @@ def continue_dialogue(state: GameState) -> None:
         finish_dialogue(state)
 
 
+def fast_forward_dialogue(state: GameState) -> bool:
+    if state.active_dialogue is None:
+        return False
+    while state.active_dialogue is not None and state.active_dialogue.can_continue and not state.active_dialogue.choices:
+        continue_dialogue(state)
+    if state.active_dialogue is None:
+        return True
+    if state.active_dialogue.choices:
+        return True
+    if state.active_dialogue.finished:
+        finish_dialogue(state)
+        return True
+    raise AssertionError(f"Dialogue cannot be advanced or finished: {state.active_dialogue.dialogue_id}")
+
+
 def choose_dialogue_option(state: GameState, index: int) -> None:
     if state.active_dialogue is None:
         return

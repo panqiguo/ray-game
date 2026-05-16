@@ -11,7 +11,7 @@ from sincity.model.defs import ActionDef, InputRequirement
 from sincity.model.enums import ResultType, SUIT_LABELS, ScreenName
 from sincity.model.state import GameState
 from sincity.rendering import draw_text
-from sincity.rules.deck import list_spirit_slots
+from sincity.rules.deck import list_all_spirit_slots, list_spirit_slots
 from sincity.rules.rng import RandomSource
 from sincity.rules import (
     card_hint_flash_active,
@@ -30,6 +30,7 @@ from sincity.rules import (
     slot_effective_value,
     slot_is_available,
     slot_is_exhausted,
+    slot_is_locked,
     slot_trauma_count,
 )
 
@@ -112,17 +113,20 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
     x = int(hand.x) + 18
     y = int(hand.y) + 48
     clicked_exhausted_card = False
-    for index, slot_id in enumerate(list_spirit_slots(state.deck)):
+    for slot_index, slot_id in enumerate(list_all_spirit_slots(state.deck)):
         rect = Rectangle(x, y, 150, 106)
-        disabled = energy_exhausted or slot_is_exhausted(state, slot_id) or not slot_is_available(state, slot_id)
-        if disabled and state.selected_input.kind == "card" and state.selected_input.index == index:
+        locked = slot_is_locked(state, slot_id)
+        disabled = locked or energy_exhausted or slot_is_exhausted(state, slot_id) or not slot_is_available(state, slot_id)
+        if disabled and state.selected_input.kind == "card" and state.selected_input.index == slot_index:
             clear_selected_input(state)
-        selected = (state.selected_input.kind == "card" and state.selected_input.index == index) and not disabled
-        slotted = (state.assembly.slotted_card_index == index) and not disabled
+        selected = (state.selected_input.kind == "card" and state.selected_input.index == slot_index) and not disabled
+        slotted = (state.assembly.slotted_card_index == slot_index) and not disabled
         hinted = (not disabled) and card_hint_flash_active(state, action) and card_matches_action_check(action, slot_id)
         if energy_exhausted and pointer_pressed(rect, z=Z_HAND):
             clicked_exhausted_card = True
-        if draw_compact_card(
+        if locked:
+            _draw_locked_slot(font, rect, "健康不足", "行动槽位已锁定")
+        elif draw_compact_card(
             font,
             rect,
             slot_id,
@@ -134,7 +138,7 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
             state=state,
             action=action,
         ):
-            select_card_input(state, slot_id, index)
+            select_card_input(state, slot_id, slot_index)
         x += 162
         if x > hand.x + hand.width - 260:
             break
@@ -144,6 +148,17 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
         push_notification(state, "warning", "行动卡已耗尽", "休息后会抽取新的行动卡。")
     inventory_rect = _inventory_panel_rect()
     draw_inventory_panel(font, inventory_rect, state, action)
+
+
+def _draw_locked_slot(font: Font | None, rect: Rectangle, title: str, subtitle: str) -> None:
+    fill = Color(20, 22, 28, 255)
+    border = Color(60, 64, 74, 180)
+    draw_frame(rect, fill, border)
+    draw_scrim(rect)
+    title_style = ui_text_style("body", "disabled")
+    draw_text(font, title, int(rect.x) + 12, int(rect.y) + 12, title_style.size, title_style.color)
+    sub_style = ui_text_style("body_sm", "disabled")
+    draw_text(font, subtitle, int(rect.x) + 12, int(rect.y) + 68, sub_style.size, sub_style.color)
 
 
 def draw_compact_card(
@@ -263,9 +278,9 @@ def draw_selected_card_curve_overlay(state: GameState) -> None:
         hand = layout().hand
         x = int(hand.x) + 18
         y = int(hand.y) + 48
-        for index, card_id in enumerate(list_spirit_slots(state.deck)):
+        for index, card_id in enumerate(list_all_spirit_slots(state.deck)):
             if index == state.selected_input.index:
-                if not slot_is_available(state, card_id):
+                if not slot_is_available(state, card_id) or slot_is_locked(state, card_id):
                     return
                 _draw_selected_card_curve(Rectangle(x, y, 150, 106))
                 return

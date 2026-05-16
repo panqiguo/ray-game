@@ -78,6 +78,8 @@ def _task_to_rows(task: RenderedTask) -> tuple[TaskRow, ...]:
     if task.description and (task.active or task.failed):
         rows.append(TaskRow(task.description, kind="desc"))
     for step in task.steps:
+        if not (step.completed or step.active):
+            continue
         rows.append(_step_to_row(step))
     return tuple(rows)
 

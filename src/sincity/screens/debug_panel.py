@@ -27,7 +27,8 @@ def draw_debug_panel(font: Font | None, state: GameState, rng: RandomSource) -> 
         return
     begin_layer("debug", z=Z_DEBUG)
     rect = debug_panel_rect()
-    draw_rectangle_rounded(rect, 0.08, 8, Color(16, 17, 22, 245))
+    draw_rectangle_rec(rect, Color(16, 17, 22, 245))
+    draw_rectangle_lines_ex(rect, 1.5, Color(110, 110, 110, 210))
     title_style = ui_text_style("subtitle")
     body_style = ui_text_style("body", "muted")
     button_size = ui_text_size("body")

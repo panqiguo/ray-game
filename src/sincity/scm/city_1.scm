@@ -12,26 +12,53 @@
 (define police-summons-text
   "# 警方调查\n\n# speaker: 警探\n“一个中枪的男人死在你的办公室里。科尔，你最好让我今天就能把这件事写完。”\n\n# speaker: 科尔\n他要的不是真相，是一份能合上的报告。")
 
-(define vera-commission-text
-  "# 薇拉委托\n\n# speaker: 弗雷德里克\n“她不是会突然消失的人。”\n\n# speaker: 科尔\n每个来找侦探的人都会这么说。区别只在于他们是真的相信，还是希望我相信。")
-
-(define vera-thread-text
-  "# 薇拉的线索\n\n# speaker: 科尔\n薇拉离开前去过老街的修鞋铺。她留下过一句话：\"如果我不回来，告诉来找我的人——钥匙在窗台第三块砖下面。\"")
-
 (define wounded-lead-text
   "# 死者线索\n\n# speaker: 科尔\n零碎的话拼在一起：一个外地口音的男人，最近在码头、饭店后门和医院登记处附近出现过。\n\n# speaker: 科尔\n他不是误闯进我的办公室。他是没能跑到下一个地方。")
 
-(define frederick-talk-text
-  "# 弗雷德里克\n\n# speaker: 弗雷德里克\n“薇拉最近总去老街。她说那里有人欠她一个解释。”\n\n# speaker: 科尔\n他讲得太完整，完整得像提前背过。")
+(define vera-bar-empty-text
+  "# 酒吧空回音\n\n# speaker: 科尔\n酒保记得薇拉喝过什么，不记得她跟谁离开。或者说，他不想记得。")
+
+(define vera-waste-empty-text
+  "# 废弃区空回音\n\n# speaker: 科尔\n薇拉来过这里。废弃区的人不认脸，只认鞋印和脚步声——而她身后跟着的，不止一个人的脚印。\n\n# speaker: 科尔\n她没有把真正的线索留在这里。但我知道了：她不是唯一一个在这片废墟里走过的人。")
+
+(define vera-street-shoemaker-text
+  "# 修鞋铺\n\n# speaker: 修鞋匠\n“她从望月旅馆出来的时候，手里拿着男人的外套。不是她的尺码，也不是她会喜欢的款式。”\n\n# speaker: 科尔\n三个地方都走过了。酒吧在回避，废弃区只剩脚印，老街递出了真正的线头。")
 
 (define hotel-lead-text
-  "# 旅馆线索\n\n# speaker: 科尔\n三个地点，两个空回音。真正有用的是老街修鞋匠那句：“她从望月旅馆出来时，手里拿着男人的外套。”")
+  "# 旅馆线索\n\n# speaker: 科尔\n酒吧里的人在回避，废弃区的脚印不止她一个人。但真正把线头递到我手上的，是修鞋匠那句：“她从望月旅馆出来时，手里拿着男人的外套。”\n\n# speaker: 科尔\n旅馆。就是这里了。")
 
 (define hotel-boss-text
   "# 望月旅馆老板\n\n# speaker: 老板\n“我不记客人的脸，也不记客人的名字。”\n\n# speaker: 科尔\n“那你记什么？”\n\n# speaker: 老板\n“谁付钱让我别开门。”")
 
 (define follow-done-text
   "# 跟踪\n\n# speaker: 科尔\n旅馆后门出来的人没有回头。他走过两条街，进了一栋没有门牌的公寓。\n\n# speaker: 科尔\n薇拉，或者知道薇拉在哪的人，就在里面。")
+
+(define auth-ready-text
+  "# 雷奥的消息\n\n# speaker: 科尔\n雷奥那边递了话过来。初步结果出来了，要我去把东西领走。")
+
+(define leo-preliminary-text
+  "# 雷奥的初步鉴定\n\n# speaker: 雷奥\n“东西是真的旧，不是昨晚才从谁口袋里掉出来的旧。它和某桩更早的事沾着边，但我还没法现在就把整条线说死。”\n\n# speaker: 科尔\n一份不完整的鉴定，有时候比完整的更危险。因为你会忍不住自己把空白补上。")
+
+(define cases-link-text
+  "# 两案关联假设\n\n# speaker: 科尔\n薇拉去过望月旅馆，中枪男人也在替某样不该流出来的东西奔命。\n\n# speaker: 科尔\n它们还不是同一个案子，但已经开始踩进同一条影子里了。")
+
+(define blonde-flirt-text
+  "# 调情\n\n# speaker: 金发女郎\n“你看起来不像来喝酒的，科尔。你像来让自己忘掉点什么。”\n\n# speaker: 科尔\n她故意靠得很近，把玩笑贴着耳边说，也顺手量了量我会不会往前走。")
+
+(define blonde-cold-text
+  "# 冷淡回应\n\n# speaker: 金发女郎\n她只抬了下眼，手里还在擦杯子。\n\n# speaker: 金发女郎\n“再点一杯。等你真想聊天的时候，再来找我。”\n\n# speaker: 科尔\n她不是不认识我，她只是还没决定要不要把时间花在我身上。")
+
+(define blonde-reward-text
+  "# 她给你的奖励\n\n# speaker: 金发女郎\n“今晚你算帮了我一次。”\n\n# speaker: 科尔\n她把一个吻、一句贴耳的话，还有一张写着地址的酒杯垫包成同一种暧昧，像在故意模糊哪样才是真的报酬。")
+
+(define blonde-mary-text
+  "# 旧名字\n\n# speaker: 金发女郎\n“你要真在找薇拉，就去问问玛丽。或者至少问问那个和她们都重合过的夜晚。”\n\n# speaker: 科尔\n她说完就不再往下讲，像把名字借给我，却不打算替我承担后果。")
+
+(define gambler-debt-text
+  "# 追债人\n\n# speaker: 赌徒\n“老街下面有个只认暗号的局。有人在那里买路，也有人在那里买身份。”\n\n# speaker: 科尔\n他说完，把一张揉皱的下注单塞给我，又说三天后去废弃区钟楼下等他。要是他还能自由走路的话。")
+
+(define gambler-clocktower-text
+  "# 钟楼之约\n\n# speaker: 科尔\n三天到了。赌徒没准时出现，但钟楼下压着半张潮湿的票根。")
 
 (define casino-found-text
   "# 赌场入口\n\n# speaker: 老千\n“别在酒吧问地下入口。会显得你太干净。”\n\n# speaker: 科尔\n他把地址写在火柴盒里侧。字很小，赌债很大。")
@@ -46,10 +73,13 @@
   "# 读完：《疼痛之后》\n\n# speaker: 科尔\n有些书不教你赢，只教你不要太快倒下。")
 
 (define auth-sent-text
-  "# 送去鉴定\n\n# speaker: 科尔\n东西已经交给鉴定人。他说三天后给结果。")
+  "# 送去鉴定\n\n# speaker: 科尔\n东西已经交给鉴定人。他说需要六天。")
 
 (define auth-result-text
   "# 鉴定结果\n\n# speaker: 鉴定人\n\"这件东西的年代比你想象的久。久到不该出现在这里。\"")
+
+(define blonde-done-text
+  "# 金发女郎\n\n# speaker: 科尔\n第八杯酒放在她面前时，她终于没再像之前那样只是接过就放下。她看了我一眼——第一次带着真正的注意，不是调情，而是评估。")
 
 (define item-recovered-text
   "# 取回物品\n\n# speaker: 科尔\n东西拿到了。现在的问题是——该留着它，还是该用它。")
@@ -136,9 +166,15 @@
           :inputs (list (item 'money 50 "鉴定费") (item 'mysterious_item 1 "神秘物品"))
           :effects (list
             (effect 'set item_auth_sent true)
-            (effect 'set vera_thread_notice_day (+ day 1))
-            (effect 'set auth_done_day (+ day 5))
-            (effect 'start-quick-dialogue auth-sent-text)))))))
+            (effect 'set auth_done_day (+ day 6))
+            (effect 'start-quick-dialogue auth-sent-text))))
+      (when (and auth_done (not leo_report_collected))
+        (action
+          :title "领取雷奥的初步鉴定"
+          :desc "雷奥那边已经有了初步结论。现在去把它拿回来。"
+          :effects (list
+            (effect 'set leo_report_collected true)
+            (effect 'start-quick-dialogue leo-preliminary-text)))))))
 
 (define-node 街边摊贩
   (node
@@ -309,84 +345,124 @@
   (node
     :desc "酒吧白天像咖啡馆，晚上像供词室。这里没有秘密，只有还没轮到你听见的消息。"
     :position '(245 520)
-    :show-clocks (list (when vera_commission_taken frederick_trace_progress) blonde_trust (when gambler_met gambler_debt_progress))
+    :show-clocks (list (when (and blonde_intro_seen (not blonde_drinks_done)) blonde_drink_progress))
     :actions (list
       (action
-        :title "买一杯酒"
-        :desc "酒不能解决问题，但能补一点精力。"
+        :title "点一杯酒"
+        :desc (if (not vera_thread_unlocked)
+          "八块钱一杯。酒不能解决问题，但能补一点精力。"
+          "八块钱一杯。她还在吧台的那一头，但现在只是忙着招呼别的客人。")
         :inputs (list (item 'money 8 "酒钱"))
-        :effects (list (effect 'add energy 2)))
-      (when (and vera_thread_unlocked (not vera_commission_taken))
+        :effects (list
+          (effect 'add energy 2)
+          (when (and blonde_intro_seen (not blonde_drinks_done)) (effect 'clock+ blonde_drink_progress 1))))
+      ;; 薇拉主线 — 电话中已接下委托，直接去三个地方打听
+      (when (and frederick_talk_done (not vera_bar_checked))
         (action
-          :title "接下薇拉的委托"
-          :desc "弗雷德里克要你找到他的妻子。你还不知道这是不是一件好事。"
+          :title "在酒吧问薇拉最近的消息"
+          :desc "先从最容易开口的地方问起。这里的人通常先记得酒，再记得脸。"
           :effects (list
-            (effect 'set vera_commission_taken true)
-            (effect 'set chapter_2_started true)
-            (effect 'start-quick-dialogue vera-commission-text))))
-      (when (and vera_commission_taken (not frederick_talk_done))
+            (effect 'set vera_bar_checked true)
+            (effect 'set vera_bar_clue true)
+            (effect 'start-quick-dialogue vera-bar-empty-text))))
+      (when (and vera_thread_unlocked (not blonde_intro_seen))
         (action
-          :title "和弗雷德里克谈话"
-          :desc "他是薇拉的丈夫，也是最想让你相信自己无辜的人。"
+          :title "和金发女郎交谈"
+          :desc "她人在那里，但还不打算把注意力真正放到你身上。也许多点几杯酒，她会愿意多看你一眼。"
           :effects (list
-            (effect 'set frederick_talk_done true)
-            (effect 'start-quick-dialogue frederick-talk-text))))
-      (when (and frederick_talk_done (not frederick_real_lead_found))
-        (make-investigate-action
-          "调查弗雷德里克的酒吧踪迹"
-          "他来过这里，却没有坐在吧台。有人在角落见过他的影子。"
-          frederick_trace_progress
-          感知))
-      (when (not gambler_met)
+            (effect 'set blonde_intro_seen true)
+            (effect 'start-quick-dialogue blonde-cold-text))))
+      (when (and blonde_intro_seen (not blonde_drinks_done))
         (action
-          :title "听绝望的赌徒抱怨"
-          :desc "他输了钱，也输掉了保密的能力。"
-          :effects (list (effect 'set gambler_met true))))
-      (when (and gambler_met (not casino_unlocked))
+          :title "和金发女郎交谈"
+          :desc "她把你的话当作吧台上的水渍一样擦过去，只丢下一句：“再喝点，侦探。清醒的人都太无聊。”"
+          :effects (list
+            (effect 'set blonde_cold_chatted true))))
+      (when (and blonde_drinks_done (not blonde_flirted))
         (action
-          :title "借钱给赌徒"
-          :desc "十块钱买不到感激，但能买到他下一句真话。"
-          :conditions (list (field-at-least 'money 10 "需要 10 元"))
-          :inputs (list (item 'money 10 "借款"))
-          :effects (list (effect 'clock+ gambler_debt_progress 1))))
-      (when (and gambler_met (not casino_unlocked))
+          :title "和金发女郎交谈"
+          :desc "第八杯之后，她终于主动把身体靠近了一点。她拿你的欲望开玩笑，也在看你是不是会为了她把判断放低。"
+          :effects (list
+            (effect 'set blonde_flirted true)
+            (effect 'add energy -1)
+            (effect 'start-quick-dialogue blonde-flirt-text))))
+      (when (and blonde_flirted (not blonde_customer_chased))
         (action
-          :title "赌局 - 老千"
-          :desc "他不是好赌，是太相信自己能看穿别人。"
-          :check (check
-            :suits (list 感知 逻辑)
-            :risk 'mid
-            :ok (outcome (list (effect 'clock+ gambler_debt_progress 2)) "你看穿了他的手法，也看穿了他的恐惧。")
-            :partial (outcome (list (effect 'clock+ gambler_debt_progress 1)) "你没赢漂亮，但逼他说出了地下入口的名字。")
-            :fail (outcome (list (effect 'add money -8) (effect 'add energy -1)) "你输了一点钱，也换来一点教训。")))))))
+          :title "和金发女郎交谈"
+          :desc "她的眼神越过你肩膀，落到那个占便宜的客人身上。她没有开口求你，只是把那一眼停得比平时久。"
+          :effects (list (effect 'start-encounter '酒吧赶客人))))
+      (when (and blonde_customer_chased (not blonde_secret_shared))
+        (action
+          :title "和金发女郎交谈"
+          :desc "她这次没有立刻把你推回客人的位置。一个吻、一句贴耳的话，或者一张写着地址的酒杯垫，都被她包成同一种暧昧。"
+          :effects (list
+            (effect 'set blonde_secret_shared true)
+            (effect 'start-quick-dialogue blonde-reward-text))))
+      (when (and blonde_secret_shared (not blonde_mary_shared))
+        (action
+          :title "和金发女郎交谈"
+          :desc "她故意留了个口子。现在看你敢不敢顺着往里问，问那个她不想完整说出口的旧名字。"
+          :effects (list
+            (effect 'set blonde_mary_shared true)
+            (effect 'start-quick-dialogue blonde-mary-text)))))))
 
 (define-node 老街
   (node
     :desc "旧铺面、窄楼梯、晾衣绳和熟人的眼神。老街没有明确入口，但你总能从这里找到一点活路。"
     :position '(450 520)
-    :show-clocks (list (when vera_commission_taken frederick_trace_progress) (when (and hotel_infiltrated (not vera_apartment_found)) vera_follow_progress))
+    :show-clocks (list (when (and hotel_infiltrated (not vera_apartment_found)) vera_follow_progress))
     :actions (list
-      (when (and frederick_talk_done (not frederick_real_lead_found))
+      (when (and frederick_talk_done (not vera_street_checked))
         (action
-          :title "调查弗雷德里克的老街踪迹"
-          :desc "三个地点里，只有老街的人真的见过薇拉和弗雷德里克留下的痕迹。"
-          :check (check
-            :suits (list 感知 逻辑)
-            :risk 'mid
-            :ok (outcome (list (effect 'clock+ frederick_trace_progress 2)) "你找到了通向望月旅馆的关键证词。")
-            :partial (outcome (list (effect 'clock+ frederick_trace_progress 1) (effect 'add energy -1)) "老街给了你半句真话，足够继续追。")
-            :fail (outcome (list (effect 'add energy -1)) "老街今天只给你关门声。"))))
+          :title "去老街修鞋铺问薇拉的消息"
+          :desc "三个地方里，只有这里的人真见过她最近的脸色。"
+          :effects (list
+            (effect 'set vera_street_checked true)
+            (effect 'start-quick-dialogue vera-street-shoemaker-text))))
       (when (and hotel_infiltrated (not vera_apartment_found))
         (make-investigate-action
-          "跟踪旅馆后门的人"
+          "跟踪得到的线索"
           "不要靠太近，也不要跟丢。真正的地址藏在他以为自己安全的时候。"
           vera_follow_progress
           感知)))))
 
+(define-node 废弃区
+  (node
+    :desc "倒塌的围墙、被水泡坏的广告牌，还有那些不愿意白天提起的交易。"
+    :position '(655 520)
+    :actions (list
+      (when (and frederick_talk_done (not vera_waste_checked))
+        (action
+          :title "搜索废弃区"
+          :desc "这里有人见过她——但大多只承认看见了影子。你低下头看地面：脚印不止一个人的，有人在她后面。"
+          :effects (list
+            (effect 'set vera_waste_checked true)
+            (effect 'start-quick-dialogue vera-waste-empty-text))))
+      (when (and chapter_2_started (not gambler_met))
+        (action
+          :title "挑战 - 碰撞：赌徒被人按在巷口"
+          :desc "有人把一个赌徒按在墙上搜身。他看见你时，像看见一条还没来得及用掉的命。"
+          :effects (list (effect 'start-encounter '巷口赌徒))))
+      (when (and gambler_met (not gambler_debt_choice_done))
+        (action
+          :title "处理追债人留下的麻烦"
+          :desc "帮他、卖他，或者两边套话。反正你得先决定这张下注单要替谁留着。"
+          :effects (list
+            (effect 'set gambler_debt_choice_done true)
+            (effect 'set gambler_return_day (+ day 3))
+            (effect 'start-quick-dialogue gambler-debt-text))))
+      (when (and gambler_clocktower_ready (not casino_unlocked))
+        (action
+          :title "赴废弃区钟楼下的约"
+          :desc "赌徒本人没出现，但他把路已经留给你了。"
+          :effects (list
+            (effect 'set casino_unlocked true)
+            (effect 'start-quick-dialogue casino-found-text)))))))
+
 (define-node 望月旅馆
   (node
     :desc "招牌灯一半亮着，一半像从来没亮过。老板记性很差，收费时除外。"
-    :position '(655 520)
+    :position '(860 520)
     :actions (list
       (when (and frederick_real_lead_found (not hotel_boss_talk_done))
         (action
@@ -404,7 +480,7 @@
 (define-node 公寓
   (node
     :desc "没有门牌的公寓楼，走廊闻起来像潮墙、廉价香水和旧火药。"
-    :position '(860 520)
+    :position '(1065 520)
     :actions (list
       (when (and vera_apartment_found (not chapter_2_done))
         (action
@@ -417,7 +493,7 @@
 (define-node 赌场
   (node
     :desc "地下室、绿绒桌、假笑和真债。这里能赢钱，也能把明天提前输掉。"
-    :position '(1065 520)
+    :position '(1270 520)
     :actions (list
       (make-work-action "替赌场看一晚场子" "不问问题，只看住门口。" 意志 'high 18 12 6 1)
       (action
@@ -465,13 +541,19 @@
     (item_auth_sent false)
     (vera_thread_notice_day 0)
     (vera_thread_unlocked false)
+    (vera_unlock_timer (clock :title "" :desc "" :initial 0 :max 2))
     (auth_done_day 0)
     (auth_done false)
-    (auth_wait_progress (clock :title "鉴定等待" :desc "鉴定人正在检查神秘物品。" :initial 0 :max 3))
+    (leo_report_collected false)
+    (cases_link_hypothesis_done false)
+    (auth_wait_progress (clock :title "鉴定等待" :desc "鉴定人正在检查神秘物品。" :initial 0 :max 6))
 
     (vera_commission_taken false)
     (frederick_talk_done false)
-    (frederick_trace_progress (clock :title "弗雷德里克踪迹" :desc "调查他和薇拉在老街一带的活动。" :initial 0 :max 4))
+    (vera_bar_checked false)
+    (vera_bar_clue false)
+    (vera_street_checked false)
+    (vera_waste_checked false)
     (frederick_real_lead_found false)
     (hotel_boss_talk_done false)
     (hotel_infiltrated false)
@@ -481,9 +563,18 @@
     (chapter_2_done false)
 
     (gambler_met false)
-    (gambler_debt_progress (clock :title "赌徒欠债" :desc "让绝望的赌徒说出地下赌场的位置。" :initial 0 :max 3))
+    (gambler_debt_choice_done false)
+    (gambler_return_day 0)
+    (gambler_clocktower_ready false)
     (casino_unlocked false)
-    (blonde_trust (clock :title "金发女郎" :desc "酒吧里另一个知道太多的人。后续支线预留。" :initial 0 :max 3))
+    (blonde_intro_seen false)
+    (blonde_cold_chatted false)
+    (blonde_flirted false)
+    (blonde_customer_chased false)
+    (blonde_secret_shared false)
+    (blonde_mary_shared false)
+    (blonde_drink_progress (clock :title "金发女郎·好感" :desc "给她点酒累计好感。填满后可以和她调情。" :initial 0 :max 8))
+    (blonde_drinks_done false)
 
     (gang_relation 0)
     (finance_relation 0)
@@ -547,20 +638,34 @@
         (effect 'start-quick-dialogue item-recovered-text)))
 
     (react
-      :when (and item_auth_sent (not vera_thread_unlocked) (>= day vera_thread_notice_day))
+      :when (and item_auth_sent (= vera_thread_notice_day 0))
+      :then (list
+        (effect 'set vera_thread_notice_day (+ day 1))))
+
+    (react
+      :when (and item_auth_sent (not vera_thread_unlocked) (>= day vera_thread_notice_day) (> vera_thread_notice_day 0))
       :then (list
         (effect 'set vera_thread_unlocked true)
-        (effect 'start-quick-dialogue vera-thread-text)))
+        (effect 'set frederick_talk_done true)
+        (effect 'set vera_commission_taken true)
+        (effect 'set chapter_2_started true)
+        (effect 'start-dialogue 'frederick_phone_intro)))
 
     (react
       :when (and item_auth_sent (not auth_done) (>= day auth_done_day))
       :then (list
         (effect 'set auth_done true)
-        (effect 'clock+ auth_wait_progress 3)
-        (effect 'start-quick-dialogue auth-result-text)))
+        (effect 'clock+ auth_wait_progress 6)
+        (effect 'start-quick-dialogue auth-ready-text)))
 
     (react
-      :when (and (clock-filled? frederick_trace_progress) (not frederick_real_lead_found))
+      :when (and leo_report_collected hotel_infiltrated (not cases_link_hypothesis_done))
+      :then (list
+        (effect 'set cases_link_hypothesis_done true)
+        (effect 'start-quick-dialogue cases-link-text)))
+
+    (react
+      :when (and vera_bar_checked vera_waste_checked vera_street_checked (not frederick_real_lead_found))
       :then (list
         (effect 'set frederick_real_lead_found true)
         (effect 'start-quick-dialogue hotel-lead-text)))
@@ -572,10 +677,10 @@
         (effect 'start-quick-dialogue follow-done-text)))
 
     (react
-      :when (and (clock-filled? gambler_debt_progress) (not casino_unlocked))
+      :when (and gambler_debt_choice_done (not gambler_clocktower_ready) (>= day gambler_return_day) (> gambler_return_day 0))
       :then (list
-        (effect 'set casino_unlocked true)
-        (effect 'start-quick-dialogue casino-found-text)))
+        (effect 'set gambler_clocktower_ready true)
+        (effect 'start-quick-dialogue gambler-clocktower-text)))
 
     (react
       :when (and (clock-filled? logic_book) (not logic_book_done))
@@ -600,8 +705,12 @@
       :when (and rehab_started (clock-filled? rehab_progress) (not rehab_done))
       :then (list
         (effect 'set rehab_done true)
-        (effect 'add health 3)
-        (effect 'start-quick-dialogue rehab-done-text)))))
+        (effect 'add health 3)))
+    (react
+      :when (and chapter_2_started (clock-filled? blonde_drink_progress) (not blonde_drinks_done))
+      :then (list
+        (effect 'set blonde_drinks_done true)
+        (effect 'start-quick-dialogue blonde-done-text)))))
 
 (define world-tasks
   (list
@@ -616,36 +725,52 @@
     (task
       :kind '主线
       :title "处理神秘物品的鉴定"
-      :desc "东西已经拿回来了。先把它送去鉴定，然后等结果出来。"
-      :active (and item_recovered (not auth_done))
-      :completed auth_done
+      :desc "东西已经拿回来了。把它送去雷奥那里，等六天，拿回初步结论。等薇拉那条线也走到旅馆，再看看这两案是不是踩进了同一片影子。"
+      :active (and item_recovered (not cases_link_hypothesis_done))
+      :completed cases_link_hypothesis_done
       :failed false
       :steps (list
         (step :title "把东西送去鉴定" :completed item_auth_sent)
-        (step :title "等待鉴定结果" :completed auth_done)))
+        (step :title "等待鉴定，需要 6 天" :completed auth_done)
+        (step :title "领取雷奥的初步鉴定" :completed leo_report_collected)
+        (step :title "提出两案关联假设" :completed cases_link_hypothesis_done)))
     (task
       :kind '主线
       :title "寻找薇拉"
-      :desc "弗雷德里克让你找到他的妻子，但这件事从一开始就不太对。"
+      :desc "德雷福雷在电话里给了三个方向：酒吧、老街、废弃区。至少有一个会留下她的痕迹。"
       :active (and vera_thread_unlocked (not chapter_2_done))
       :completed chapter_2_done
       :failed false
       :steps (list
-        (step :title "接下薇拉的委托" :completed vera_commission_taken)
-        (step :title "和弗雷德里克谈话" :completed frederick_talk_done)
-        (step :title "调查弗雷德里克的踪迹" :completed frederick_real_lead_found)
-        (step :title "和旅馆老板谈" :completed hotel_boss_talk_done)
+        (step :title "在老街三个地方打听薇拉的消息" :completed frederick_real_lead_found)
+        (step :title "和旅馆老板谈判" :completed hotel_boss_talk_done)
         (step :title "潜入望月旅馆" :completed hotel_infiltrated)
-        (step :title "跟踪到公寓" :completed vera_apartment_found)
-        (step :title "完成公寓对峙" :completed chapter_2_done)))
+        (step :title "跟踪得到的线索" :completed vera_apartment_found)
+        (step :title "持枪对峙" :completed chapter_2_done)))
+    (task
+      :kind '支线
+      :title "酒吧金发女郎"
+      :desc "她看起来放荡、轻佻、主动引诱，但这也是她在老街活下来的方式。"
+      :active (and blonde_intro_seen (not blonde_mary_shared))
+      :completed blonde_mary_shared
+      :failed false
+      :steps (list
+        (step :title "点满八杯酒，让她注意到你" :completed blonde_drinks_done)
+        (step :title "和金发女郎交谈：她开始认真看你" :completed blonde_flirted)
+        (step :title "和金发女郎交谈：替她处理占便宜的客人" :completed blonde_customer_chased)
+        (step :title "和金发女郎交谈：收下暧昧奖励" :completed blonde_secret_shared)
+        (step :title "和金发女郎交谈：听她提起旧名字和重合的夜晚" :completed blonde_mary_shared)))
     (task
       :kind '支线
       :title "赌徒与赌场"
-      :desc "那个绝望的赌徒知道地下入口在哪。借钱、套话，或者让他在赌局里露怯。"
+      :desc "赌徒知道老街下面那个只认暗号的局。先把他从巷口的麻烦里拖出来——剩下的会回来。"
       :active (and gambler_met (not casino_unlocked))
       :completed casino_unlocked
       :failed false
-      :steps (list))
+      :steps (list
+        (step :title "碰上被按在巷口的赌徒" :completed gambler_met)
+        (step :title "处理追债人留下的麻烦" :completed gambler_debt_choice_done)
+        (step :title "检查下注单上的暗号" :completed casino_unlocked)))
     (task
       :kind '压力
       :title "警方调查"
@@ -674,7 +799,8 @@
       (警局)
       (仓库)
       (when vera_thread_unlocked (酒吧))
-      (when vera_commission_taken (老街))
+      (when vera_thread_unlocked (老街))
+      (when vera_thread_unlocked (废弃区))
       (when frederick_real_lead_found (望月旅馆))
       (when vera_apartment_found (公寓))
       (when casino_unlocked (赌场)))))

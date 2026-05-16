@@ -123,6 +123,26 @@ body{
   font-weight:750;
   color:#171200;
 }
+.tempt{
+  background:#f6d2dd;
+  min-height:68px;
+  padding:12px 14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:750;
+  color:#511725;
+}
+.reveal{
+  background:#eee7dc;
+  min-height:68px;
+  padding:12px 14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:700;
+  color:#473a2d;
+}
 .muted{
   color:#a19a90;
 }
@@ -226,63 +246,91 @@ body{
   <div class="row">
     <div class="locations">
       <div class="loc hub">老街区</div>
-      <div class="loc">老街</div>
-      <div></div>
-      <div class="loc">废弃区</div>
+      <div class="loc">办公室<br>雷奥</div>
       <div class="loc">酒吧</div>
+      <div class="loc">老街<br>修鞋铺</div>
+      <div class="loc">废弃区</div>
+      <div class="loc">望月旅馆</div>
+      <div></div>
+      <div class="loc">无门牌<br>公寓</div>
     </div>
 
     <div class="lane">
       <div class="lane-title">中枪男人</div>
       <div class="tasks">
-        <div class="task">把物品送去鉴定</div>
+        <div class="task wide">办公室：把物品送去鉴定</div>
+        <div class="task muted">触发第二章主线：送鉴定后的次日，德雷福雷来电，老街区开放</div>
         <div class="task">等待鉴定，需要 6 天</div>
-        <div class="task">领取雷奥的初步鉴定</div>
-        <div class="task wide">提出两案关联假设<br>（当同时有鉴定结果以及旅馆的线索时弹出）</div>
+        <div class="task wide">办公室/雷奥：领取初步鉴定</div>
+        <div class="task muted">鉴定只给模糊结果：旧纸张、机构编号、旧案痕迹，不直接揭露红房间</div>
+        <div class="task wide">提出两案关联假设<br>触发条件：已领取鉴定 + 已潜入望月旅馆</div>
       </div>
     </div>
 
     <div class="lane">
       <div class="lane-title">薇拉（主线）</div>
       <div class="tasks">
-        <div class="task wide">和德雷福雷谈谈，接下寻找薇拉的委托</div>
-        <div class="task wide">去三个地方看看，其中有一个地方可能有她最近的信息</div>
-        <div class="task">和固执的旅馆老板谈判</div>
+        <div class="task wide">酒吧：和德雷福雷谈谈，接下寻找薇拉的委托</div>
+        <div class="task muted">他给三个方向：酒吧、老街、废弃区。语气像在帮忙，也像提前安排证词</div>
+        <div class="task wide">酒吧：问薇拉最近的消息</div>
+        <div class="task muted">空回音：酒保记得她喝过什么，不愿记得她跟谁离开</div>
+        <div class="task wide">废弃区：问薇拉的消息</div>
+        <div class="task muted">空回音：有人见过影子，但没人愿意承认看清了脸</div>
+        <div class="task wide">老街修鞋铺：拿到真正线索</div>
+        <div class="task muted">修鞋匠说她从望月旅馆出来，手里拿着男人外套；旅馆解锁</div>
+        <div class="task wide">望月旅馆：和固执老板谈判</div>
         <div class="task challenge">挑战 潜入旅馆</div>
-        <div class="task">跟踪得到的线索</div>
-        <div class="task challenge">持枪 对峙</div>
+        <div class="task wide">老街：跟踪旅馆后门出来的人</div>
+        <div class="task muted">填“跟踪目标”进度，满后找到无门牌公寓</div>
+        <div class="task challenge">公寓：持枪对峙</div>
       </div>
     </div>
 
     <div class="lane">
       <div class="lane-title">酒吧金发女郎</div>
       <div class="tasks">
-        <div class="task">点单 +10</div>
-        <div class="task challenge">调情，喝酒</div>
-        <div class="task">她的关联的故事</div>
+        <div class="task wide">酒吧：喝酒消费，推进“金发女郎注意”进度 0/8</div>
+        <div class="task muted">她在这里工作，靠客人点酒赚钱。每次喝酒不是送她礼物，而是在她的场子里持续消费</div>
+        <div class="task wide">进度到 8：她主动过来搭话</div>
+        <div class="task tempt">酒吧：诱惑 调情，继续喝</div>
+        <div class="task wide">她故意靠得很近，拿科尔的欲望开玩笑，也在观察这个愿意喝到第八杯的男人还能不能保持判断</div>
+        <div class="task challenge">酒吧：帮她赶走一个占便宜的客人</div>
+        <div class="task wide">她把奖励包装成暧昧：一个吻、一句贴耳的话，或者一张写着地址的酒杯垫</div>
+        <div class="task wide">酒吧：追问她提到的旧名字</div>
+        <div class="task muted">她提到玛丽，或者一个和薇拉路线重合的夜晚；不给证据，只给会让玩家想继续靠近她的口子</div>
+        <div class="task muted">第二章功能：用妩媚和欲望牵引玩家，同时埋“她也在利用科尔”的伏笔</div>
       </div>
     </div>
 
     <div class="lane">
       <div class="lane-title">赌徒男人</div>
       <div class="tasks">
-        <div class="task challenge">?</div>
-        <div class="task muted">先以问号出现：他是麻烦、资源，还是骗子</div>
+        <div class="task challenge">废弃区：碰撞 赌徒被人按在巷口</div>
+        <div class="task wide">他把一张揉皱的下注单塞给科尔，求他别交给追债的人</div>
+        <div class="task wide">废弃区：处理追债人留下的麻烦</div>
+        <div class="task muted">选择态度：帮他、卖他，或两边套话。无论如何都拿到下注单这个话题种子</div>
+        <div class="task wide">他抛出地下赌局话题</div>
+        <div class="task muted">老街下面有个只认暗号的局，有人在那里买路，也有人在那里买身份</div>
+        <div class="task wide">暂停：三天后去废弃区钟楼下</div>
+        <div class="task muted">第二章只抛钩子，不展开赌场线；钟楼约定为第三章/第四章重启支线</div>
       </div>
     </div>
 
     <div class="lane">
       <div class="lane-title">旧书店多琳</div>
       <div class="tasks">
-        <div class="task muted">尚未成为安全屋，但可通过书店听到老街和旧案的零碎消息</div>
+        <div class="task muted">第二章删除主动行动：旧书店不参与猫鼠游戏，避免地点分散</div>
+        <div class="task muted">只在第三章作为藏匿薇拉和翻旧报纸的地点重新启用</div>
       </div>
     </div>
 
     <div class="lane">
       <div class="lane-title">城市压力</div>
       <div class="tasks">
-        <div class="task">老街区开放，玩家第一次接触城市背面</div>
+        <div class="task">老街区开放：酒吧、老街、废弃区、望月旅馆、公寓</div>
+        <div class="task wide">玩家的推进方式：城市询问拿线索 → 挑战场景突破封锁 → clock 跟踪解锁下一地点</div>
         <div class="task">另一些人也在找薇拉，科尔不再是唯一猎人</div>
+        <div class="task muted">本章不开放地下赌场；只通过赌徒男人预告这个世界更低一层的入口</div>
       </div>
     </div>
   </div>
@@ -330,18 +378,23 @@ body{
     <div class="lane">
       <div class="lane-title">酒吧金发女郎</div>
       <div class="tasks">
-        <div class="task">再次去酒吧找她喝酒</div>
-        <div class="task">追问她故事里那个女人是谁</div>
+        <div class="task">再次去酒吧找她</div>
+        <div class="task tempt">她邀请科尔去楼上包间</div>
+        <div class="task wide">这像是一场艳遇，也像一次测试：她想知道科尔是会把她当玩物，还是当成一个会害怕的人</div>
+        <div class="task reveal">拆开她的面具</div>
+        <div class="task wide">她承认自己在利用科尔：她需要一个外来者替她问那些她不敢问的问题</div>
         <div class="task challenge">挑战 后巷摆脱盯梢者</div>
         <div class="task wide">取得玛丽·贝尔旧客人、朋友，或幸存者方向</div>
-        <div class="task muted">她给的不是证据，而是玛丽作为一个活人的轮廓</div>
+        <div class="task muted">她给的不是证据，而是玛丽作为一个活人的轮廓；她的放荡不是反转成纯洁，而是露出背后的恐惧、债和亏欠</div>
       </div>
     </div>
 
     <div class="lane">
       <div class="lane-title">赌徒男人</div>
       <div class="tasks">
-        <div class="task">揭开问号：他欠了赌局的钱</div>
+        <div class="task">赴废弃区钟楼约定</div>
+        <div class="task wide">他没准时出现，只留下暗号或被追债者拖走的痕迹</div>
+        <div class="task">查下注单背后的地下赌局</div>
         <div class="task challenge">挑战 进入地下赌局</div>
         <div class="task">获取假证件 / 旧楼通道 / 黑市人脉</div>
         <div class="task wide">处理他的离城请求：放他走、逼他留下，或让他做一次正确的事</div>

@@ -5,7 +5,7 @@ import os
 import pickle
 
 from sincity.model.state import GameState, RenderCacheState
-from sincity.rules.progression import _mark_content_dirty
+from sincity.rules.progression import _mark_content_dirty, sync_world_progress_clocks
 from sincity.rules.rng import RandomSource
 
 SLOT_NAMES: dict[int, str] = {
@@ -90,5 +90,6 @@ def debug_load(state: GameState, rng: RandomSource, slot: int = 1) -> None:
     for f in dataclasses.fields(type(state)):
         setattr(state, f.name, getattr(loaded_state, f.name))
 
+    sync_world_progress_clocks(state)
     rng._random.setstate(rng_state)
     _mark_content_dirty(state)

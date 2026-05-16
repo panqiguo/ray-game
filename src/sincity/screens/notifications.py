@@ -54,12 +54,12 @@ def draw_notifications(font: Font | None, state: GameState) -> None:
         draw_frame(draw_rect, fill, border)
 
         title_style = ui_text_style("body", _NOTIFICATION_TONES[item.kind])
-        title_color = Color(title_style.color.r, title_style.color.g, title_style.color.b, int(255 * alpha))
+        title_color = Color(title_style.color.r, title_style.color.g, title_style.color.b, int(title_style.color.a * alpha))
         draw_text(font, item.title, int(draw_rect.x + TOAST_PADDING_X), int(draw_rect.y + TOAST_PADDING_Y), title_style.size, title_color)
 
         if body_lines:
             body_style = ui_text_style("body_sm", "muted")
-            body_color = Color(body_style.color.r, body_style.color.g, body_style.color.b, int(255 * alpha))
+            body_color = Color(body_style.color.r, body_style.color.g, body_style.color.b, int(body_style.color.a * alpha))
             body_y = draw_rect.y + TOAST_PADDING_Y + title_style.line_height
             for line in body_lines:
                 draw_text(font, line, int(draw_rect.x + TOAST_PADDING_X), int(body_y), body_style.size, body_color)

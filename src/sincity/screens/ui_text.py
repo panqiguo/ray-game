@@ -32,8 +32,8 @@ _LEVEL_SPECS: dict[TextLevel, TextLevelSpec] = {
 }
 
 _TONE_COLORS: dict[TextTone, Color] = {
-    "default": RAYWHITE,
-    "muted": LIGHTGRAY,
+    "default": Color(245, 245, 245, 255),
+    "muted": Color(200, 200, 200, 255),
     "subtle": Color(170, 170, 170, 255),
     "accent": Color(212, 196, 132, 255),
     "danger": Color(220, 110, 110, 255),

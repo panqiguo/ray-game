@@ -32,6 +32,10 @@ def list_spirit_slots(deck: DeckState) -> list[str]:
     return [*deck.available_slots, *deck.exhausted_slots]
 
 
+def list_all_spirit_slots(deck: DeckState) -> list[str]:
+    return [*deck.available_slots, *deck.exhausted_slots, *deck.locked_slots]
+
+
 def action_card_count_for_health(health: int) -> int:
     if health <= 0:
         return 0
@@ -57,13 +61,17 @@ def refresh_spirit_slots(deck: DeckState, rng: RandomSource | None = None, *, he
     deck.action_card_owners.clear()
     deck.exhausted_slots.clear()
     deck.available_slots.clear()
-    for index in range(count):
+    deck.locked_slots.clear()
+    for index in range(BASE_ACTION_CARD_COUNT):
         slot_id = f"cole:{index}"
         raw = rng.randint(0, 3)
         value = max(0, raw - penalty)
         deck.action_card_values[slot_id] = value
         deck.action_card_owners[slot_id] = "cole"
-        deck.available_slots.append(slot_id)
+        if index < count:
+            deck.available_slots.append(slot_id)
+        else:
+            deck.locked_slots.append(slot_id)
 
 
 def start_city_day(deck: DeckState, rng: RandomSource, hand_size: int = 0, *, health: int = 10) -> None:

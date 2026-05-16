@@ -48,7 +48,7 @@ def start_new_run(seed: int) -> tuple[GameState, RandomSource]:
                 value=0,
                 visible=True,
             )
-            for clock_id, spec in SCENARIO.clocks_by_id.items()
+            for clock_id in SCENARIO.clocks_by_id
         },
         inventory={
             **dict(SCENARIO.initial_inventory),
@@ -73,6 +73,7 @@ def start_new_run(seed: int) -> tuple[GameState, RandomSource]:
     )
     sync_trauma_cards_with_health(state)
     start_city_day(state.deck, rng, HAND_SIZE, health=state.attributes.health)
+    sync_world_progress_clocks(state)
     _resolve_world_reacts(state, rng, [])
     return state, rng
 
@@ -162,7 +163,14 @@ def get_clock_value(state: GameState, clock_id: str) -> int:
         raw = state.active_encounter.store[clock_id]
         assert isinstance(raw, int)
         return raw
-    return state.world.progress_clocks[clock_id].value
+    clock_state = state.world.progress_clocks.get(clock_id)
+    assert clock_state is not None, f"Missing world progress clock: {clock_id}"
+    return clock_state.value
+
+
+def sync_world_progress_clocks(state: GameState) -> None:
+    for clock_id in SCENARIO.clocks_by_id:
+        state.world.progress_clocks.setdefault(clock_id, ProgressClockState(value=0, visible=True))
 
 
 def get_clock_spec_for_state(state: GameState, clock_id: str):
@@ -338,6 +346,10 @@ def slot_is_available(state: GameState, slot_id: str) -> bool:
 
 def slot_is_exhausted(state: GameState, slot_id: str) -> bool:
     return slot_id in state.deck.exhausted_slots
+
+
+def slot_is_locked(state: GameState, slot_id: str) -> bool:
+    return slot_id in state.deck.locked_slots
 
 
 def slot_is_preferred_for_check(slot_id: str, check) -> bool | None:

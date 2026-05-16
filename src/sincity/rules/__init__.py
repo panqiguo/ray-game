@@ -47,6 +47,7 @@ from .progression import (
     slot_effective_value,
     slot_is_available,
     slot_is_exhausted,
+    slot_is_locked,
     slot_trauma_count,
     trigger_card_hint_flash,
     toggle_action_energy_slot,

@@ -16,6 +16,7 @@ class DeckState:
     actor_names: dict[str, str] = field(default_factory=dict)
     available_slots: list[str] = field(default_factory=list)
     exhausted_slots: list[str] = field(default_factory=list)
+    locked_slots: list[str] = field(default_factory=list)
     trauma_by_slot: dict[str, int] = field(default_factory=dict)
 
 

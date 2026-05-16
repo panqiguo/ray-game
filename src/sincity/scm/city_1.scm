@@ -132,12 +132,12 @@
         (action
           :title "把神秘物品送去鉴定"
           :desc "这东西被太多人追着找。先弄清它是什么，再决定它值不值得继续拿着。"
-          :conditions (list (has-item 'mysterious_item 1 "需要神秘物品") (field-at-least 'money 15 "需要 15 元鉴定费"))
-          :inputs (list (item 'money 15 "鉴定费") (item 'mysterious_item 1 "神秘物品"))
+          :conditions (list (has-item 'mysterious_item 1 "需要神秘物品") (field-at-least 'money 50 "需要 50 元鉴定费"))
+          :inputs (list (item 'money 50 "鉴定费") (item 'mysterious_item 1 "神秘物品"))
           :effects (list
             (effect 'set item_auth_sent true)
             (effect 'set vera_thread_notice_day (+ day 1))
-            (effect 'set auth_done_day (+ day 3))
+            (effect 'set auth_done_day (+ day 5))
             (effect 'start-quick-dialogue auth-sent-text)))))))
 
 (define-node 街边摊贩

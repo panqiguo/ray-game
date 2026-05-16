@@ -9,7 +9,7 @@ from sincity.content.runtime import RenderedTask, RenderedTaskStep, render_tasks
 from sincity.model.state import GameState
 from sincity.rendering import draw_text
 
-from .ui_core import measure_text_width, wrap_text_lines_any
+from .ui_core import Z_MESSAGE, measure_text_width, scroll_available, wrap_text_lines_any
 from .ui_text import ui_text_color, ui_text_style
 
 
@@ -35,7 +35,7 @@ def draw_task_panel(font, rect: Rectangle, state: GameState) -> None:
     max_scroll = max(0.0, content_height - content_rect.height)
     if max_scroll <= 0:
         state.task_panel_scroll = 0.0
-    elif check_collision_point_rec(get_mouse_position(), rect):
+    elif scroll_available(rect, z=Z_MESSAGE):
         state.task_panel_scroll = max(0.0, min(max_scroll, state.task_panel_scroll - get_mouse_wheel_move() * 34.0))
     else:
         state.task_panel_scroll = max(0.0, min(max_scroll, state.task_panel_scroll))

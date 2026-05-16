@@ -29,6 +29,7 @@ from sincity.model.state import (
 )
 from sincity.rules.deck import list_spirit_slots, make_starting_deck, refresh_spirit_slots, start_city_day
 from sincity.rules.judgment import compute_action_value, roll_result
+from sincity.rules.notifications import push_notification
 from sincity.rules.rng import RandomSource
 from sincity.model.enums import Suit
 
@@ -1217,6 +1218,7 @@ def _award_completed_tasks(state: GameState) -> None:
         state.world.rewarded_tasks.add(task.title)
         state.growth_points += 1
         _push_log(state, f"{task.kind}任务完成：{task.title}，获得 1 点成长。")
+        push_notification(state, "success", f"{task.kind}任务完成", f"{task.title}，获得 1 点成长。")
 
 
 def _resolve_encounter_reacts(state: GameState, rng: RandomSource, extra_lines: list[str]) -> None:
@@ -1604,6 +1606,7 @@ def claim_growth(state: GameState, growth_id: str) -> None:
     _apply_effects(growth.effects, state, RandomSource(state.seed))
     state.growth_points = max(0, state.growth_points - 1)
     _push_log(state, f"成长调整：{growth.title}")
+    push_notification(state, "success", "成长已确认", growth.title)
     close_modal(state)
 
 

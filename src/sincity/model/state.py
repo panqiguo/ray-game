@@ -124,6 +124,16 @@ class RenderCacheState:
 
 
 @dataclass
+class NotificationState:
+    id: int
+    kind: str
+    title: str
+    body: str = ""
+    age: float = 0.0
+    duration: float = 3.2
+
+
+@dataclass
 class CardHintFlashState:
     action_id: str = ""
     until_monotonic: float = 0.0
@@ -161,3 +171,5 @@ class GameState:
     encounter_action_point_cap: int = 3
     encounter_resource_root_id: str = ""
     task_panel_scroll: float = 0.0
+    notifications: list[NotificationState] = field(default_factory=list)
+    next_notification_id: int = 1

@@ -6,6 +6,7 @@ import traceback
 from sincity.content.city_1 import SCENARIO, build_city_1, replace_city_1
 from sincity.content.validate import validate_content
 from sincity.encounters import get_encounter, initial_store
+from sincity.rules.notifications import push_notification
 from sincity.encounters.defs import EncounterCompileError
 from sincity.encounters.registry import ENCOUNTERS_BY_ID, load_encounters, replace_encounters
 from sincity.encounters.lispy import module_dependency_paths
@@ -87,6 +88,8 @@ class ScmHotReloader:
         except Exception:
             replace_city_1(old_world)
             replace_encounters(old_encounters)
+            if state is not None:
+                push_notification(state, "danger", "内容热重载失败", "已保留旧内容。")
             print("[SCM hot reload] failed, keeping previous content")
             traceback.print_exc()
             return False
@@ -105,6 +108,7 @@ class ScmHotReloader:
             state.render_cache.revision += 1
             state.action_log.append("内容已热重载。")
             del state.action_log[:-12]
+            push_notification(state, "info", "内容已热重载")
         print("[SCM hot reload] reloaded content")
         return True
 

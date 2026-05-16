@@ -25,12 +25,45 @@ class TableSections:
     content: Rectangle
 
 
+# --- Input region system ---
+
+_region_counter: int = 0
+
+
+@dataclass(frozen=True)
+class InputRegion:
+    name: str
+    rect: Rectangle
+    z: int
+    order: int
+    interactive: bool = True
+    modal: bool = False
+    blocks_pointer: bool = True
+
+
+# Z-order constants — higher = more on top
+Z_WORLD = 10
+Z_HAND = 20
+Z_MESSAGE = 25
+Z_HUD = 30
+Z_LOCATION_MODAL = 50
+Z_PROFILE_MODAL = 60
+Z_DIALOGUE_MODAL = 70
+Z_DEBUG = 90
+Z_TOAST = 100
+
+
 @dataclass
 class UiInputState:
     mouse: Vector2 = field(default_factory=lambda: Vector2(0.0, 0.0))
     pressed: bool = False
+    down: bool = False
+    released: bool = False
+    wheel: float = 0.0
     click_consumed: bool = False
     layers: list[str] = field(default_factory=list)
+    layer_zs: list[int] = field(default_factory=list)
+    regions: list[InputRegion] = field(default_factory=list)
 
 
 _UI = UiInputState()
@@ -42,27 +75,122 @@ _MAX_TEXT_CACHE_SIZE = 4096
 def begin_ui_frame() -> None:
     _UI.mouse = get_mouse_position()
     _UI.pressed = is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+    _UI.down = is_mouse_button_down(MOUSE_BUTTON_LEFT)
+    _UI.released = is_mouse_button_released(MOUSE_BUTTON_LEFT)
+    _UI.wheel = get_mouse_wheel_move()
     _UI.click_consumed = False
     _UI.layers.clear()
+    _UI.layer_zs.clear()
+    _UI.regions.clear()
 
 
 def finish_ui_frame() -> None:
     assert not _UI.layers, f"unclosed layers: {_UI.layers}"
 
 
-def begin_layer(name: str, interactive: bool) -> None:
-    _UI.layers.append(name if interactive else f"!{name}")
+def begin_layer(name: str, *, z: int) -> None:
+    _UI.layers.append(name)
+    _UI.layer_zs.append(z)
 
 
 def end_layer(name: str) -> None:
     assert _UI.layers, f"missing layer {name}"
     top = _UI.layers.pop()
-    assert top.removeprefix("!") == name, f"layer mismatch: expected {name}, got {top}"
+    _UI.layer_zs.pop()
+    assert top == name, f"layer mismatch: expected {name}, got {top}"
 
 
-def layer_interactive() -> bool:
-    return not _UI.layers[-1].startswith("!") if _UI.layers else True
+def current_layer_z() -> int:
+    return _UI.layer_zs[-1] if _UI.layer_zs else 0
 
+
+# --- Input region registration ---
+
+def register_input_region(
+    name: str,
+    rect: Rectangle,
+    *,
+    z: int,
+    interactive: bool = True,
+    modal: bool = False,
+    blocks_pointer: bool = True,
+) -> None:
+    assert not (modal and not blocks_pointer), f"region {name}: modal=True requires blocks_pointer=True"
+    global _region_counter
+    _region_counter += 1
+    _UI.regions.append(InputRegion(name, rect, z, _region_counter, interactive, modal, blocks_pointer))
+
+
+def top_region_at(point: Vector2) -> InputRegion | None:
+    candidates = [
+        region for region in _UI.regions
+        if region.blocks_pointer and check_collision_point_rec(point, region.rect)
+    ]
+    return max(candidates, key=lambda r: (r.z, r.order), default=None)
+
+
+def highest_modal_z() -> int | None:
+    modals = [r.z for r in _UI.regions if r.modal]
+    return max(modals, default=None)
+
+
+def mouse_point() -> Vector2:
+    return _UI.mouse
+
+
+def mouse_wheel() -> float:
+    return _UI.wheel
+
+
+def pointer_available(rect: Rectangle, *, z: int) -> bool:
+    modal_z = highest_modal_z()
+    if modal_z is not None and z < modal_z:
+        return False
+
+    top = top_region_at(mouse_point())
+    if top is not None:
+        if z < top.z:
+            return False
+        if z == top.z and not top.interactive:
+            return False
+
+    return check_collision_point_rec(mouse_point(), rect)
+
+
+def scroll_available(rect: Rectangle, *, z: int | None = None) -> bool:
+    resolved_z = current_layer_z() if z is None else z
+    return pointer_available(rect, z=resolved_z)
+
+
+def _raw_click_pressed() -> bool:
+    return _UI.pressed and not _UI.click_consumed
+
+
+def pointer_pressed(rect: Rectangle, *, z: int) -> bool:
+    if not pointer_available(rect, z=z):
+        return False
+    if _UI.pressed and not _UI.click_consumed:
+        _UI.click_consumed = True
+        return True
+    return False
+
+
+def consume_click() -> None:
+    _UI.click_consumed = True
+
+
+def any_input_pressed() -> bool:
+    if _UI.pressed:
+        return True
+    if get_key_pressed() != 0:
+        return True
+    return (
+        is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+        or is_mouse_button_pressed(MOUSE_BUTTON_MIDDLE)
+    )
+
+
+# --- Layout helpers ---
 
 def layout() -> StageLayout:
     width = get_screen_width() or WINDOW_WIDTH
@@ -87,28 +215,7 @@ def split_table(rect: Rectangle, *, header_height: float = 118.0, note_width: fl
     return TableSections(shell=rect, header=header, note=note, content=content)
 
 
-def mouse_point() -> Vector2:
-    return _UI.mouse
-
-
-def click_pressed() -> bool:
-    return _UI.pressed and not _UI.click_consumed
-
-
-def consume_click() -> None:
-    _UI.click_consumed = True
-
-
-def any_input_pressed() -> bool:
-    if _UI.pressed:
-        return True
-    if get_key_pressed() != 0:
-        return True
-    return (
-        is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
-        or is_mouse_button_pressed(MOUSE_BUTTON_MIDDLE)
-    )
-
+# --- Drawing primitives ---
 
 def draw_frame(rect: Rectangle, fill: Color, border: Color = Color(110, 110, 110, 210)) -> None:
     if rect.width <= 0 or rect.height <= 0:
@@ -160,13 +267,14 @@ def draw_note_block(font: Font | None, rect: Rectangle, title: str, body: str) -
         draw_text(font, body, int(rect.x) + 12, int(rect.y) + 38, body_style.size, body_style.color)
 
 
-def clickable(rect: Rectangle) -> bool:
-    if not layer_interactive():
+# --- Interactive widgets ---
+
+def clickable(rect: Rectangle, *, z: int | None = None) -> bool:
+    resolved_z = current_layer_z() if z is None else z
+    if not pointer_available(rect, z=resolved_z):
         return False
-    hovered = check_collision_point_rec(mouse_point(), rect)
-    if hovered:
-        draw_rectangle_rounded_lines_ex(rect, 0.035, 6, 2.0, Color(177, 145, 87, 255))
-    if hovered and _UI.pressed and not _UI.click_consumed:
+    draw_rectangle_rounded_lines_ex(rect, 0.035, 6, 2.0, Color(177, 145, 87, 255))
+    if _UI.pressed and not _UI.click_consumed:
         _UI.click_consumed = True
         return True
     return False
@@ -212,6 +320,8 @@ def draw_slot_chip(font: Font | None, rect: Rectangle, label: str, *, filled: bo
     draw_centered_text(font, label, rect, label_style.size, label_style.color)
     return clicked
 
+
+# --- Text helpers ---
 
 def draw_centered_text(font: Font | None, text: str, rect: Rectangle, size: int, color: Color) -> None:
     width = measure_text_width(font, text, size)

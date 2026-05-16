@@ -13,9 +13,12 @@ from sincity.content.hot_reload import HOT_RELOADER
 from sincity.dialogue_compile import compile_dialogues
 from sincity.content.validate import validate_content
 from sincity.rendering import configure_gui_theme, draw_text, load_ui_font, unload_ui_font
+from sincity.rules.notifications import advance_notifications
 from sincity.rules.progression import advance_pending_resolution, start_new_run
 from sincity.screens import draw_current_screen
 from sincity.screens.debug_panel import draw_debug_panel
+from sincity.screens.input_regions import register_screen_input_regions
+from sincity.screens.notifications import draw_notifications
 from sincity.screens.widgets import begin_ui_frame, draw_hud, finish_ui_frame
 
 WINDOW_FLAGS = FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI
@@ -53,6 +56,7 @@ class GameApp:
             self.request_exit()
             return
         advance_pending_resolution(self.state, self.rng, get_frame_time())
+        advance_notifications(self.state, get_frame_time())
 
     def restart_process(self) -> None:
         os.execv(sys.executable, [sys.executable, *sys.argv])
@@ -89,9 +93,11 @@ class GameApp:
         begin_drawing()
         clear_background(Color(10, 12, 16, 255))
         begin_ui_frame()
+        register_screen_input_regions(self.state)
         draw_hud(self.ui_font, self.state)
         draw_current_screen(self.ui_font, self.state, self.rng)
         draw_debug_panel(self.ui_font, self.state, self.rng)
+        draw_notifications(self.ui_font, self.state)
         finish_ui_frame()
         end_drawing()
 

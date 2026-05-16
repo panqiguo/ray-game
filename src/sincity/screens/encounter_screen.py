@@ -28,6 +28,7 @@ from sincity.screens.widgets import (
     end_layer,
     layout,
 )
+from .ui_core import Z_HAND, Z_LOCATION_MODAL, Z_MESSAGE, Z_WORLD
 
 
 def draw_encounter_screen(font: Font | None, state: GameState, rng) -> None:
@@ -39,16 +40,18 @@ def draw_encounter_screen(font: Font | None, state: GameState, rng) -> None:
             close_modal(state)
     page = layout()
     table_rect, message_rect = split_desktop_area(page.stage)
-    begin_layer("encounter_root", interactive=state.modal.kind == "")
+    begin_layer("encounter_root", z=Z_WORLD)
     _draw_encounter_table(font, state, rng, table_rect)
     end_layer("encounter_root")
     draw_card_pile_modal(font, state)
-    begin_layer("hand", interactive=state.modal.kind in {"", "location"} and not resolving)
+    begin_layer("hand", z=Z_HAND)
     draw_hand(font, state, current_action(state), rng)
     end_layer("hand")
+    begin_layer("message", z=Z_MESSAGE)
     draw_message_feed(font, message_rect, state)
+    end_layer("message")
     if state.modal.kind == "location" and state.modal.primary_id is not None:
-        begin_layer("encounter_location_table", interactive=True)
+        begin_layer("encounter_location_table", z=Z_LOCATION_MODAL)
         _draw_encounter_location_table(font, state, rng)
         end_layer("encounter_location_table")
     draw_profile_modal(font, state)
@@ -100,6 +103,7 @@ def _draw_encounter_location_table(font: Font | None, state: GameState, rng) -> 
     if location_clock_ids:
         draw_clock_row(font, Rectangle(sections.header.x + 18, sections.header.y + 84, sections.header.width - 36, 48), location_clock_ids, state)
     _draw_location_contents(font, state, rng, target, sections.content, nested_locations=True)
+
 
 def _draw_location_contents(font: Font | None, state: GameState, rng, location, content_rect: Rectangle, *, nested_locations: bool) -> None:
     child_ids = tuple(child.id for child in location.children if location_is_visible(child.id, state))

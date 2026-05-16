@@ -7,14 +7,14 @@ from sincity.rendering import draw_text
 from sincity.rules import choose_dialogue_option, continue_dialogue, finish_dialogue
 
 from .dialogue_portraits import portrait_for_speaker
-from .ui_core import begin_layer, clickable, draw_frame, end_layer, layout, mouse_point, text_button, wrap_text_lines_any
+from .ui_core import Z_DIALOGUE_MODAL, begin_layer, clickable, draw_frame, end_layer, layout, mouse_point, scroll_available, text_button, wrap_text_lines_any
 from .ui_text import ui_text_size, ui_text_style
 
 
 def draw_dialogue_overlay(font: Font | None, state: GameState) -> None:
     if state.modal.kind != "dialogue" or state.active_dialogue is None:
         return
-    begin_layer("dialogue_modal", interactive=True)
+    begin_layer("dialogue_modal", z=Z_DIALOGUE_MODAL)
     stage = layout().stage
     _draw_dialogue_scrim(stage)
     speaker = _current_speaker(state.active_dialogue.history)
@@ -86,7 +86,7 @@ def _draw_history(font: Font | None, state: GameState, rect: Rectangle, line_hei
     rendered_lines = _rendered_history(font, state.active_dialogue.history, rect.width)
     max_visible_lines = max(1, int((rect.height + block_gap) // line_height))
     max_scroll = max(0, len(rendered_lines) - max_visible_lines)
-    if check_collision_point_rec(mouse_point(), rect):
+    if scroll_available(rect, z=Z_DIALOGUE_MODAL):
         wheel = int(get_mouse_wheel_move())
         if wheel != 0:
             state.active_dialogue.history_scroll = max(0, min(max_scroll, state.active_dialogue.history_scroll - wheel * 3))

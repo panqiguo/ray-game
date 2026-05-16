@@ -33,6 +33,7 @@ from sincity.screens.widgets import (
     end_layer,
     layout,
 )
+from .ui_core import Z_HAND, Z_HUD, Z_LOCATION_MODAL, Z_MESSAGE, Z_WORLD
 
 
 def draw_city_screen(font: Font | None, state: GameState, rng) -> None:
@@ -44,16 +45,18 @@ def draw_city_screen(font: Font | None, state: GameState, rng) -> None:
             close_modal(state)
     page = layout()
     table_rect, message_rect = split_desktop_area(page.stage)
-    begin_layer("world", interactive=state.modal.kind == "")
+    begin_layer("world", z=Z_WORLD)
     _draw_world_table(font, state, table_rect, rng)
     end_layer("world")
     draw_card_pile_modal(font, state)
-    begin_layer("hand", interactive=state.modal.kind in {"", "location"} and not resolving)
+    begin_layer("hand", z=Z_HAND)
     draw_hand(font, state, current_action(state), rng)
     end_layer("hand")
+    begin_layer("message", z=Z_MESSAGE)
     draw_message_feed(font, message_rect, state)
+    end_layer("message")
     if state.modal.kind == "location" and state.modal.primary_id is not None:
-        begin_layer("location_table", interactive=True)
+        begin_layer("location_table", z=Z_LOCATION_MODAL)
         _draw_location_table(font, state, rng)
         end_layer("location_table")
     draw_profile_modal(font, state, GROWTH_DEFS)

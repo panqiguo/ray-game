@@ -33,16 +33,20 @@ from sincity.rules import (
     slot_trauma_count,
 )
 
+from sincity.rules.notifications import push_notification
+
 from .dialogue_view import draw_dialogue_overlay
+from .input_regions import profile_panel_rect
 from .task_panel import draw_task_panel
-from .ui_core import begin_layer, click_pressed, clickable, draw_frame, draw_scrim, end_layer, layout, measure_text_width, mouse_point, text_button, wrap_text_lines, wrap_text_lines_any
+from .ui_core import Z_HAND, Z_HUD, Z_PROFILE_MODAL, begin_layer, clickable, draw_frame, draw_scrim, end_layer, layout, measure_text_width, mouse_point, pointer_pressed, text_button, wrap_text_lines, wrap_text_lines_any
 from .ui_text import ui_text_color, ui_text_size, ui_text_style
 
 INVENTORY_PANEL_WIDTH = 324
 INVENTORY_PANEL_RIGHT_OFFSET = 336
 
+
 def draw_hud(font: Font | None, state: GameState) -> None:
-    begin_layer("hud", interactive=(state.modal.kind in {"", "profile"}))
+    begin_layer("hud", z=Z_HUD)
     hud = layout().hud
     draw_frame(hud, Color(20, 22, 29, 245))
     _hud_meter(
@@ -71,7 +75,7 @@ def draw_hud(font: Font | None, state: GameState) -> None:
     )
     draw_text(font, relation_text, int(hud.x + 392), int(hud.y + 17), day_style.size, day_style.color)
     draw_text(font, f"第 {state.day} 天", int(hud.x + hud.width - 248), int(hud.y + 17), day_style.size, day_style.color)
-    if text_button(font, Rectangle(hud.x + hud.width - 148, hud.y + 10, 120, 34), f"档案 {state.growth_points}", ui_text_size("body"), disabled=(state.modal.kind not in {"", "profile"})):
+    if text_button(font, Rectangle(hud.x + hud.width - 148, hud.y + 10, 120, 34), f"档案 {state.growth_points}", ui_text_size("body")):
         if state.modal.kind == "profile":
             close_modal(state)
         else:
@@ -108,7 +112,6 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
     x = int(hand.x) + 18
     y = int(hand.y) + 48
     clicked_exhausted_card = False
-    pointer = mouse_point()
     for index, slot_id in enumerate(list_spirit_slots(state.deck)):
         rect = Rectangle(x, y, 150, 106)
         disabled = energy_exhausted or slot_is_exhausted(state, slot_id) or not slot_is_available(state, slot_id)
@@ -117,7 +120,7 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
         selected = (state.selected_input.kind == "card" and state.selected_input.index == index) and not disabled
         slotted = (state.assembly.slotted_card_index == index) and not disabled
         hinted = (not disabled) and card_hint_flash_active(state, action) and card_matches_action_check(action, slot_id)
-        if energy_exhausted and click_pressed() and check_collision_point_rec(pointer, rect):
+        if energy_exhausted and pointer_pressed(rect, z=Z_HAND):
             clicked_exhausted_card = True
         if draw_compact_card(
             font,
@@ -138,8 +141,11 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
     if clicked_exhausted_card:
         state.action_log.append("行动卡已耗尽：休息后会抽取新的行动卡。")
         del state.action_log[:-MAX_LOG_LINES]
+        push_notification(state, "warning", "行动卡已耗尽", "休息后会抽取新的行动卡。")
     inventory_rect = _inventory_panel_rect()
     draw_inventory_panel(font, inventory_rect, state, action)
+
+
 def draw_compact_card(
     font: Font | None,
     rect: Rectangle,
@@ -412,8 +418,8 @@ def _draw_message_log(font: Font | None, rect: Rectangle, state: GameState) -> N
 def draw_profile_modal(font: Font | None, state: GameState, growth_defs=GROWTH_DEFS) -> None:
     if state.modal.kind != "profile":
         return
-    begin_layer("profile", interactive=True)
-    rect = Rectangle(layout().hud.x + layout().hud.width - 500, layout().hud.y + layout().hud.height + 12, 500, 440)
+    begin_layer("profile", z=Z_PROFILE_MODAL)
+    rect = profile_panel_rect()
     draw_scrim(Rectangle(0, 0, float(get_screen_width()), float(get_screen_height())))
     draw_frame(rect, Color(16, 18, 24, 250), Color(118, 118, 118, 220))
     title_style = ui_text_style("title")

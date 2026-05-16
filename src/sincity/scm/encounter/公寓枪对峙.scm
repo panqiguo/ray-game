@@ -18,7 +18,7 @@
   (lambda ()
     (list
       (effect 'set hostility 12)
-      (effect-reset-clock distance)
+      (effect 'clock- distance 3)
       (effect-reset-clock disarm))))
 
 (define-scene standoff
@@ -26,7 +26,7 @@
     :title "无门牌公寓 · 枪对峙"
     :desc
       (cond
-        ((>= (clock-value distance) 2) "你已经足够近。枪口仍然危险，但主动权第一次有可能从她手里滑出来。")
+        ((>= (clock-value distance) 3) "你已经足够近。枪口仍然危险，但主动权第一次有可能从她手里滑出来。")
         ((<= (clock-value hostility) 3) "她的敌意降了下来。现在你可以开始处理距离，而不是只处理枪声。")
         (else "门开着。屋里没有灯，只有窗外招牌的红光。薇拉坐在阴影里，枪口稳稳对着你。"))
     :show-clocks (list hostility distance disarm)
@@ -70,9 +70,9 @@
           "你把移动伪装成寻找支撑点。桌角、椅背、她的手腕，距离开始有意义。"
           感知
           'mid
-          (list (effect 'clock+ distance 1))
+          (list (effect 'clock+ distance 2))
           (list (effect 'clock+ distance 1) (effect 'clock+ hostility 1))
-          (list (effect 'clock+ hostility 2) (effect-reset-clock distance))
+          (list (effect 'clock+ hostility 2) (effect 'clock- distance 3))
           "你挪近了一步，她还没有意识到这一步的价值。"
           "你的位置好了些，但她也重新紧张起来。"
           "她看穿了你的意图，枪口重新把你钉回原地。"))
@@ -82,13 +82,13 @@
           "你没有冲过去，只是让一件家具变成她和你之间的犹豫。"
           逻辑
           'mid
-          (list (effect 'clock+ distance 1) (effect 'clock- hostility 1))
+          (list (effect 'clock+ distance 2) (effect 'clock- hostility 1))
           (list (effect 'clock+ distance 1))
-          (list (effect 'clock+ hostility 2) (effect-reset-clock distance))
+          (list (effect 'clock+ hostility 2) (effect 'clock- distance 3))
           "椅背遮住了你的重心，她不得不重新判断你的距离。"
           "你站到了更好的角度，但她看见了你的计算。"
           "椅脚擦过地面，她的枪口立刻追了上来。"))
-      (when (>= (clock-value distance) 2)
+      (when (>= (clock-value distance) 3)
         (make-standoff-action
           "关键时刻夺枪"
           "只能在她分神的一瞬间动手。失败的话，距离会被重新拉开。"
@@ -132,6 +132,6 @@
   :state (state
     (use-world-basics)
     (hostility (clock :title "敌意" :desc "降到 3 后可以尝试拉近距离；满格时薇拉会开枪。" :initial 5 :max 12))
-    (distance (clock :title "距离" :desc "足够近时才能夺枪。" :initial 0 :max 2))
+    (distance (clock :title "距离" :desc "足够近时才能夺枪。" :initial 0 :max 4))
     (disarm (clock :title "缴械" :desc "填满后科尔夺回主动权。" :initial 0 :max 1)))
   :root (standoff))

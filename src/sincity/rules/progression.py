@@ -6,7 +6,7 @@ from sincity.constants import HAND_SIZE, MAX_LOG_LINES
 from sincity.content import GROWTH_DEFS, SCENARIO
 from sincity.content.runtime import next_react_rule as next_world_react_rule
 from sincity.content.runtime import react_rule_matches as world_react_rule_matches
-from sincity.content.runtime import render_world
+from sincity.content.runtime import render_tasks, render_world
 from sincity.dialogues import choose_dialogue_option as choose_runtime_dialogue_option
 from sincity.dialogues import continue_dialogue_session, create_dialogue_session, create_quick_dialogue_session, get_dialogue
 from sincity.encounters import MAX_REACT_STEPS, get_encounter, initial_store, next_react_rule, react_rule_matches, render_encounter
@@ -1023,6 +1023,7 @@ def _apply_effects(
             _resolve_encounter_reacts(state, rng, derived)
         elif state.screen == ScreenName.CITY:
             _resolve_world_reacts(state, rng, derived)
+    _award_completed_tasks(state)
     return tuple(derived)
 
 
@@ -1138,6 +1139,17 @@ def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines
             end_game(state)
         return
     raise AssertionError(f"Unsupported effect kind: {item.kind}")
+
+
+def _award_completed_tasks(state: GameState) -> None:
+    for task in render_tasks(SCENARIO.get_program(), state):
+        if task.kind not in {"主线", "支线"} or not task.completed:
+            continue
+        if task.title in state.world.rewarded_tasks:
+            continue
+        state.world.rewarded_tasks.add(task.title)
+        state.growth_points += 1
+        _push_log(state, f"{task.kind}任务完成：{task.title}，获得 1 点成长。")
 
 
 def _resolve_encounter_reacts(state: GameState, rng: RandomSource, extra_lines: list[str]) -> None:
@@ -1297,12 +1309,10 @@ def finish_encounter(state: GameState, outcome: str, rng: RandomSource, extra_li
     _mark_content_dirty(state)
     if outcome == "success":
         _apply_effects(encounter.rewards, state, rng, extra_lines)
-        state.growth_points += 1
-        _push_log(state, f"{encounter.title}：完成，获得 1 点成长。")
+        _push_log(state, f"{encounter.title}：完成。")
     elif outcome == "fail":
         _apply_effects(encounter.fail_effects, state, rng, extra_lines)
-        state.growth_points += 1
-        _push_log(state, f"{encounter.title}：失败，但你还是得到了 1 点成长。")
+        _push_log(state, f"{encounter.title}：失败。")
     else:
         _push_log(state, f"{encounter.title}：中断。")
 

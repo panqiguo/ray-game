@@ -40,6 +40,7 @@ class WorldState:
     progress_clocks: dict[str, ProgressClockState] = field(default_factory=dict)
     inventory: dict[str, int] = field(default_factory=dict)
     values: dict[str, int | bool | str] = field(default_factory=dict)
+    rewarded_tasks: set[str] = field(default_factory=set)
 
 
 @dataclass

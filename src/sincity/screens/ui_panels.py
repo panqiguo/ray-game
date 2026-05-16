@@ -429,7 +429,7 @@ def draw_profile_modal(font: Font | None, state: GameState, growth_defs=GROWTH_D
         return
     header_y = int(rect.y) + 64
     draw_text(font, f"成长点数 {state.growth_points}", int(rect.x) + 20, header_y, stats_style.size, stats_style.color)
-    draw_text(font, "每完成一个侦探任务获得 1 点。", int(rect.x) + 175, header_y, meta_style.size, meta_style.color)
+    draw_text(font, "每完成一个主线或支线任务获得 1 点。", int(rect.x) + 175, header_y, meta_style.size, meta_style.color)
 
     content_y = int(rect.y) + 96
     content_h = int(rect.height) - 118

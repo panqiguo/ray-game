@@ -8,767 +8,373 @@
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --paper:#f7f7f4;
-  --ink:#1d1d1f;
-  --muted:#777;
-  --line:#d8d6cf;
-  --soft:#ffffffcc;
-  --cell:#fff;
-  --shadow:0 10px 28px rgba(36,34,30,.08);
+  --ink:#171717;
+  --line:#d7d3ca;
+  --soft:#ffffffd6;
+  --muted:#756f66;
+  --hub:#7c2cf2;
+  --loc:#58bce8;
+  --challenge:#ffd43f;
 }
 body{
-  min-width:1500px;
+  min-width:1720px;
   color:var(--ink);
   background:
-    linear-gradient(rgba(247,247,244,.92),rgba(247,247,244,.92)),
-    radial-gradient(circle,#cac7bd 1px,transparent 1px);
+    linear-gradient(rgba(247,247,244,.88),rgba(247,247,244,.88)),
+    radial-gradient(circle,#cfcac0 1.5px,transparent 1.5px);
   background-size:auto,22px 22px;
   font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;
-  padding:34px 34px 70px;
+  padding:28px 28px 72px;
 }
-.page-head{
+.section{
+  margin-bottom:34px;
+}
+.section-head{
+  height:128px;
+  border:1px dotted #9f9a91;
   display:flex;
-  align-items:flex-end;
-  justify-content:space-between;
-  gap:28px;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:18px;
+  background:rgba(255,255,255,.5);
   margin-bottom:22px;
 }
-.kicker{
-  font-size:12px;
-  color:#8d877c;
-  letter-spacing:.08em;
-  margin-bottom:7px;
-}
-h1{
-  font-size:26px;
-  font-weight:650;
-  letter-spacing:0;
-}
-.page-note{
-  max-width:620px;
-  color:#68645d;
-  font-size:13px;
-  line-height:1.75;
-  text-align:right;
-}
-.legend{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  margin-bottom:18px;
-}
-.tag{
-  display:inline-flex;
-  align-items:center;
-  min-height:20px;
-  padding:2px 7px;
-  border-radius:5px;
-  background:#ece9df;
-  color:#5e584f;
-  font-size:11px;
-  font-weight:600;
-  white-space:nowrap;
-}
-.tag.challenge{background:#f0d56a;color:#5a4300}
-.tag.merge{background:#c9e2d3;color:#24593b}
-.tag.choice{background:#d8d3f6;color:#47388b}
-.tag.branch{background:#d9e8ee;color:#28576a}
-.tag.pressure{background:#edd2cc;color:#8d2f23}
-.board{
-  display:grid;
-  gap:12px;
-  align-items:stretch;
-}
-.corner,
-.lane-head,
-.chapter,
-.cell{
-  border:1px solid var(--line);
-  border-radius:8px;
-  background:var(--soft);
-}
-.corner{
-  min-height:118px;
-  padding:14px;
-  display:flex;
-  flex-direction:column;
-  justify-content:flex-end;
-  color:#817b70;
-  font-size:12px;
-  line-height:1.55;
-}
-.lane-head{
-  min-height:118px;
-  padding:15px 15px 14px;
-  position:relative;
-  overflow:hidden;
-  box-shadow:var(--shadow);
-}
-.lane-head:before{
-  content:"";
-  position:absolute;
-  left:0;
-  right:0;
-  top:0;
-  height:5px;
-  background:var(--accent);
-}
-.lane-title{
+.section-head .chapter{
   font-size:16px;
   font-weight:650;
-  margin-bottom:6px;
 }
-.lane-sub{
-  font-size:12px;
-  color:#77736a;
-  line-height:1.55;
+.section-head .title{
+  font-size:17px;
+  font-weight:500;
 }
-.lane-type{
-  margin-top:12px;
-  display:inline-flex;
-  color:#fff;
-  background:var(--accent);
-  border-radius:5px;
-  padding:3px 7px;
-  font-size:11px;
-  font-weight:650;
+.row{
+  display:grid;
+  grid-template-columns:500px repeat(6, minmax(170px, 1fr));
+  gap:22px;
+  align-items:start;
 }
-.chapter{
-  padding:14px;
-  min-height:190px;
-  background:#fdfcf8;
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-  border-style:dashed;
-}
-.chapter-label{
-  color:#8d877c;
-  font-size:12px;
-  font-weight:650;
-}
-.chapter-title{
-  font-size:19px;
-  font-weight:700;
-}
-.chapter-days{
-  color:#7f796d;
-  font-size:12px;
-}
-.locs{
-  display:flex;
-  flex-wrap:wrap;
-  gap:6px;
-  margin-top:auto;
+.locations{
+  display:grid;
+  grid-template-columns:124px 124px 124px;
+  gap:8px 24px;
+  align-content:start;
 }
 .loc{
-  border:1px solid #d8d3c6;
-  background:#f1eee6;
-  color:#6f675c;
-  border-radius:5px;
-  padding:4px 7px;
-  font-size:11px;
-  font-weight:600;
-}
-.cell{
-  min-height:190px;
-  padding:14px 14px 13px;
-  background:var(--cell);
-  position:relative;
-}
-.cell.active{
-  border-color:color-mix(in srgb,var(--accent) 48%,#d8d6cf);
-}
-.cell.merge{
-  background:linear-gradient(135deg,#fff 0%,#fff 56%,color-mix(in srgb,var(--accent) 11%,#fff) 100%);
-}
-.cell.dormant{
-  background:#f1f0ec;
-  color:#9b968b;
-  border-style:dashed;
-}
-.cell-title{
-  font-size:13px;
-  color:#5f5a52;
+  width:124px;
+  height:124px;
+  background:var(--loc);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  font-size:15px;
   font-weight:700;
-  margin-bottom:8px;
+  line-height:1.35;
 }
-.cell.dormant .cell-title{color:#9b968b}
-.beats{
-  list-style:none;
+.loc.hub{
+  background:var(--hub);
+  color:#050505;
+}
+.lane{
+  min-height:120px;
+  padding-top:2px;
+}
+.lane-title{
+  text-align:center;
+  font-size:14px;
+  font-weight:650;
+  line-height:1.45;
+  margin-bottom:18px;
+}
+.tasks{
   display:flex;
   flex-direction:column;
-  gap:7px;
+  align-items:center;
+  gap:17px;
 }
-.beats li{
+.task{
+  width:100%;
+  max-width:210px;
+  font-size:13px;
+  line-height:1.55;
+  text-align:center;
+}
+.task ul{
+  text-align:left;
+  padding-left:18px;
+}
+.task li+li{
+  margin-top:12px;
+}
+.task-note{
+  color:#6f685f;
+  font-size:11.5px;
+  line-height:1.55;
+  margin-top:8px;
+}
+.challenge{
+  background:var(--challenge);
+  min-height:68px;
+  padding:12px 14px;
   display:flex;
-  gap:7px;
-  align-items:flex-start;
-  font-size:12.5px;
-  line-height:1.55;
-  color:#33312d;
+  align-items:center;
+  justify-content:center;
+  font-weight:750;
+  color:#171200;
 }
-.cell.dormant .beats li{color:#9b968b}
-.dot{
-  width:5px;
-  height:5px;
-  border-radius:50%;
-  background:var(--accent);
-  margin-top:7px;
-  flex:0 0 auto;
-  opacity:.8;
+.muted{
+  color:#a19a90;
 }
-.beat-text{
-  min-width:0;
+.wide{
+  max-width:250px;
 }
-.beat-text .tag{
-  margin-right:5px;
-  vertical-align:1px;
+.empty{
+  color:#aaa49b;
 }
-.beat-title{
-  display:inline;
-  font-weight:650;
-  color:#26231f;
-}
-.beat-note{
-  display:block;
-  margin-top:2px;
-  color:#777168;
-  font-size:11.5px;
-  line-height:1.55;
-}
-.note{
-  margin-top:10px;
-  padding-top:9px;
-  border-top:1px dashed #ddd8cd;
-  color:#777168;
-  font-size:11.5px;
-  line-height:1.6;
-}
-.dormant .note{border-top-color:#dedbd3;color:#999389}
 .footer-note{
   margin-top:18px;
-  color:#7a756c;
+  color:#6f685f;
   font-size:12px;
   line-height:1.7;
-}
-@media print{
-  body{padding:18px;min-width:0;background:#fff}
-  .board{gap:8px}
-  .lane-head,.cell{box-shadow:none}
 }
 </style>
 </head>
 <body>
-<header class="page-head">
-  <div>
-    <div class="kicker">STORYLINE BOARD</div>
-    <h1>科尔事件簿 · 多线叙事 Timeline</h1>
+
+<section class="section">
+  <div class="section-head">
+    <div class="chapter">第一章</div>
+    <div class="title">碎片</div>
   </div>
-  <p class="page-note">
-    横向每一列是一条独立推进的故事线，纵向每一行是章节阶段。节点只写推进目标或场景纲要，用来检查每条线何时开启、并线、收束。
-  </p>
-</header>
 
-<div class="legend">
-  <span class="tag challenge">挑战场景</span>
-  <span class="tag merge">并线</span>
-  <span class="tag choice">选择</span>
-  <span class="tag branch">支线</span>
-  <span class="tag pressure">压力</span>
-</div>
+  <div class="row">
+    <div class="locations">
+      <div class="loc hub">中心区</div>
+      <div class="loc">办公室</div>
+      <div class="loc">饭店</div>
+      <div></div>
+      <div class="loc">医院</div>
+      <div class="loc">书店</div>
+      <div></div>
+      <div class="loc">仓库</div>
+    </div>
 
-<main id="board" class="board"></main>
+    <div class="lane">
+      <div class="lane-title">中枪男人</div>
+      <div class="tasks">
+        <div class="task wide">
+          别人也在寻找这个东西，<br>在 5 天，赶在他们之前
+          <div class="task-note">中枪男人闯入办公室，留下神秘物品</div>
+        </div>
+        <div class="task">
+          <ul>
+            <li>处理血迹</li>
+            <li>询问其他人这个男人的信息，去踩点</li>
+            <li>配合警方调查</li>
+          </ul>
+        </div>
+        <div class="task challenge">挑战 - 取回东西</div>
+        <div class="task">把物品送去鉴定</div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-title">薇拉（主线）</div>
+      <div class="tasks">
+        <div class="task empty">尚未出现</div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-title">酒吧金发女人</div>
+      <div class="tasks">
+        <div class="task empty">酒吧未开放</div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-title">赌徒男人</div>
+      <div class="tasks">
+        <div class="task empty">老街未开放</div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-title">旧书店多琳</div>
+      <div class="tasks">
+        <div class="task muted">书店作为普通地点出现，先建立多琳和科尔的旧识关系</div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-title">城市压力</div>
+      <div class="tasks">
+        <div class="task">警方、房东、街坊开始知道科尔卷入了麻烦</div>
+        <div class="task muted">这一章只展示城市表层：办公室、饭店、医院、书店、仓库</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <div class="chapter">第二章</div>
+    <div class="title">猫鼠游戏 找到薇拉</div>
+  </div>
+
+  <div class="row">
+    <div class="locations">
+      <div class="loc hub">老街区</div>
+      <div class="loc">老街</div>
+      <div></div>
+      <div class="loc">废弃区</div>
+      <div class="loc">酒吧</div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-title">中枪男人</div>
+      <div class="tasks">
+        <div class="task">把物品送去鉴定</div>
+        <div class="task">等待鉴定，需要 6 天</div>
+        <div class="task">领取雷奥的初步鉴定</div>
+        <div class="task wide">提出两案关联假设<br>（当同时有鉴定结果以及旅馆的线索时弹出）</div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-title">薇拉（主线）</div>
+      <div class="tasks">
+        <div class="task wide">和德雷福雷谈谈，接下寻找薇拉的委托</div>
+        <div class="task wide">去三个地方看看，其中有一个地方可能有她最近的信息</div>
+        <div class="task">和固执的旅馆老板谈判</div>
+        <div class="task challenge">挑战 潜入旅馆</div>
+        <div class="task">跟踪得到的线索</div>
+        <div class="task challenge">持枪 对峙</div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-title">酒吧金发女郎</div>
+      <div class="tasks">
+        <div class="task">点单 +10</div>
+        <div class="task challenge">调情，喝酒</div>
+        <div class="task">她的关联的故事</div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-title">赌徒男人</div>
+      <div class="tasks">
+        <div class="task challenge">?</div>
+        <div class="task muted">先以问号出现：他是麻烦、资源，还是骗子</div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-title">旧书店多琳</div>
+      <div class="tasks">
+        <div class="task muted">尚未成为安全屋，但可通过书店听到老街和旧案的零碎消息</div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-title">城市压力</div>
+      <div class="tasks">
+        <div class="task">老街区开放，玩家第一次接触城市背面</div>
+        <div class="task">另一些人也在找薇拉，科尔不再是唯一猎人</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <div class="chapter">第三章</div>
+    <div class="title">倾斜 藏住薇拉</div>
+  </div>
+
+  <div class="row">
+    <div class="locations">
+      <div class="loc hub">旧城区</div>
+      <div class="loc">旧书店</div>
+      <div class="loc">安全屋</div>
+      <div class="loc">警局档案室</div>
+      <div class="loc">康复诊所<br>外围</div>
+      <div class="loc">地下赌局</div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-title">中枪男人</div>
+      <div class="tasks">
+        <div class="task">追问雷奥更完整的鉴定</div>
+        <div class="task wide">鉴定指向旧案卷、特殊病患文件，或某个被撤销的机构编号</div>
+        <div class="task">查这个编号对应的人</div>
+        <div class="task wide">把中枪男人线暂时并入薇拉案：它们不是两个案子，但还不知道谁在利用谁</div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-title">薇拉（主线）</div>
+      <div class="tasks">
+        <div class="task wide">决定不立刻把薇拉交给德雷福雷</div>
+        <div class="task">带薇拉转移到旧书店后屋</div>
+        <div class="task wide">听她讲入院评估、医生签字、德雷福雷的控制</div>
+        <div class="task">调查入院评估文件</div>
+        <div class="task">调查玛丽·贝尔旧案</div>
+        <div class="task challenge">挑战 取回薇拉指定文件</div>
+        <div class="task wide">向德雷福雷隐瞒进度：报告“还没找到”</div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-title">酒吧金发女郎</div>
+      <div class="tasks">
+        <div class="task">再次去酒吧找她喝酒</div>
+        <div class="task">追问她故事里那个女人是谁</div>
+        <div class="task challenge">挑战 后巷摆脱盯梢者</div>
+        <div class="task wide">取得玛丽·贝尔旧客人、朋友，或幸存者方向</div>
+        <div class="task muted">她给的不是证据，而是玛丽作为一个活人的轮廓</div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-title">赌徒男人</div>
+      <div class="tasks">
+        <div class="task">揭开问号：他欠了赌局的钱</div>
+        <div class="task challenge">挑战 进入地下赌局</div>
+        <div class="task">获取假证件 / 旧楼通道 / 黑市人脉</div>
+        <div class="task wide">处理他的离城请求：放他走、逼他留下，或让他做一次正确的事</div>
+        <div class="task">把通道接到薇拉转移路线</div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-title">旧书店多琳</div>
+      <div class="tasks">
+        <div class="task">说服多琳借出后屋</div>
+        <div class="task">整理旧报纸和剪报</div>
+        <div class="task wide">找到玛丽·贝尔死亡、康复诊所开业、旧案撤销的零散记录</div>
+        <div class="task">处理书店被人盯上的风险</div>
+        <div class="task wide">决定是否把多琳拉进真相</div>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-title">城市压力</div>
+      <div class="tasks">
+        <div class="task">调查康复诊所外围</div>
+        <div class="task">查警局旧案撤销记录</div>
+        <div class="task wide">红房间从传闻变成体面机构：诊断、评估、转院、档案</div>
+        <div class="task">标记第一个上层名字：医生、律师、基金会或警局内线</div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <p class="footer-note">
-  设计备注：中枪男人线是序章引爆点，薇拉委托线是第一条长主线；两者在第三、四章通过神秘物品与红房间案正式合流。金发女人和赌徒男人从老街区开启，持续到第三或第四章，之后以资源、证词、通道或缺席的形式影响后续。
+  备注：第一、二章严格按当前图里的内容落版；第三章是沿着“找到薇拉后不交人，而是开始验证她的话”往下推。新增“旧书店多琳”线，用来承接第三章新地点、安全屋、旧报纸和薇拉藏身处。
 </p>
 
-<script>
-const lanes = [
-  {
-    id:"intruder",
-    title:"中枪男人",
-    subtitle:"序章线 · 神秘物品 · 被盯上的办公室",
-    type:"引爆线",
-    accent:"#7b61d1"
-  },
-  {
-    id:"vera",
-    title:"薇拉 / 弗雷德里克",
-    subtitle:"委托、追猎、倾斜、反转，是整章情感和误判的核心",
-    type:"主线",
-    accent:"#c45b50"
-  },
-  {
-    id:"redroom",
-    title:"红房间 / 城市权力",
-    subtitle:"从街头债务、警察压力到上层系统的真实形状",
-    type:"世界线",
-    accent:"#3c7f88"
-  },
-  {
-    id:"blonde",
-    title:"酒吧金发女人",
-    subtitle:"老街开启的隐秘侧面，提供玛丽·贝尔和幸存者方向",
-    type:"人物支线",
-    accent:"#d29525"
-  },
-  {
-    id:"gambler",
-    title:"赌徒男人",
-    subtitle:"老街开启的地下入口，连接赌局、债务、假证件与通道",
-    type:"人物支线",
-    accent:"#4f8e55"
-  }
-];
-
-const task = (title,note="",tag=null) => ({title,note,tag});
-
-const chapters = [
-  {
-    label:"序章",
-    title:"闯入",
-    days:"开场夜",
-    locations:["办公室","诊所","雷奥"],
-    cells:{
-      intruder:{
-        title:"取回神秘物品",
-        beats:[
-          task("5天内取回中枪男人留下的东西","中枪男人突然闯入办公室，死前把神秘物品交到科尔手里。有人会来找它，科尔必须决定藏在哪里、交给谁鉴定。","压力"),
-          task("处理办公室闯入现场","清理血迹、尸体、邻居目击和可能的报警风险，让普通生活的外壳暂时维持下去。"),
-          task("把物品送去鉴定","找雷奥或其他可信线人，换取第一个模糊方向：名字、编号或旧案痕迹。")
-        ]
-      },
-      vera:{
-        title:"尚未接入",
-        dormant:true,
-        beats:[
-          task("等待委托触发","薇拉此时还只是城市另一端的失踪者，弗雷德里克尚未进入科尔视野。")
-        ]
-      },
-      redroom:{
-        title:"确认自己被盯上",
-        beats:[
-          task("处理黑帮债务倒计时","讨债人上门，把科尔的时间压力钉在桌面上。","压力"),
-          task("查清谁在打听科尔","房东、邻居或旧联系人透露：有人在问办公室和中枪男人的事。")
-        ]
-      },
-      blonde:{
-        title:"未开启",
-        dormant:true,
-        beats:[task("等待老街区解锁","酒吧与金发女人支线暂不出现。")]
-      },
-      gambler:{
-        title:"未开启",
-        dormant:true,
-        beats:[task("等待老街区解锁","地下赌局与赌徒男人支线暂不出现。")]
-      }
-    }
-  },
-  {
-    label:"第一章",
-    title:"卷入",
-    days:"Day 1-4",
-    locations:["中心区","公寓","书店","饭馆"],
-    cells:{
-      intruder:{
-        title:"追查神秘物品",
-        beats:[
-          task("检查闯入者遗留线索","从衣物、弹孔、血迹和随身物里找出他从哪里来。"),
-          task("确认翻办公室的人","有人已经来找过同一件东西，科尔需要判断对方是黑帮、警察还是更隐秘的人。"),
-          task("联系旧同僚追问案卷编号","旧同僚不想说话，但他的恐惧本身就是线索。"),
-          task("在时限前锁定物品指向谁","对方给出5天压力，玩家要推进到一个可行动的名字或地点。","压力")
-        ],
-        note:"这一列的节点都应该像任务：取物、鉴定、追问、锁定方向；情节只作为任务备注出现。"
-      },
-      vera:{
-        title:"接下寻找薇拉的委托",
-        beats:[
-          task("接下弗雷德里克的委托","他以疲惫丈夫姿态出现，报酬足够让科尔暂时忽略不对劲。"),
-          task("调查薇拉基础资料","整理照片、病历说法、婚姻关系、失踪时间线。"),
-          task("走访薇拉最后出现地点","比对她接触过的人、留下的物和被删除的记录。"),
-          task("判断跟踪者冲谁而来","科尔开始被跟踪，但还不知道对方是冲薇拉，还是冲神秘物品。")
-        ]
-      },
-      redroom:{
-        title:"维持城市表层生活",
-        beats:[
-          task("规划债务前的行动窗口","黑帮债务限制行动天数，也逼玩家选择优先查哪条线。","压力"),
-          task("建立可用人脉","书店、饭馆、诊所等地点提供普通生活层面的线索与资源。"),
-          task("确认警察和财阀只是远影","第一章只让玩家看到影子，不急着解释上层结构。")
-        ]
-      },
-      blonde:{
-        title:"未开启",
-        dormant:true,
-        beats:[task("等待老街区解锁","她的故事线从第二章酒吧开放后开始。")]
-      },
-      gambler:{
-        title:"未开启",
-        dormant:true,
-        beats:[task("等待老街区解锁","他的故事线从第二章老街和地下赌局开放后开始。")]
-      }
-    }
-  },
-  {
-    label:"第二章",
-    title:"追猎",
-    days:"Day 5-8",
-    locations:["老街","旅馆","酒吧","废弃区"],
-    cells:{
-      intruder:{
-        title:"把物品线接到薇拉线",
-        beats:[
-          task("领取雷奥的初步鉴定","鉴定只给出模糊结果：名字、编号或旧案痕迹。"),
-          task("比对物品与薇拉逃亡路线","玩家发现物品指向的地点，和薇拉正在靠近的地方有重叠。"),
-          task("提出两案关联假设","这不是结论，只是让两条线第一次并排进入玩家脑中。","并线")
-        ],
-        merge:true
-      },
-      vera:{
-        title:"从委托进入追猎",
-        beats:[
-          task("调查薇拉相关资料","确认她不是漫无目的地逃，而是在沿某条线索移动。"),
-          task("锁定旅馆并尝试调查","旅馆是第一个明确落点，玩家要决定正面询问还是绕开前台。"),
-          task("潜入旅馆","避开另一拨追猎者，搜索房间、账本和被匆忙留下的东西。","挑战场景"),
-          task("逼问旅馆线索","从员工、邻房客或旧联系人口中拿到下一站。"),
-          task("跟踪薇拉逃亡路线","她在找什么这个疑问，开始比完成委托更重要。"),
-          task("处理首次对抗","她握着武器，不相信任何人；玩家要在制服、谈判、放走之间处理。"),
-          task("帮助薇拉暂时躲开追捕","科尔第一次偏离完成任务的轨道。","选择")
-        ]
-      },
-      redroom:{
-        title:"识别另一个猎人",
-        beats:[
-          task("调查先到一步的人","科尔扑空不是因为慢，而是有另一拨人也在追她。"),
-          task("打开老街消息渠道","玩家接触酒吧、废弃区和地下线人，城市背面的信息开始流动。"),
-          task("记录红房间改名痕迹","此时它仍是传闻，但名字、地址和人员开始反复出现。")
-        ]
-      },
-      blonde:{
-        title:"开启酒吧金发女人支线",
-        beats:[
-          task("在老街酒吧接触金发女人","她用玩笑和交易试探科尔，不直接给答案。","支线"),
-          task("替她处理跟踪者","小型街头场景，换取她愿意继续谈。"),
-          task("打听玛丽·贝尔的只言片语","她认识某个幸存者，也知道玛丽不是档案里那种人。"),
-          task("决定关系基调","信任、交易或互相利用，会影响第三章她给多少东西。","选择")
-        ],
-        note:"她的任务不是解主线谜题，而是从隐秘角度让玩家理解这个世界。"
-      },
-      gambler:{
-        title:"开启赌徒男人支线",
-        beats:[
-          task("在老街救下或抓住赌徒男人","他正被追债，玩家可帮他、利用他或当场交易。","支线"),
-          task("追问地下赌局入口","他知道假证件、旧楼通道和某些人脉。"),
-          task("处理他的当晚麻烦","小型外出或城市行动，决定他是否愿意带路。"),
-          task("记录他的离城倒计时","他的线不会贯穿全章，核心是短时间内决定他留下还是逃。")
-        ]
-      }
-    }
-  },
-  {
-    label:"第三章",
-    title:"倾斜",
-    days:"Day 9-12",
-    locations:["旧书店","安全屋","档案室","警局外围"],
-    cells:{
-      intruder:{
-        title:"把神秘物品并入旧案",
-        beats:[
-          task("查到物品对应的旧案卷","神秘物品指向红房间相关案卷，序章线正式并入旧案。","并线"),
-          task("让雷奥确认交叉人物","弗雷德里克、玛丽·贝尔或某个旧调查员进入同一张关系网。"),
-          task("暂存无法深追的疑问","玩家知道它重要，但眼下必须先处理薇拉和弗雷德里克。")
-        ],
-        merge:true
-      },
-      vera:{
-        title:"休战、藏匿、验证",
-        beats:[
-          task("为薇拉安排藏身处","旧书店、安全屋或多琳的地方，让她短暂离开追捕。"),
-          task("听取薇拉关于弗雷德里克的陈述","她讲控制、入院评估和医生压力，但没有说完整真相。"),
-          task("调查入院评估文件","玩家要验证她说出的那部分是否真实。"),
-          task("调查玛丽·贝尔旧案","旧案被草草结案，玩家开始情感上偏向薇拉。"),
-          task("替薇拉寻找指定文件或证人","看似受害者求助，其实也是她计划的一部分。"),
-          task("向弗雷德里克隐瞒进度","科尔报告还没找到，正式站到委托之外。","选择")
-        ],
-        note:"这一章的每个点都要能落成调查、对话或外出行动；薇拉的讲述只是任务里的备注和奖励。"
-      },
-      redroom:{
-        title:"验证红房间结构",
-        beats:[
-          task("查警局旧案撤销记录","确认旧案不是自然结束，而是被压下去。"),
-          task("追踪医疗系统接口","康复中心、医生、评估文件让红房间开始具备现实形状。"),
-          task("标记上层人物入口","玩家第一次看到财阀、警局和红房间之间的结构性连接。")
-        ]
-      },
-      blonde:{
-        title:"推进玛丽·贝尔支线",
-        beats:[
-          task("向金发女人追问玛丽生前关系","她给出的不是证据，而是玛丽作为人的侧影。"),
-          task("保护她的联系人","酒吧后巷摆脱盯梢者，换取幸存者线索。","挑战场景"),
-          task("取得幸存者可能下落","她要求科尔先证明自己不是又一个利用她们的人。"),
-          task("确定支线信任状态","信任、欠人情或冷淡收束，决定第四章她是否出面。","选择")
-        ]
-      },
-      gambler:{
-        title:"取得地下入口资源",
-        beats:[
-          task("让赌徒带路进入地下赌局","玩家可以用钱、人情或威胁换取入口。"),
-          task("获取假证件或秘密通道","这条支线提供工具，不提供主线真相。"),
-          task("处理他的离城请求","他问科尔：留下真的有用吗。"),
-          task("决定他是否还有用","让他跑、逼他留下，或给他一次做对事的机会。","选择")
-        ]
-      }
-    }
-  },
-  {
-    label:"第四章",
-    title:"暗流",
-    days:"Day 13-15",
-    locations:["康复中心外围","工业废区","旧会议点"],
-    cells:{
-      intruder:{
-        title:"把中枪男人转为证据链",
-        beats:[
-          task("整理中枪男人身份线索","他不再单独推进，而是成为红房间证据链的一环。","并线"),
-          task("确认他为谁办事","玩家不必立刻得到完整答案，但要拿到足够指向最终对峙的证据。"),
-          task("保留死前行为疑问","为什么把东西交给科尔，这个问题留到终局闭合。")
-        ],
-        merge:true
-      },
-      vera:{
-        title:"共同调查弗雷德里克",
-        beats:[
-          task("追查薇拉给出的地址和人名","她主动推动调查，科尔还没意识到这些点在服务她的复仇。"),
-          task("锁定康复中心外围或旧会议点","从传闻转向可进入、可调查的地点。"),
-          task("潜入外围档案室","拿到红房间与弗雷德里克的直接联系。","挑战场景"),
-          task("确认弗雷德里克的关键角色","他不是被拖下水的人，而是结构中的重要节点。"),
-          task("处理弗雷德里克正面质问","委托外壳失效，科尔和他公开冲突。")
-        ]
-      },
-      redroom:{
-        title:"应对正面压力",
-        beats:[
-          task("处理弗雷德里克派来的谈话","对方暗示知道科尔在帮薇拉。","压力"),
-          task("解决执照、房东、警局连锁麻烦","城市系统开始让科尔无法正常生活。","压力"),
-          task("保护被牵连的盟友","雷奥或其他人可能因鉴定和调查遭遇麻烦。"),
-          task("决定继续查还是退缩","退缩也已经来不及，玩家只是决定付出哪种代价。","选择")
-        ]
-      },
-      blonde:{
-        title:"收束金发女人支线",
-        beats:[
-          task("取得幸存者或证词出口","她交出线索，或承认自己只能帮到这里。"),
-          task("让她联络地下记者","只有信任足够时，她才愿意承担风险。"),
-          task("决定是否要求她出面作证","保护她离开、要求作证，或让她继续沉默。","选择")
-        ]
-      },
-      gambler:{
-        title:"收束赌徒男人支线",
-        beats:[
-          task("确认离城通道是否可用","假证件、旧楼通道或地下人脉准备就绪。"),
-          task("要求他最后帮一次忙","关系足够时，他愿意留下替科尔开一次门。"),
-          task("处理他的背叛或离开","他离城、留下，或在压力下出卖路线。","选择")
-        ]
-      }
-    }
-  },
-  {
-    label:"第五章",
-    title:"崩塌",
-    days:"高潮夜",
-    locations:["旧宅","街角","逃亡路线"],
-    cells:{
-      intruder:{
-        title:"在逃亡中重查序章问题",
-        beats:[
-          task("重新审视神秘物品来源","科尔开始怀疑中枪男人也是薇拉棋盘上的一颗棋子。"),
-          task("确认哪些线索是意外产生的","死前把东西交到科尔手上，可能并不完全在薇拉计划内。"),
-          task("带着未解问题进入终局","玩家需要保留问题：她是否预料到科尔会拿到它。")
-        ]
-      },
-      vera:{
-        title:"处理旧宅死亡现场",
-        beats:[
-          task("赴弗雷德里克的旧宅约谈","他直接打电话给科尔，声音不再体面。"),
-          task("在楼上逼问弗雷德里克","他谈婚姻、控制和忏悔的裂缝，但不完整坦白。"),
-          task("调查楼下死亡声响","弗雷德里克下楼后死亡发生。"),
-          task("面对门口出现的薇拉","她的表情无法判断：意外、恐惧，还是别的东西。"),
-          task("从现场逃走","记录、冲突和现场位置都指向科尔，他必须跑。","压力"),
-          task("追问她为什么在那里","这是第五章留给玩家的核心问题。")
-        ]
-      },
-      redroom:{
-        title:"突破全城收网",
-        beats:[
-          task("避开警方和红房间同时追捕","警察、弗雷德里克的人、红房间相关势力同时行动。","压力"),
-          task("销毁或转移危险记录","科尔的调查记录会把他钉成嫌疑人。"),
-          task("寻找临时安全点","根据支线结果，可用落点可能变多或变少。")
-        ]
-      },
-      blonde:{
-        title:"调用酒吧支线余波",
-        beats:[
-          task("请求短暂藏身处","若支线完成，她可以打开酒吧后门或提供证词出口。"),
-          task("承受关系破裂后果","若关系破裂，她关闭路线，科尔少一个安全落点。")
-        ],
-        merge:true
-      },
-      gambler:{
-        title:"调用赌徒支线余波",
-        beats:[
-          task("使用假证件或旧楼通道","若支线完成，他提供逃亡工具。"),
-          task("处理通道失效或背叛","若他已离城或出卖路线，逃亡变窄。")
-        ],
-        merge:true
-      }
-    }
-  },
-  {
-    label:"第六章",
-    title:"真相与抉择",
-    days:"终局",
-    locations:["安全屋","公开渠道","最终对峙点"],
-    cells:{
-      intruder:{
-        title:"闭合序章任务",
-        beats:[
-          task("拼出中枪男人真实身份","通过雷奥、多琳和旧记录完成最后校验。"),
-          task("确认他和薇拉计划的关系","他确实在棋盘上，但死亡和交物可能制造了偏差。"),
-          task("把开场物品纳入最终证据","开场冲击变成最终真相的最后一块拼图。","并线")
-        ],
-        merge:true
-      },
-      vera:{
-        title:"完成最终对峙",
-        beats:[
-          task("找到薇拉并摊开证据","这次不是她在黑暗中握碎玻璃，而是科尔主动对质。"),
-          task("逼她承认完整计划","玛丽·贝尔、五年接近弗雷德里克、利用科尔，全部浮出水面。"),
-          task("判断她给出的真相边界","她说出的部分是真的，但从来不是完整真相。"),
-          task("把她交给警察","法律上正确，但可能让红房间继续存在。","选择"),
-          task("帮助她逃跑","情感上可能，但科尔要接受她仍可能再次利用他。","选择"),
-          task("一起公布证据","最危险，也最接近彻底揭开红房间。","选择"),
-          task("让她自己决定","承认科尔不是她的拯救者，她也不需要被拯救。","选择")
-        ]
-      },
-      redroom:{
-        title:"决定红房间是否暴露",
-        beats:[
-          task("选择公开证据的渠道","地下记者、警察内部线人、直接曝光或交易。"),
-          task("承担公开路径代价","每条路都会改变弗雷德里克罪行被看见的方式。"),
-          task("确定科尔的最终立场","最好的收束不是幸福，而是科尔做出自己的决定。")
-        ]
-      },
-      blonde:{
-        title:"结算金发女人支线",
-        dormant:true,
-        beats:[
-          task("结算她是否进入证词链","她可能出面，也可能只是继续在酒吧里活下去。"),
-          task("回收玛丽与幸存者视角","玩家从她这里理解人，而不是拿到万能答案。")
-        ]
-      },
-      gambler:{
-        title:"结算赌徒男人支线",
-        dormant:true,
-        beats:[
-          task("结算他离城、帮忙或背叛","他的结果反映普通人如何被债务和恐惧塑形。"),
-          task("回收一次小勇气或小失败","他可以偿还人情，也可以证明这座城市很难让人变好。")
-        ]
-      }
-    }
-  }
-];
-
-const tagClass = {
-  "挑战场景":"challenge",
-  "并线":"merge",
-  "选择":"choice",
-  "支线":"branch",
-  "压力":"pressure"
-};
-
-function makeEl(tag, className, text){
-  const el = document.createElement(tag);
-  if(className) el.className = className;
-  if(text) el.textContent = text;
-  return el;
-}
-
-function normalizeBeat(beat){
-  if(Array.isArray(beat)) return {tag:beat[0],title:beat[1],note:""};
-  return beat;
-}
-
-function renderBeat(rawBeat, accent){
-  const beat = normalizeBeat(rawBeat);
-  const li = makeEl("li");
-  const dot = makeEl("span","dot");
-  dot.style.background = accent;
-  const text = makeEl("span","beat-text");
-  if(beat.tag){
-    const tag = makeEl("span",`tag ${tagClass[beat.tag] || ""}`,beat.tag);
-    text.appendChild(tag);
-  }
-  text.appendChild(makeEl("span","beat-title",beat.title));
-  if(beat.note) text.appendChild(makeEl("span","beat-note",beat.note));
-  li.append(dot,text);
-  return li;
-}
-
-function renderBoard(){
-  const board = document.getElementById("board");
-  board.style.gridTemplateColumns = `150px repeat(${lanes.length}, minmax(230px, 1fr))`;
-
-  const corner = makeEl("div","corner");
-  corner.innerHTML = "<strong>章节阶段</strong><br>地点解锁与故事压力按行推进";
-  board.appendChild(corner);
-
-  for(const lane of lanes){
-    const head = makeEl("section","lane-head");
-    head.style.setProperty("--accent",lane.accent);
-    head.append(
-      makeEl("div","lane-title",lane.title),
-      makeEl("div","lane-sub",lane.subtitle),
-      makeEl("div","lane-type",lane.type)
-    );
-    board.appendChild(head);
-  }
-
-  for(const chapter of chapters){
-    const chapterCell = makeEl("section","chapter");
-    chapterCell.innerHTML = `
-      <div>
-        <div class="chapter-label">${chapter.label}</div>
-        <div class="chapter-title">${chapter.title}</div>
-        <div class="chapter-days">${chapter.days}</div>
-      </div>
-      <div class="locs">${chapter.locations.map(loc => `<span class="loc">${loc}</span>`).join("")}</div>
-    `;
-    board.appendChild(chapterCell);
-
-    for(const lane of lanes){
-      const data = chapter.cells[lane.id] || {
-        title:"空窗",
-        dormant:true,
-        beats:[task("这一阶段没有推进")]
-      };
-      const cell = makeEl("section","cell");
-      cell.style.setProperty("--accent",lane.accent);
-      if(data.dormant) cell.classList.add("dormant");
-      else cell.classList.add("active");
-      if(data.merge) cell.classList.add("merge");
-
-      cell.appendChild(makeEl("div","cell-title",data.title));
-      const ul = makeEl("ul","beats");
-      for(const beat of data.beats) ul.appendChild(renderBeat(beat,lane.accent));
-      cell.appendChild(ul);
-      if(data.note) cell.appendChild(makeEl("div","note",data.note));
-      board.appendChild(cell);
-    }
-  }
-}
-
-renderBoard();
-</script>
 </body>
 </html>

@@ -609,18 +609,20 @@
       :kind '主线
       :title "几天之后去取东西"
       :desc "那个男人让你第 5 天去取回东西。警察、血迹、死者线索都是你可以提前处理的事。"
-      :active (and intrusion_seen (not item_auth_sent))
-      :completed item_auth_sent
+      :active (and intrusion_seen (not item_recovered))
+      :completed item_recovered
       :failed item_recovery_failed
       :steps (list))
     (task
       :kind '主线
-      :title "等待鉴定结果"
-      :desc "神秘物品已经送去鉴定。结果出来之前，你只能继续撑住这座城。"
-      :active (and item_auth_sent (not auth_done))
+      :title "处理神秘物品的鉴定"
+      :desc "东西已经拿回来了。先把它送去鉴定，然后等结果出来。"
+      :active (and item_recovered (not auth_done))
       :completed auth_done
       :failed false
-      :steps (list))
+      :steps (list
+        (step :title "把东西送去鉴定" :completed item_auth_sent)
+        (step :title "等待鉴定结果" :completed auth_done)))
     (task
       :kind '主线
       :title "寻找薇拉"

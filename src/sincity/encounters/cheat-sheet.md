@@ -50,11 +50,15 @@ Encounter / World SCM 速查
 
 字段作用域：
 
-- world 全局字段：`day` `health` `energy` `stress` `money` `cigarettes`
-- world 还包括：world `:state` 绑定、初始 inventory 物品计数
 - encounter 局部字段：encounter `:state` 绑定
-- 修改字段统一直接写字段名：`money`、`health`、`energy`、`villa_job_taken`
+- encounter 需要读写世界状态时，先在 `:state` 显式导入：
+  - 角色属性：`(energy (world-attr 'energy))`、`(health (world-attr 'health))`
+  - 世界物品：`(money (world-item 'money 0))`
+  - 世界值：`(case_done (world-value 'case_done false))`
+- 可 include `common_world_bindings.scm` 使用 helper 展开常用绑定：`(use-world-health)`、`(use-world-energy)`、`(use-world-money)`、`(use-world-food)`、`(use-world-basics)`。
+- 修改字段统一写已绑定的字段名：`money`、`health`、`energy`、`villa_job_taken`
 - `stress` 是旧字段名兼容层；新内容优先写 `energy`。`(effect 'add energy -1)` 表示精力减少 1。
+- completion bucket（`:on-success` / `:on-fail`）可以使用已导入的世界绑定；未在 `:state` 导入的世界字段继续使用 quoted key，例如 `(effect 'add 'money 20)`。
 - `day` 是特例：修改只用 `(effect 'advance-day)`
 
 `node` / `scene`：
@@ -158,6 +162,7 @@ Encounter / World SCM 速查
 (effect 'clock- clock-field amount)
 (effect 'set field value)
 (effect 'add field amount)
+(effect 'copy target-field source-field)
 (effect 'start-dialogue 'dialogue_id)
 (effect 'start-quick-dialogue "对白内容")
 (effect 'start-encounter 'encounter_id)
@@ -172,8 +177,9 @@ Encounter / World SCM 速查
 
 - `(effect 'reset-hand)` 现在的语义是“按健康状态抽取新的行动卡”
 - `(effect 'advance-day)` 会推进一天，并使精力 -1
+- `(effect 'set field value)` 只设置字面值；复制当前字段值使用 `(effect 'copy target source)`。
 - 已废弃短名效果：不要写 `(effect 'health -1)` / `(effect 'stress 1)`
-- 推荐写法：`(effect 'add health -1)`、`(effect 'add energy -1)`、`(effect 'add money 20)`
+- 推荐写法：先在 `:state` 导入，再写 `(effect 'add health -1)`、`(effect 'add energy -1)`、`(effect 'add money 20)`
 
 时钟查询：
 

@@ -1,6 +1,7 @@
 (include "../enum-symbols.scm")
 
 (include "../common_clock_macros.scm")
+(include "../common_world_bindings.scm")
 
 (define bedroom_circle_probe
   (action
@@ -305,8 +306,9 @@
 
 (content
   :meta (meta :key '潜入别墅 :title "潜入别墅" :desc "深夜潜入戒备森严的宅邸，只为听到一个真相。")
-  :on-fail (list (effect 'add stress 2))
+  :on-fail (list (effect 'add 'stress 2))
   :state (state
+    (use-world-health)
     (alert (clock :title "全局警觉度" :initial 0 :max 6))
     (patrol (clock :title "保安巡逻" :initial 0 :max 3))
     (traverse (clock :title "穿越进度" :initial 0 :max 2))

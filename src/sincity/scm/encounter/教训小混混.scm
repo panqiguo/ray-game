@@ -1,4 +1,5 @@
 (include "../enum-symbols.scm")
+(include "../common_world_bindings.scm")
 
 (define breathe
   (action
@@ -118,6 +119,7 @@
   :on-success (list
     (effect 'set 'gang_pressure_result_pending true))
   :state (state
+    (use-world-health)
     (initiative (clock :title "主动权" :initial 0 :max 4))
     (knife (clock :title "夺刀" :initial 0 :max 2))
     (enemy_hp (clock :title "敌人血量" :initial 4 :max 4))

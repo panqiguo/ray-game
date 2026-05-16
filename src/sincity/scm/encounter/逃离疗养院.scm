@@ -4,6 +4,7 @@
 ;; scene3 大门, 你有两个选择,第一个(地点)是进桑德堡医生的办公室,然后跟头目交谈,交谈过之后,这个选项会被替换为桑德堡被打晕的文本. 第二个选择(行动)是离开这里.
 (include "../helper.scm")
 (include "../common_clock_macros.scm")
+(include "../common_world_bindings.scm")
 
 
 (define react-once-until
@@ -246,6 +247,8 @@
 
 (define all-state
   (state
+   (use-world-health)
+   (use-world-money)
    ;; 流程控制标志
    (intro-has-played false)
    (escaped false) ;; 是否已挣脱

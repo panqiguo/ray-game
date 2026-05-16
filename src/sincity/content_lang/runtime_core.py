@@ -220,6 +220,7 @@ def host_values(*, store_specs: dict[str, StoreFieldSpec], store: dict[str, int 
         "field-truthy": builtin_field_truthy_condition,
         "reacts": lambda *args: [item for item in args if item is not None],
         "react": SpecialFormProcedure(builtin_react),
+        "world-attr": builtin_world_attr,
         "world-value": builtin_world_value,
         "world-item": builtin_world_item,
         "task": SpecialFormProcedure(builtin_task),
@@ -274,6 +275,16 @@ def builtin_world_value(key: Any, initial: Any = False) -> StateBindingValue:
         name=name,
         spec=StoreFieldSpec(id=name, kind="value", initial=value, persist="world_value"),
         value=value,
+    )
+
+
+def builtin_world_attr(key: Any) -> StateBindingValue:
+    name = binding_name(key)
+    assert name in {"health", "energy", "stress", "logic", "perception", "willpower"}, f"Unsupported world attr: {name}"
+    return StateBindingValue(
+        name=name,
+        spec=StoreFieldSpec(id=name, kind="value", initial=0, persist="world_attr"),
+        value=0,
     )
 
 
@@ -431,6 +442,10 @@ def builtin_effect(args: tuple[Any, ...]) -> Effect:
     if kind == "add":
         target = binding_name(args[1])
         return Effect(kind="add_field", value=f"{target}:{int(unwrap(args[2]))}")
+    if kind == "copy":
+        target = binding_name(args[1])
+        source = binding_name(args[2])
+        return Effect(kind="copy_field", value=f"{target}:{source}")
     if kind == "start-encounter":
         return Effect(kind="start_encounter", value=str(unwrap(args[1])))
     if kind == "end-encounter":

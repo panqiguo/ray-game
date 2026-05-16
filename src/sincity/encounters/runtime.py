@@ -42,6 +42,7 @@ MAX_REACT_STEPS = 64
 ENCOUNTER_ACTION_EFFECTS = frozenset({
     "set_field",
     "add_field",
+    "copy_field",
     "shift_clock",
     "reset_hand",
     "start_dialogue",
@@ -216,21 +217,40 @@ def _load_state_expr(expr: Any, definitions: dict[str, Any], module: ModuleState
         return
     assert _is_call(expr, "state"), "Encounter state must be a `(state ...)` form."
     env = _schema_env(definitions=definitions)
-    for binding in expr[1:]:
-        assert isinstance(binding, list) and len(binding) == 2 and isinstance(binding[0], str), "Each state binding must be `(name value)`."
-        name = binding[0]
-        value = evaluate(binding[1], env)
+    for binding in _expand_state_bindings(expr[1:], env):
+        name, raw_value = binding
+        value = raw_value if isinstance(raw_value, (ClockTemplate, StateBindingValue)) else evaluate(raw_value, env)
         if isinstance(value, ClockTemplate):
             spec = StoreFieldSpec(id=name, kind="clock", initial=value.initial, title=value.title, maximum=value.maximum, persist="encounter")
             module.store_specs[name] = spec
             module.clocks_by_id[name] = ProgressClockSpec(id=name, title=value.title, description=value.description, segments=value.maximum)
         elif isinstance(value, StateBindingValue):
             assert value.name == name, f"Imported state binding `{name}` must use the same source key."
-            assert value.spec.persist in {"world_value", "world_inventory"}, f"Unsupported imported state binding for {name}: {value.spec.persist}"
+            assert value.spec.persist in {"world_attr", "world_value", "world_inventory"}, f"Unsupported imported state binding for {name}: {value.spec.persist}"
             module.store_specs[name] = value.spec
         else:
             assert isinstance(value, (bool, int, str)), f"Unsupported state value for {name}: {value!r}"
             module.store_specs[name] = StoreFieldSpec(id=name, kind="value", initial=value)
+
+
+def _expand_state_bindings(items: list[Any], env: Environment) -> list[tuple[str, Any]]:
+    result: list[tuple[str, Any]] = []
+    for item in items:
+        if isinstance(item, list) and len(item) == 2 and isinstance(item[0], str):
+            result.append((item[0], item[1]))
+            continue
+        expanded = evaluate(item, env)
+        if expanded is None:
+            continue
+        assert isinstance(expanded, list), f"State helper must produce a list of bindings, got: {expanded!r}"
+        for binding in expanded:
+            assert isinstance(binding, list) and len(binding) == 2 and isinstance(binding[0], str), f"State helper produced invalid binding: {binding!r}"
+            result.append((binding[0], binding[1]))
+    names: set[str] = set()
+    for name, _value in result:
+        assert name not in names, f"Duplicate state binding: {name}"
+        names.add(name)
+    return result
 
 
 def _eval_meta_expr(expr: Any, env: Environment) -> EncounterMeta:
@@ -336,8 +356,6 @@ def _state_resolver(name: str, *, store: dict[str, int | bool | str], store_spec
     if name in store_specs:
         spec = store_specs[name]
         return StateBindingValue(name=name, spec=spec, value=store.get(name, spec.initial))
-    if name in {"health", "stress", "money", "cigarettes"}:
-        return StateBindingValue(name=name, spec=StoreFieldSpec(id=name, kind="value", initial=0, persist="run"), value=0)
     return _MISSING
 
 
@@ -345,10 +363,11 @@ def _validate_completion_effects(program: CompiledEncounterProgram) -> None:
     for bucket_name, effects in {"on-success": program.rewards, "on-fail": program.fail_effects}.items():
         _assert_effects_allowed(effects, allowed=ENCOUNTER_COMPLETION_EFFECTS, context=f"{program.id}: {bucket_name}")
         for effect in effects:
-            if effect.kind in {"set_field", "add_field", "shift_clock"}:
+            if effect.kind in {"set_field", "add_field", "copy_field", "shift_clock"}:
                 assert isinstance(effect.value, str), f"{program.id}: {bucket_name} effect payload must be string"
                 key, _, _ = effect.value.partition(":")
-                assert key not in program.store_specs, f"{program.id}: {bucket_name} cannot target encounter-local field `{key}`"
+                spec = program.store_specs.get(key)
+                assert spec is None or spec.persist != "encounter", f"{program.id}: {bucket_name} cannot target encounter-local field `{key}`"
             assert effect.kind != "end_encounter", f"{program.id}: {bucket_name} cannot contain end-encounter effect"
 
 

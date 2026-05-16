@@ -25,6 +25,7 @@ VALID_CONDITIONS = {
 WORLD_EFFECTS = {
     "set_field",
     "add_field",
+    "copy_field",
     "shift_clock",
     "reset_hand",
     "upgrade_spirit_value",
@@ -39,6 +40,7 @@ WORLD_EFFECTS = {
 ENCOUNTER_EFFECTS = {
     "set_field",
     "add_field",
+    "copy_field",
     "shift_clock",
     "reset_hand",
     "start_dialogue",
@@ -49,6 +51,7 @@ ENCOUNTER_EFFECTS = {
 ENCOUNTER_COMPLETION_EFFECTS = {
     "set_field",
     "add_field",
+    "copy_field",
     "shift_clock",
     "reset_hand",
     "upgrade_spirit_value",
@@ -89,6 +92,8 @@ def _validate_effect(item: Effect, *, context: str) -> None:
         assert isinstance(item.value, str) and item.value.strip(), "Quick dialogue text cannot be empty"
     if item.kind == "start_encounter":
         assert isinstance(item.value, str) and item.value in ENCOUNTERS_BY_ID, f"Unknown encounter id: {item.value}"
+    if item.kind == "copy_field":
+        assert isinstance(item.value, str) and ":" in item.value, f"Invalid copy effect payload: {item.value!r}"
     if item.kind == "end_game":
         assert item.value is True or (
             isinstance(item.value, tuple)

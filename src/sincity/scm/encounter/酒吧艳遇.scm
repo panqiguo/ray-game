@@ -1,4 +1,5 @@
 (include "../enum-symbols.scm")
+(include "../common_world_bindings.scm")
 
 (define cold_direct_talk
   (action
@@ -245,6 +246,7 @@
   :meta (meta :key '酒吧艳遇 :title "酒吧艳遇" :desc "深夜的酒吧里，玩家要在目标关上心门之前钻进去，把情报带出来。")
   :on-success (list)
   :state (state
+    (use-world-health)
     (rapport (clock :title "好感" :initial 0 :max 9))
     (tension (clock :title "警觉度" :initial 0 :max 3))
     (attitude 'cold)

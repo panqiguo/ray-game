@@ -69,8 +69,8 @@
         :suits (list suit)
         :risk risk
         :ok (outcome (list (effect 'add money ok-money)))
-        :partial (outcome (list (effect 'add money partial-money) (effect 'add energy -2)))
-        :fail (outcome (list (effect 'add money fail-money) (effect 'add energy -2) (when (> fail-health 0) (effect 'add health (- fail-health)))))))))
+        :partial (outcome (list (effect 'add money partial-money) (effect 'add energy -1)))
+        :fail (outcome (list (effect 'add money fail-money) (effect 'add energy -1) (when (> fail-health 0) (effect 'add health (- fail-health)))))))))
 
 (define make-book-action
   (lambda (title desc clock suit)
@@ -180,9 +180,9 @@
         :check (check
           :suits (list 意志)
           :risk 'mid
-          :ok (outcome (list (effect 'add health 2)))
-          :partial (outcome (list (effect 'add health 2) (effect 'add energy -1)))
-          :fail (outcome (list (effect 'add health 1) (effect 'add energy -2) (effect 'set infected true)))))
+          :ok (outcome (list (effect 'add health 3)))
+          :partial (outcome (list (effect 'add health 2)))
+          :fail (outcome (list (effect 'add health 2) (effect 'add energy -1)))))
       (when (and intrusion_seen (not item_recovered) (not market_investigated))
         (action
           :title "问枪伤药品的去向"
@@ -286,7 +286,7 @@
     :position '(40 520)
     :show-clocks (list (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress))
     :actions (list
-      (make-work-action "搬货打散工" "现金来得快，代价也直接。" 意志 'mid 24 16 8 1)
+      (make-work-action "搬货打散工" "现金来得快，代价也直接。" 意志 'mid 12 10 6 1)
       (when (and intrusion_seen (not item_recovered) (not warehouse_investigated))
         (action
           :title "问码头装卸工"
@@ -419,7 +419,7 @@
     :desc "地下室、绿绒桌、假笑和真债。这里能赢钱，也能把明天提前输掉。"
     :position '(1065 520)
     :actions (list
-      (make-work-action "替赌场看一晚场子" "不问问题，只看住门口。" 意志 'mid 30 18 6 1)
+      (make-work-action "替赌场看一晚场子" "不问问题，只看住门口。" 意志 'high 18 12 6 1)
       (action
         :title "小赌一局"
         :desc "把十块钱放上桌，试试今晚的手气。"

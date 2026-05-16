@@ -121,7 +121,12 @@ def _sync_state_to_content(state: GameState) -> None:
         return
     encounter = get_encounter(state.active_encounter.encounter_id)
     for key, spec in encounter.store_specs.items():
-        if spec.persist == "world_inventory":
+        if spec.persist == "world_attr":
+            if key in {"energy", "stress"}:
+                value = state.attributes.stress
+            else:
+                value = getattr(state.attributes, key)
+        elif spec.persist == "world_inventory":
             value = state.world.inventory.get(key, spec.initial)
         elif spec.persist == "world_value":
             value = state.world.values.get(key, spec.initial)

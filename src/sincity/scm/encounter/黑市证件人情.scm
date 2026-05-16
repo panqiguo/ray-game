@@ -1,4 +1,5 @@
 (include "../enum-symbols.scm")
+(include "../common_world_bindings.scm")
 
 (define-scene favor
   (scene
@@ -13,7 +14,7 @@
           :risk 'mid
           :ok (outcome "他退得很快，账册也交得很快。" (list (effect 'end-encounter 'success)))
           :partial (outcome "你拿到了账册，但手背被划开一道口子。" (list (effect 'add health -1) (effect 'end-encounter 'success)))
-          :fail (outcome "他从后门跑了。接头人不会为失败的人做证件。" (list (effect 'add 'energy -2) (effect 'end-encounter 'fail)))))
+          :fail (outcome "他从后门跑了。接头人不会为失败的人做证件。" (list (effect 'add energy -2) (effect 'end-encounter 'fail)))))
       (action
         :title "绕到后门堵他"
         :desc "你试着不靠拳头解决这件事。后门窄，脚步声会先出卖人。"
@@ -21,8 +22,8 @@
           :suits (list 感知)
           :risk 'mid
           :ok (outcome "你堵住了他，也堵住了他的侥幸。" (list (effect 'end-encounter 'success)))
-          :partial (outcome "你追上了他，但这一跑耗掉不少力气。" (list (effect 'add 'energy -1) (effect 'end-encounter 'success)))
-          :fail (outcome "你慢了一步，只听见铁门在巷尾合上。" (list (effect 'add 'energy -2) (effect 'end-encounter 'fail))))))))
+          :partial (outcome "你追上了他，但这一跑耗掉不少力气。" (list (effect 'add energy -1) (effect 'end-encounter 'success)))
+          :fail (outcome "你慢了一步，只听见铁门在巷尾合上。" (list (effect 'add energy -2) (effect 'end-encounter 'fail))))))))
 
 (content
   :meta (meta :key '黑市证件人情 :title "黑市证件人情" :desc "替黑市接头人处理一件棘手事，换一套假证件。")
@@ -33,5 +34,7 @@
   :on-fail (list
     (effect 'set 'fake_id_job_failed true))
   :state (state
+    (use-world-health)
+    (use-world-energy)
     (phase 'favor))
   :root (favor))

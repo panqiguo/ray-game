@@ -64,6 +64,7 @@ class RenderedTask:
 WORLD_EFFECTS = frozenset({
     "set_field",
     "add_field",
+    "copy_field",
     "shift_clock",
     "reset_hand",
     "advance_day",

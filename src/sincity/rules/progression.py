@@ -174,13 +174,19 @@ def get_clock_spec_for_state(state: GameState, clock_id: str):
 
 def _field_value(state: GameState, key: str) -> int | bool | str:
     if state.active_encounter is not None and key in state.active_encounter.store:
-        return state.active_encounter.store[key]
+        spec = _encounter(state).store_specs[key]
+        if spec.persist == "encounter":
+            return state.active_encounter.store[key]
+        if spec.persist == "world_attr":
+            return _world_attr_value(state, key)
+        if spec.persist == "world_value":
+            return state.world.values.get(key, spec.initial)
+        if spec.persist == "world_inventory":
+            return state.world.inventory.get(key, int(spec.initial))
     if key in state.deck.spirit_values:
         return state.deck.spirit_values[key]
-    if key == "energy":
-        return state.attributes.stress
-    if hasattr(state.attributes, key):
-        return getattr(state.attributes, key)
+    if key in {"energy", "stress", "health", "logic", "perception", "willpower"}:
+        return _world_attr_value(state, key)
     if key in state.world.values:
         return state.world.values[key]
     return state.world.inventory.get(key, 0)
@@ -188,10 +194,33 @@ def _field_value(state: GameState, key: str) -> int | bool | str:
 
 def _set_field(state: GameState, key: str, value: int | bool | str, extra_lines: list[str] | None = None) -> None:
     if state.active_encounter is not None and key in state.active_encounter.store:
-        current = state.active_encounter.store[key]
-        state.active_encounter.store[key] = _coerce_like(current, value)
-        _mark_content_dirty(state)
-        return
+        spec = _encounter(state).store_specs[key]
+        if spec.persist == "encounter":
+            current = state.active_encounter.store[key]
+            state.active_encounter.store[key] = _coerce_like(current, value)
+            _mark_content_dirty(state)
+            return
+        if spec.persist == "world_attr":
+            _set_world_attr(state, key, int(value))
+            state.active_encounter.store[key] = _field_value(state, key)
+            _mark_content_dirty(state)
+            return
+        if spec.persist == "world_value":
+            current = state.world.values.get(key, spec.initial)
+            parsed = _coerce_like(current, value)
+            state.world.values[key] = parsed
+            state.active_encounter.store[key] = parsed
+            _mark_content_dirty(state)
+            return
+        if spec.persist == "world_inventory":
+            count = int(value)
+            if count <= 0:
+                state.world.inventory.pop(key, None)
+            else:
+                state.world.inventory[key] = count
+            state.active_encounter.store[key] = state.world.inventory.get(key, 0)
+            _mark_content_dirty(state)
+            return
     if key in state.deck.spirit_values:
         state.deck.spirit_values[key] = int(value)
         sync_trauma_cards_with_health(state)
@@ -223,7 +252,40 @@ def _set_field(state: GameState, key: str, value: int | bool | str, extra_lines:
     _mark_content_dirty(state)
 
 
+def _world_attr_value(state: GameState, key: str) -> int:
+    if key == "energy":
+        return state.attributes.stress
+    if key == "stress":
+        return state.attributes.stress
+    if key == "health":
+        return state.attributes.health
+    if key == "logic":
+        return state.attributes.logic
+    if key == "perception":
+        return state.attributes.perception
+    if key == "willpower":
+        return state.attributes.willpower
+    raise AssertionError(f"Unknown world attr: {key}")
+
+
+def _set_world_attr(state: GameState, key: str, value: int) -> None:
+    if key in {"energy", "stress"}:
+        state.attributes.stress = max(0, min(state.attributes.max_stress, value))
+        return
+    if key == "health":
+        state.attributes.health = value
+        sync_trauma_cards_with_health(state)
+        return
+    assert key in {"logic", "perception", "willpower"}, f"Unknown world attr: {key}"
+    setattr(state.attributes, key, value)
+
+
 def _add_field(state: GameState, key: str, amount: int, extra_lines: list[str] | None = None) -> None:
+    if state.active_encounter is not None and key in state.active_encounter.store:
+        current = _field_value(state, key)
+        assert isinstance(current, int), f"Cannot add to non-number field `{key}`"
+        _set_field(state, key, current + amount, extra_lines)
+        return
     if key == "health":
         change_health(state, amount, extra_lines)
         return
@@ -1051,6 +1113,11 @@ def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines
         key, raw = value.split(":", 1)
         _add_field(state, key, int(raw), extra_lines)
         return
+    if item.kind == "copy_field":
+        assert isinstance(value, str)
+        target, source = value.split(":", 1)
+        _set_field(state, target, _field_value(state, source), extra_lines)
+        return
     if item.kind == "shift_clock":
         assert isinstance(value, str)
         key, raw = value.split(":", 1)
@@ -1281,7 +1348,9 @@ def start_encounter(state: GameState, encounter_id: str) -> None:
 def _initial_encounter_store(state: GameState, encounter: CompiledEncounterProgram) -> dict[str, int | bool | str]:
     store = initial_store(encounter)
     for key, spec in encounter.store_specs.items():
-        if spec.persist == "world_inventory":
+        if spec.persist == "world_attr":
+            store[key] = _world_attr_value(state, key)
+        elif spec.persist == "world_inventory":
             store[key] = state.world.inventory.get(key, spec.initial)
         elif spec.persist == "world_value":
             store[key] = state.world.values.get(key, spec.initial)
@@ -1421,6 +1490,10 @@ def _describe_effects(effects: tuple[Effect, ...], action_id: str, state: GameSt
                 lines.append(f"精力 {'+' if energy_amount >= 0 else ''}{energy_amount}")
             else:
                 lines.append(f"{_field_label(key)} {'+' if amount >= 0 else ''}{amount}")
+        elif item.kind == "copy_field":
+            assert isinstance(value, str)
+            target, source = value.split(":", 1)
+            lines.append(f"{_field_label(target)} = {_field_label(source)}")
         elif item.kind == "shift_clock":
             assert isinstance(value, str)
             key, raw = value.split(":", 1)

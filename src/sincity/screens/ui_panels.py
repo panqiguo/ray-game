@@ -119,9 +119,12 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
         draw_text(font, subtitle, int(hand.x) + 166, int(hand.y) + 17, subtitle_style.size, subtitle_style.color)
     x = int(hand.x) + 18
     y = int(hand.y) + 48
+    cards_right_limit = _inventory_panel_rect().x - 12
     clicked_exhausted_card = False
     for slot_index, slot_id in enumerate(list_all_spirit_slots(state.deck)):
         rect = Rectangle(x, y, 150, 106)
+        if rect.x + rect.width > cards_right_limit:
+            break
         locked = slot_is_locked(state, slot_id)
         disabled = locked or energy_exhausted or slot_is_exhausted(state, slot_id) or not slot_is_available(state, slot_id)
         if disabled and state.selected_input.kind == "card" and state.selected_input.index == slot_index:
@@ -147,8 +150,6 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
         ):
             select_card_input(state, slot_id, slot_index)
         x += 162
-        if x > hand.x + hand.width - 260:
-            break
     if clicked_exhausted_card:
         state.action_log.append("行动卡已耗尽：休息后会抽取新的行动卡。")
         del state.action_log[:-MAX_LOG_LINES]
@@ -294,15 +295,17 @@ def draw_selected_card_curve_overlay(state: GameState) -> None:
         hand = layout().hand
         x = int(hand.x) + 18
         y = int(hand.y) + 48
+        cards_right_limit = _inventory_panel_rect().x - 12
         for index, card_id in enumerate(list_all_spirit_slots(state.deck)):
+            rect = Rectangle(x, y, 150, 106)
+            if rect.x + rect.width > cards_right_limit:
+                return
             if index == state.selected_input.index:
                 if not slot_is_available(state, card_id) or slot_is_locked(state, card_id):
                     return
-                _draw_selected_card_curve(Rectangle(x, y, 150, 106))
+                _draw_selected_card_curve(rect)
                 return
             x += 162
-            if x > hand.x + hand.width - 260:
-                return
     if state.selected_input.kind == "item":
         rect = _selected_inventory_rect(state)
         if rect is not None:

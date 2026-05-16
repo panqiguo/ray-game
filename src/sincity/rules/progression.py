@@ -73,6 +73,7 @@ def start_new_run(seed: int) -> tuple[GameState, RandomSource]:
     )
     sync_trauma_cards_with_health(state)
     start_city_day(state.deck, rng, HAND_SIZE, health=state.attributes.health)
+    _reset_action_cycle_from_deck(state)
     sync_world_progress_clocks(state)
     _resolve_world_reacts(state, rng, [])
     return state, rng
@@ -112,10 +113,25 @@ def _current_encounter_root_id(state: GameState) -> str:
     return _encounter_snapshot(state).root_location_id
 
 
-def _reset_encounter_action_cycle(state: GameState) -> None:
-    state.encounter_action_points = state.encounter_action_point_cap
+def _reset_action_cycle_from_deck(state: GameState) -> None:
+    cap = len(state.deck.available_slots)
+    state.encounter_action_point_cap = cap
+    state.encounter_action_points = cap
     state.encounter_pressure_used = False
     state.deck.action_card_bonuses.clear()
+
+
+def _sync_action_cycle_cap(state: GameState) -> None:
+    cap = len(state.deck.available_slots) + len(state.deck.exhausted_slots)
+    if cap == state.encounter_action_point_cap:
+        return
+    spent = max(0, state.encounter_action_point_cap - state.encounter_action_points)
+    state.encounter_action_point_cap = cap
+    state.encounter_action_points = max(0, cap - spent)
+
+
+def _reset_encounter_action_cycle(state: GameState) -> None:
+    _reset_action_cycle_from_deck(state)
 
 
 def _sync_encounter_action_cycle(state: GameState) -> None:
@@ -130,6 +146,7 @@ def encounter_action_points(state: GameState) -> tuple[int, int] | None:
     if state.screen != ScreenName.ENCOUNTER or state.active_encounter is None:
         return None
     _sync_encounter_action_cycle(state)
+    _sync_action_cycle_cap(state)
     return (state.encounter_action_points, state.encounter_action_point_cap)
 
 
@@ -387,6 +404,7 @@ def _slot_can_execute_check(state: GameState, slot_id: str, check) -> bool:
 
 def _slot_can_spend_energy(state: GameState, slot_id: str) -> bool:
     _sync_encounter_action_cycle(state)
+    _sync_action_cycle_cap(state)
     if state.encounter_action_points <= 0:
         return False
     if not slot_is_available(state, slot_id):
@@ -1284,8 +1302,8 @@ def _resolve_world_reacts(state: GameState, rng: RandomSource, extra_lines: list
 
 
 def reset_hand(state: GameState, rng: RandomSource) -> None:
-    _reset_encounter_action_cycle(state)
     refresh_spirit_slots(state.deck, rng, health=state.attributes.health)
+    _reset_action_cycle_from_deck(state)
     _mark_content_dirty(state)
 
 

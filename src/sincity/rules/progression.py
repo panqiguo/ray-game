@@ -114,6 +114,8 @@ def _current_encounter_root_id(state: GameState) -> str:
 
 def _reset_encounter_action_cycle(state: GameState) -> None:
     state.encounter_action_points = state.encounter_action_point_cap
+    state.encounter_pressure_used = False
+    state.deck.action_card_bonuses.clear()
 
 
 def _sync_encounter_action_cycle(state: GameState) -> None:
@@ -335,7 +337,7 @@ def slot_base_value(state: GameState, slot_id: str) -> int:
 
 
 def slot_current_value(state: GameState, slot_id: str) -> int:
-    return slot_base_value(state, slot_id)
+    return slot_base_value(state, slot_id) + state.deck.action_card_bonuses.get(slot_id, 0)
 
 
 def slot_is_available(state: GameState, slot_id: str) -> bool:
@@ -1036,6 +1038,7 @@ def _consume_slotted_card(state: GameState) -> None:
     slot_id = state.assembly.slotted_card_id
     if slot_id is None:
         return
+    state.deck.action_card_bonuses.pop(slot_id, None)
     if slot_id in state.deck.available_slots:
         state.deck.available_slots.remove(slot_id)
     if slot_id not in state.deck.exhausted_slots:
@@ -1299,6 +1302,36 @@ def rest_during_encounter(state: GameState, rng: RandomSource) -> None:
         reset_hand(state, rng)
     cycle_text = f"；{'，'.join(extra_lines[:2])}" if extra_lines else ""
     _push_log(state, f"你短暂休整了一下：精力 -1，重抽行动卡{cycle_text}。")
+
+
+def can_endure_pressure_during_encounter(state: GameState) -> bool:
+    if state.screen != ScreenName.ENCOUNTER or state.active_encounter is None:
+        return False
+    if state.encounter_pressure_used:
+        return False
+    if state.attributes.stress <= 0:
+        return False
+    return any(slot_is_available(state, slot_id) for slot_id in state.deck.available_slots)
+
+
+def endure_pressure_during_encounter(state: GameState, rng: RandomSource) -> None:
+    assert state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None, "Encounter pressure is only available during encounters."
+    assert not state.encounter_pressure_used, "Encounter pressure can only be used once per cycle."
+    assert state.attributes.stress > 0, "Encounter pressure requires at least 1 energy."
+    available_slots = [slot_id for slot_id in state.deck.available_slots if slot_is_available(state, slot_id)]
+    assert available_slots, "Encounter pressure requires at least one available action card."
+    clear_assembly(state)
+    clear_selected_input(state)
+    change_energy(state, -1)
+    target_index = rng.randint(0, len(available_slots) - 1)
+    target_slot = available_slots[target_index]
+    state.deck.action_card_bonuses[target_slot] = state.deck.action_card_bonuses.get(target_slot, 0) + 1
+    state.encounter_pressure_used = True
+    _mark_content_dirty(state)
+    owner_name = state.deck.actor_names.get(slot_owner(target_slot), slot_owner(target_slot))
+    card_label = owner_name
+    _push_log(state, f"你咬牙承受住压力：精力 -1，{card_label} 的一张行动卡本回合 +1。")
+    push_notification(state, "warning", "承受压力", "随机一张可用行动卡本回合 +1。")
 
 
 def advance_clock(state: GameState, clock_id: str, amount: int = 1, extra_lines: list[str] | None = None) -> None:

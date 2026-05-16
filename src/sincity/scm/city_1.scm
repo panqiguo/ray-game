@@ -99,8 +99,14 @@
         :suits (list suit)
         :risk risk
         :ok (outcome (list (effect 'add money ok-money)))
-        :partial (outcome (list (effect 'add money partial-money) (effect 'add energy -1)))
-        :fail (outcome (list (effect 'add money fail-money) (effect 'add energy -1) (when (> fail-health 0) (effect 'add health (- fail-health)))))))))
+        :partial (if (= risk 'low)
+          (outcome (list (effect 'add money partial-money)))
+          (outcome (list (effect 'add money partial-money) (effect 'add energy -1))))
+        :fail (if (= risk 'high)
+          (outcome (list (effect 'add money fail-money) (effect 'add energy -1) (when (> fail-health 0) (effect 'add health (- fail-health)))))
+          (if (= risk 'mid)
+            (outcome (list (effect 'add money fail-money) (effect 'add energy -1)))
+            (outcome (list (effect 'add money fail-money)))))))))
 
 (define make-book-action
   (lambda (title desc clock suit)
@@ -192,6 +198,7 @@
         :desc "把 2 点精力恢复存成 1 份干粮，之后可以在办公室里吃掉。"
         :inputs (list (item 'money 10 "干粮钱"))
         :effects (list (effect 'add food 1)))
+      (make-work-action "帮摊贩收摊洗碗" "低风险，钱少，但至少不会把腰和命都押在仓库里。" 意志 'low 6 4 2 0)
       (when (and intrusion_seen (not item_recovered) (not stall_investigated))
         (action
           :title "向摊贩打听中枪男人"
@@ -234,7 +241,7 @@
   (node
     :desc "白墙、玻璃柜、登记表。正规两个字的意思是：他们会救你，也会记住你。"
     :position '(655 280)
-    :show-clocks (list (when (and rehab_started (not rehab_done)) rehab_progress) (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress))
+    :show-clocks (list (when (and rehab_started (not rehab_done)) rehab_progress) (when (and rehab2_started (not rehab2_done)) rehab2_progress) (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress))
     :actions (list
       (action
         :title "标准治疗"
@@ -261,6 +268,25 @@
             :ok (outcome (list (effect 'clock+ rehab_progress 2)))
             :partial (outcome (list (effect 'clock+ rehab_progress 1)))
             :fail (outcome (list)))))
+      (when (or (not rehab2_started) rehab2_done)
+        (action
+          :title "开始康复治疗（简易）"
+          :desc "八块钱开一个简易康复疗程。低配但直接，可用三次。"
+          :inputs (list (item 'money 8 "疗程费用"))
+          :effects (list
+            (effect 'set rehab2_started true)
+            (effect 'set rehab2_done false)
+            (effect-reset-clock rehab2_progress))))
+      (when (and rehab2_started (not rehab2_done) (not (clock-filled? rehab2_progress)))
+        (action
+          :title "进行简易康复训练"
+          :desc "投入行动卡训练一次。效果看发挥，次数用完为止。"
+          :check (check
+            :suits (list 意志)
+            :risk 'low
+            :ok (outcome (list (effect 'clock+ rehab2_progress 1) (effect 'add health 1)))
+            :partial (outcome (list (effect 'clock+ rehab2_progress 1) (effect 'add energy 1)))
+            :fail (outcome (list (effect 'clock+ rehab2_progress 1))))))
       (when gunshot_wound
         (action
           :title "处理枪伤"
@@ -322,7 +348,7 @@
     :position '(40 520)
     :show-clocks (list (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress))
     :actions (list
-      (make-work-action "搬货打散工" "现金来得快，代价也直接。" 意志 'mid 12 10 6 1)
+      (make-work-action "搬货打散工" "高风险，现金来得快，代价也直接。坏结果会伤到身体。" 意志 'high 16 11 6 1)
       (when (and intrusion_seen (not item_recovered) (not warehouse_investigated))
         (action
           :title "问码头装卸工"
@@ -357,7 +383,7 @@
           (effect 'add energy 2)
           (when (and blonde_intro_seen (not blonde_drinks_done)) (effect 'clock+ blonde_drink_progress 1))))
       ;; 薇拉主线 — 电话中已接下委托，直接去三个地方打听
-      (when (and frederick_talk_done (not vera_bar_checked))
+      (when (and vera_thread_unlocked (not vera_bar_checked))
         (action
           :title "在酒吧问薇拉最近的消息"
           :desc "先从最容易开口的地方问起。这里的人通常先记得酒，再记得脸。"
@@ -412,7 +438,7 @@
     :position '(450 520)
     :show-clocks (list (when (and hotel_infiltrated (not vera_apartment_found)) vera_follow_progress))
     :actions (list
-      (when (and frederick_talk_done (not vera_street_checked))
+      (when (and vera_thread_unlocked (not vera_street_checked))
         (action
           :title "去老街修鞋铺问薇拉的消息"
           :desc "三个地方里，只有这里的人真见过她最近的脸色。"
@@ -431,7 +457,7 @@
     :desc "倒塌的围墙、被水泡坏的广告牌，还有那些不愿意白天提起的交易。"
     :position '(655 520)
     :actions (list
-      (when (and frederick_talk_done (not vera_waste_checked))
+      (when (and vera_thread_unlocked (not vera_waste_checked))
         (action
           :title "搜索废弃区"
           :desc "这里有人见过她——但大多只承认看见了影子。你低下头看地面：脚印不止一个人的，有人在她后面。"
@@ -592,7 +618,10 @@
     (gunshot_wound false)
     (rehab_started false)
     (rehab_done false)
-    (rehab_progress (clock :title "康复训练进度" :desc "每次训练进度+1，填满后恢复3点健康。" :initial 0 :max 4))))
+    (rehab_progress (clock :title "康复训练进度" :desc "每次训练进度+1，填满后恢复3点健康。" :initial 0 :max 4))
+    (rehab2_started false)
+    (rehab2_done false)
+    (rehab2_progress (clock :title "简易康复训练" :desc "每次训练恢复少量体力，可用3次。" :initial 0 :max 3))))
 
 (define world-reacts
   (reacts
@@ -706,6 +735,10 @@
       :then (list
         (effect 'set rehab_done true)
         (effect 'add health 3)))
+    (react
+      :when (and rehab2_started (clock-filled? rehab2_progress) (not rehab2_done))
+      :then (list
+        (effect 'set rehab2_done true)))
     (react
       :when (and chapter_2_started (clock-filled? blonde_drink_progress) (not blonde_drinks_done))
       :then (list

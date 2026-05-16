@@ -5,10 +5,7 @@
 (define trigger-watchman
   (lambda (amount)
     (list
-      (effect 'clock+ alert amount)
-      (effect 'set patrol_phase 'incoming)
-      (effect-reset-clock patrol_incoming)
-      (effect-reset-clock patrol_leaving))))
+      (effect 'clock+ alert amount))))
 
 (define low-risk-search
   (lambda (title desc suit progress-clock ok-step ok-text partial-text fail-text)
@@ -189,11 +186,77 @@
         "你把夹层撬开了一半，样品已经很近了，但动静也大了。"
         "木板刚翘起来一点，你就知道这一层的人都听见了。"))))
 
+(define soften-wife-patrol
+  (lambda (title desc suit ok-text partial-text fail-text)
+    (action
+      :title title
+      :desc desc
+      :check (check
+        :suits (list suit)
+        :risk 'mid
+        :ok (outcome (list (effect 'clock+ wife_patrol 2)) ok-text)
+        :partial (outcome (list (effect 'clock+ wife_patrol 1) (effect 'add energy -1)) partial-text)
+        :fail (outcome (list (effect 'clock+ alert 1)) fail-text)))))
+
+(define soften-husband-patrol
+  (lambda (title desc suit ok-text partial-text fail-text)
+    (action
+      :title title
+      :desc desc
+      :check (check
+        :suits (list suit)
+        :risk 'mid
+        :ok (outcome (list (effect 'clock+ husband_patrol 2)) ok-text)
+        :partial (outcome (list (effect 'clock+ husband_patrol 1) (effect 'add energy -1)) partial-text)
+        :fail (outcome (list (effect 'clock+ alert 1)) fail-text)))))
+
+(define-scene wife-patrol-scene
+  (scene
+    :title "旅馆老板娘巡查"
+    :desc "楼下传来拖鞋踩过木阶的声音。老板娘没喊人，只是把每扇门外的影子都看了一遍。她在场时，每次休整都会让警觉继续上升。"
+    :show-clocks (list wife_patrol)
+    :actions (list
+      (soften-wife-patrol
+        "把动静引到窗外的猫"
+        "窗台下面确实有野猫。你只需要让它看起来像罪魁祸首。"
+        感知
+        "她听见猫叫，脚步停了一会儿。"
+        "她半信半疑，但暂时没往你这边来。"
+        "猫没配合，楼梯声反而更近了。")
+      (soften-wife-patrol
+        "伪装成隔壁住客咳嗽"
+        "这种旅馆里，夜里有人咳两声不算稀奇。"
+        逻辑
+        "她在门外停了一下，最后把这动静归到隔壁房。"
+        "你的咳声有点刻意，但也算拖住了她。"
+        "你咳得太干净，像一个正在撒谎的人。"))))
+
+(define-scene husband-patrol-scene
+  (scene
+    :title "旅馆老板巡查"
+    :desc "老板的脚步比老板娘重。他不是来确认有没有声音，他是来确认有没有人敢不付代价。老板在场时，每次休整都会让警觉继续上升。"
+    :show-clocks (list husband_patrol)
+    :actions (list
+      (soften-husband-patrol
+        "把门缝下的光压灭"
+        "先让他相信这层没人醒着，至少没人敢醒着。"
+        感知
+        "门缝暗下去，他的脚步慢了一拍。"
+        "你压住了光，也压住了自己的呼吸。"
+        "光影晃了一下，他看见了不该有的轮廓。")
+      (soften-husband-patrol
+        "丢一枚硬币到走廊另一头"
+        "不是让他相信没人，而是让他先去看别处。"
+        逻辑
+        "硬币滚到远处，他骂了一声，转身过去看。"
+        "他被引开一点，但没有完全离开。"
+        "硬币撞得太响，像有人故意为之。"))))
+
 (define patrol-status-text
   (lambda ()
     (cond
-      ((= patrol_phase 'incoming) "守夜人正在朝这层走过来。休整会让警觉继续上升。")
-      ((= patrol_phase 'leaving) "守夜人的脚步正在远去。休整会让警觉慢慢下降。")
+      (husband_patrol_active "老板正在巡查这层。先把他糊弄过去，再继续翻。")
+      (wife_patrol_active "老板娘已经上楼巡查。她不一定看见了你，但她听见了这层的不对劲。")
       (else "二楼还没完全惊动，但每一声小动静都会留下回音。"))))
 
 (define-scene hallway-scene
@@ -205,7 +268,7 @@
         (if resource_room_known
           "你先摸清了一间备用资源房，但真正的目标房间还藏在这排门后。"
           "你还不知道他们把东西放进了哪一间房。先在这层楼找出真正的门。"))
-    :show-clocks (list hallway_investigation)
+    :show-clocks (list (when (not target_room_known) hallway_investigation))
     :actions (hallway-actions)))
 
 (define-scene resource-room-scene
@@ -244,12 +307,11 @@
   (scene
     :title "望月旅馆 · 潜入"
     :desc (patrol-status-text)
-    :show-clocks (list
-      alert
-      (when (= patrol_phase 'incoming) patrol_incoming)
-      (when (= patrol_phase 'leaving) patrol_leaving))
+    :show-clocks (list alert)
     :children (list
-      (hallway-scene)
+      (when wife_patrol_active (wife-patrol-scene))
+      (when husband_patrol_active (husband-patrol-scene))
+      (when (not target_room_known) (hallway-scene))
       (when resource_room_known (resource-room-scene))
       (when target_room_known (target-room-scene)))))
 
@@ -260,29 +322,43 @@
   :on-fail (list
     (effect 'add energy -2))
   :on-cycle (list
-    (effect 'clock+ cycle_pulse 1))
+    (effect 'clock+ wife_patrol_tick 1)
+    (effect 'clock+ husband_patrol_tick 1))
   :reacts (reacts
     (react
-      :when (and (= patrol_phase 'incoming) (clock-filled? cycle_pulse) (not (clock-filled? patrol_incoming)))
+      :when (and (>= (clock-value alert) 3) (not wife_patrol_triggered))
       :then (list
-        (effect-reset-clock cycle_pulse)
-        (effect 'clock+ patrol_incoming 1)
+        (effect 'set wife_patrol_triggered true)
+        (effect 'set wife_patrol_active true)
+        (effect-reset-clock wife_patrol_tick)
+        (effect 'start-quick-dialogue "楼下传来拖鞋踩上木阶的声音。旅馆老板娘醒了。")))
+    (react
+      :when (and (>= (clock-value alert) 6) (not husband_patrol_triggered))
+      :then (list
+        (effect 'set husband_patrol_triggered true)
+        (effect 'set husband_patrol_active true)
+        (effect-reset-clock husband_patrol_tick)
+        (effect 'start-quick-dialogue "更重的脚步从楼下压上来。旅馆老板也被惊动了。")))
+    (react
+      :when (and wife_patrol_active (clock-filled? wife_patrol_tick))
+      :then (list
+        (effect-reset-clock wife_patrol_tick)
         (effect 'clock+ alert 1)))
     (react
-      :when (and (= patrol_phase 'incoming) (clock-filled? patrol_incoming))
+      :when (and husband_patrol_active (clock-filled? husband_patrol_tick))
       :then (list
-        (effect 'set patrol_phase 'leaving)
-        (effect-reset-clock patrol_leaving)))
+        (effect-reset-clock husband_patrol_tick)
+        (effect 'clock+ alert 1)))
     (react
-      :when (and (= patrol_phase 'leaving) (clock-filled? cycle_pulse) (> (clock-value alert) 0) (not (clock-filled? patrol_leaving)))
+      :when (and (clock-filled? wife_patrol) wife_patrol_active)
       :then (list
-        (effect-reset-clock cycle_pulse)
-        (effect 'clock+ patrol_leaving 1)
-        (effect 'clock- alert 1)))
+        (effect 'set wife_patrol_active false)
+        (effect 'start-quick-dialogue "老板娘终于把这层的动静归到那些夜里乱窜的小东西身上，拖鞋声慢慢下楼去了。")))
     (react
-      :when (and (= patrol_phase 'leaving) (or (clock-filled? patrol_leaving) (clock-empty? alert)))
+      :when (and (clock-filled? husband_patrol) husband_patrol_active)
       :then (list
-        (effect 'set patrol_phase 'idle)))
+        (effect 'set husband_patrol_active false)
+        (effect 'start-quick-dialogue "老板骂了一句，像是决定明天再找人算账。他的脚步离开了这一层。")))
     (react
       :when (and (>= (clock-value hallway_investigation) 2) (not resource_room_known))
       :then (list
@@ -305,8 +381,10 @@
   :state (state
     (use-world-basics)
     (alert (clock :title "警觉" :desc "填满则潜入失败。" :initial 0 :max 9))
-    (patrol_incoming (clock :title "守夜人巡逻" :desc "正在朝这层走过来。每次休整，警觉 +1。" :initial 0 :max 2))
-    (patrol_leaving (clock :title "守夜人离开" :desc "脚步声在远去。每次休整，警觉 -1。" :initial 0 :max 2))
+    (wife_patrol (clock :title "老板娘巡查" :desc "填满后老板娘离开。" :initial 0 :max 4))
+    (husband_patrol (clock :title "老板巡查" :desc "填满后老板离开。" :initial 0 :max 4))
+    (wife_patrol_tick (clock :title "老板娘巡查节拍" :initial 0 :max 1))
+    (husband_patrol_tick (clock :title "老板巡查节拍" :initial 0 :max 1))
     (hallway_investigation (clock :title "房间调查" :desc "找出真正的目标房间。" :initial 0 :max 4))
     (resource_loot (clock :title "资源搜寻" :desc "最多搜寻 4 次。" :initial 0 :max 4))
     (target_search (clock :title "寻找样品" :desc "把样品从目标房间里翻出来。" :initial 0 :max 3))
@@ -314,6 +392,8 @@
     (resource_room_entered false)
     (target_room_known false)
     (target_room_entered false)
-    (patrol_phase 'idle)
-    (cycle_pulse (clock :title "巡逻节拍" :initial 0 :max 1)))
+    (wife_patrol_triggered false)
+    (wife_patrol_active false)
+    (husband_patrol_triggered false)
+    (husband_patrol_active false))
   :root (infiltration))

@@ -236,6 +236,11 @@ def host_values(*, store_specs: dict[str, StoreFieldSpec], store: dict[str, int 
         "log": builtin_log,
         "clock-value": lambda value: clock_metric(value, "value"),
         "clock-max": lambda value: clock_metric(value, "maximum"),
+        "clock-half": lambda value: (clock_metric(value, "maximum") + 1) // 2,
+        "clock-empty?": lambda value: clock_metric(value, "value") == 0,
+        "clock-filled?": lambda value: clock_metric(value, "value") == clock_metric(value, "maximum"),
+        "clock-partial?": lambda value: 0 < clock_metric(value, "value") < clock_metric(value, "maximum"),
+        "clock-at-least-half?": lambda value: clock_metric(value, "value") >= ((clock_metric(value, "maximum") + 1) // 2),
     }
 
 
@@ -305,9 +310,9 @@ def builtin_scene(args: tuple[Any, ...]) -> SceneTemplate:
         description=keyword_string(kwargs, ":desc", default=""),
         position=position_tuple(kwargs.get(":position")),
         shown_clock_ids=tuple(clock_id(item) for item in as_list(kwargs.get(":show-clocks")) if item is not None),
-        conditions=tuple(item for item in as_list(kwargs.get(":conditions")) if item is not None),
-        actions=tuple(item for item in as_list(kwargs.get(":actions")) if item is not None),
-        children=tuple(item for item in as_list(kwargs.get(":children")) if item is not None),
+        conditions=tuple(item for item in as_list_or_single(kwargs.get(":conditions")) if item is not None),
+        actions=tuple(item for item in as_list_or_single(kwargs.get(":actions")) if item is not None),
+        children=tuple(item for item in as_list_or_single(kwargs.get(":children")) if item is not None),
     )
 
 
@@ -549,6 +554,14 @@ def as_list(value: Any) -> list[Any]:
         return []
     assert isinstance(value, list), f"Expected list value, got: {value!r}"
     return value
+
+
+def as_list_or_single(value: Any) -> list[Any]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    return [value]
 
 
 def as_effect_tuple(value: Any) -> tuple[Effect, ...]:

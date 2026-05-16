@@ -12,6 +12,7 @@ class DeckState:
     spirit_values: dict[str, int] = field(default_factory=dict)
     extra_slots: dict[str, int] = field(default_factory=dict)
     action_card_values: dict[str, int] = field(default_factory=dict)
+    action_card_bonuses: dict[str, int] = field(default_factory=dict)
     action_card_owners: dict[str, str] = field(default_factory=dict)
     actor_names: dict[str, str] = field(default_factory=dict)
     available_slots: list[str] = field(default_factory=list)
@@ -170,6 +171,7 @@ class GameState:
     card_hint_flash: CardHintFlashState = field(default_factory=CardHintFlashState)
     encounter_action_points: int = 3
     encounter_action_point_cap: int = 3
+    encounter_pressure_used: bool = False
     encounter_resource_root_id: str = ""
     task_panel_scroll: float = 0.0
     notifications: list[NotificationState] = field(default_factory=list)

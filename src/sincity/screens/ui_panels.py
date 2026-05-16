@@ -15,11 +15,13 @@ from sincity.rules.deck import list_all_spirit_slots, list_spirit_slots
 from sincity.rules.rng import RandomSource
 from sincity.rules import (
     card_hint_flash_active,
+    can_endure_pressure_during_encounter,
     card_matches_action_check,
     claim_growth,
     close_modal,
     count_spirit_cards,
     encounter_action_points,
+    endure_pressure_during_encounter,
     open_modal,
     requirement_is_slotted,
     rest_during_encounter,
@@ -103,8 +105,13 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
         detail_style = ui_text_style("body", "danger" if energy_exhausted else "muted")
         detail_x = energy_x + int(measure_text_width(font, energy_label, energy_style.size)) + 10
         draw_text(font, detail, detail_x, int(hand.y) + 17, detail_style.size, detail_style.color)
+        pressure_rect = Rectangle(hand.x + hand.width - INVENTORY_PANEL_RIGHT_OFFSET - 198, hand.y + 12, 84, 30)
         rest_rect = Rectangle(hand.x + hand.width - INVENTORY_PANEL_RIGHT_OFFSET - 104, hand.y + 12, 84, 30)
-        rest_disabled = state.active_dialogue is not None or state.pending_resolution is not None
+        action_locked = state.active_dialogue is not None or state.pending_resolution is not None
+        pressure_disabled = action_locked or not can_endure_pressure_during_encounter(state)
+        if text_button(font, pressure_rect, "承压", ui_text_size("body"), disabled=pressure_disabled):
+            endure_pressure_during_encounter(state, rng if rng is not None else RandomSource(state.seed))
+        rest_disabled = action_locked
         if text_button(font, rest_rect, "休整", ui_text_size("body"), disabled=rest_disabled):
             rest_during_encounter(state, rng if rng is not None else RandomSource(state.seed))
     else:
@@ -176,6 +183,7 @@ def draw_compact_card(
 ) -> bool:
     owner_id = card_id.split(":", 1)[0]
     owner_name = state.deck.actor_names.get(owner_id, owner_id) if state is not None else owner_id
+    boosted = state is not None and state.deck.action_card_bonuses.get(card_id, 0) > 0
     if disabled is None:
         disabled = state is not None and (slot_is_exhausted(state, card_id) or not slot_is_available(state, card_id))
     hinted = hinted and not disabled
@@ -184,6 +192,8 @@ def draw_compact_card(
     border = Color(72, 76, 88, 180) if disabled else Color(95, 99, 107, 220)
     if selected:
         border = Color(201, 165, 88, 255)
+    elif boosted:
+        border = Color(214, 184, 96, 245)
     elif hinted:
         border = Color(230, 206, 126, 255)
     clicked = clickable(rect) if (interactive and not disabled) else False
@@ -200,6 +210,7 @@ def draw_compact_card(
 def _draw_hand_card_head(font: Font | None, rect: Rectangle, name: str, *, card_id: str, state: GameState | None, disabled: bool) -> None:
     number_text = str(slot_current_value(state, card_id) if state is not None else 0)
     trauma = slot_trauma_count(state, card_id) if state is not None else 0
+    bonus = state.deck.action_card_bonuses.get(card_id, 0) if state is not None else 0
     number_style = ui_text_style("title", "disabled" if disabled else ("warning" if trauma else "accent"))
     suffix_style = ui_text_style("body", "disabled" if disabled else "muted")
     text_size = max(28, number_style.size - 2)
@@ -208,6 +219,11 @@ def _draw_hand_card_head(font: Font | None, rect: Rectangle, name: str, *, card_
     y = int(rect.y) + 12
     draw_text(font, number_text, x, y, text_size, number_style.color)
     draw_text(font, name, x + int(measure_text_width(font, number_text, text_size)) + 6, y + 1, suffix_size, suffix_style.color)
+    if bonus > 0 and not disabled:
+        bonus_rect = Rectangle(rect.x + rect.width - 48, rect.y + 10, 34, 20)
+        draw_frame(bonus_rect, Color(84, 68, 46, 255), Color(214, 184, 96, 245))
+        bonus_style = ui_text_style("caption", "accent")
+        draw_text(font, f"+{bonus}", int(bonus_rect.x) + 8, int(bonus_rect.y) + 3, bonus_style.size, bonus_style.color)
     if trauma and not disabled:
         trauma_style = ui_text_style("body_sm", "warning")
         draw_text(font, f"创伤 {trauma}", x, y + 34, trauma_style.size, trauma_style.color)

@@ -1,4 +1,5 @@
 (include "../enum-symbols.scm")
+(include "../common_clock_macros.scm")
 
 (define step-between
   (action

@@ -6,7 +6,7 @@ from .rng import RandomSource
 
 
 SPIRIT_ORDER = ("logic", "perception", "willpower")
-BASE_ACTION_CARD_COUNT = 3
+BASE_ACTION_CARD_COUNT = 4
 
 
 def make_starting_deck(rng: RandomSource) -> DeckState:
@@ -40,13 +40,11 @@ def action_card_count_for_health(health: int) -> int:
     if health <= 0:
         return 0
     if health <= 3:
-        return 2
+        return 3
     return BASE_ACTION_CARD_COUNT
 
 
 def health_penalty_for_cards(health: int) -> int:
-    if health <= 3:
-        return 1
     if health <= 6:
         return 1
     return 0
@@ -58,6 +56,7 @@ def refresh_spirit_slots(deck: DeckState, rng: RandomSource | None = None, *, he
     count = action_card_count_for_health(health)
     penalty = health_penalty_for_cards(health)
     deck.action_card_values.clear()
+    deck.action_card_bonuses.clear()
     deck.action_card_owners.clear()
     deck.exhausted_slots.clear()
     deck.available_slots.clear()

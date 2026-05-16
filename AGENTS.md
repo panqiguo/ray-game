@@ -65,7 +65,7 @@
 # 核心游戏系统
 - 资源: health（健康）、energy/stress（精力）、money（金钱）
 - 行动骰子精神值: logic=2, perception=1, willpower=1（初始值）
-- 每 cycle 行动槽位: health≤3 时 2 槽，否则 3 槽（初始）
+- 每 cycle 行动槽位: health≤3 时 3 槽，否则 4 槽（初始）
 - 判定: 行动值 = 精神值 + 骰子点数（含修正）→ 查结果表（judgment.py）
 - 时钟 clock 系统: 各任务/进度的填条机制
 - React 系统: 世界条件触发器，在每次行动后自动检查并触发连锁效果

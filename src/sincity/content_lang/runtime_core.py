@@ -13,6 +13,8 @@ from sincity.encounters.defs import (
     EncounterSchemaError,
     EncounterSchemeError,
     OutcomeTemplate,
+    ReactionFace,
+    ReactionTable,
     ReactTemplate,
     RenderedAction,
     RenderedScene,
@@ -92,6 +94,22 @@ def validate_react_template(react: ReactTemplate) -> None:
         assert isinstance(effect, Effect), f"react contains non-effect value: {effect!r}"
 
 
+def validate_reaction_face(face: ReactionFace) -> None:
+    assert 1 <= face.value <= 6, f"reaction face value must be 1..6, got: {face.value}"
+    assert face.title, "reaction face title must not be empty"
+    for effect in face.effects:
+        assert isinstance(effect, Effect), f"reaction face contains non-effect value: {effect!r}"
+
+
+def validate_reaction_table(table: ReactionTable) -> None:
+    assert table.faces, "reaction table must contain at least one face"
+    seen: set[int] = set()
+    for face in table.faces:
+        validate_reaction_face(face)
+        assert face.value not in seen, f"duplicate reaction face: {face.value}"
+        seen.add(face.value)
+
+
 def validate_schema_forms(
     expr: Any,
     env: Environment,
@@ -129,6 +147,18 @@ def validate_schema_forms(
                 return
             assert isinstance(value, ReactTemplate), f"react form did not produce react template: {value!r}"
             validate_react_template(value)
+        elif head_name == "reaction-table":
+            value = evaluate(expr, env)
+            if allow_nil_templates and value is None:
+                return
+            assert isinstance(value, ReactionTable), f"reaction-table form did not produce reaction table: {value!r}"
+            validate_reaction_table(value)
+        elif head_name == "face":
+            value = evaluate(expr, env)
+            if allow_nil_templates and value is None:
+                return
+            assert isinstance(value, ReactionFace), f"face form did not produce reaction face: {value!r}"
+            validate_reaction_face(value)
         elif head_name == "effect":
             value = evaluate(expr, env)
             assert isinstance(value, Effect), f"effect form did not produce effect: {value!r}"
@@ -220,6 +250,8 @@ def host_values(*, store_specs: dict[str, StoreFieldSpec], store: dict[str, int 
         "field-truthy": builtin_field_truthy_condition,
         "reacts": lambda *args: [item for item in args if item is not None],
         "react": SpecialFormProcedure(builtin_react),
+        "reaction-table": lambda *args: builtin_reaction_table(args),
+        "face": lambda *args: builtin_reaction_face(args),
         "world-attr": builtin_world_attr,
         "world-value": builtin_world_value,
         "world-item": builtin_world_item,
@@ -372,6 +404,28 @@ def builtin_react(args: list[Any], env: Environment) -> ReactTemplate:
     condition = Procedure(params=(), body=normalize_react_condition_body(kwargs[":when"], env), env=env)
     effects = eval_effect_list(kwargs[":then"], env)
     return ReactTemplate(condition=condition, effects=effects)
+
+
+def builtin_reaction_table(args: tuple[Any, ...]) -> ReactionTable:
+    faces = tuple(item for item in args if item is not None)
+    table = ReactionTable(faces=faces)
+    validate_reaction_table(table)
+    return table
+
+
+def builtin_reaction_face(args: tuple[Any, ...]) -> ReactionFace:
+    assert len(args) >= 2, "face expects value and title."
+    value = int(unwrap(args[0]))
+    title = str(unwrap(args[1]))
+    description = ""
+    effect_start = 2
+    if len(args) >= 3 and not isinstance(args[2], Effect):
+        description = str(unwrap(args[2]))
+        effect_start = 3
+    effects = tuple(item for item in args[effect_start:] if item is not None)
+    face = ReactionFace(value=value, title=title, description=description, effects=effects)
+    validate_reaction_face(face)
+    return face
 
 
 def builtin_task(args: list[Any], env: Environment) -> TaskTemplate:

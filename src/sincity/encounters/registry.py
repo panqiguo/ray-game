@@ -30,6 +30,7 @@ ENCOUNTER_FILES = (
     "巷口赌徒.scm",
     "潜入旅馆.scm",
     "公寓枪对峙.scm",
+    "公寓枪对峙2.scm",
 )
 
 

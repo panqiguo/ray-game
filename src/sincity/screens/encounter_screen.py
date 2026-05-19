@@ -3,7 +3,8 @@ from __future__ import annotations
 from pyray import *  # type: ignore
 
 from sincity.model.state import GameState
-from sincity.rules import close_modal, current_action, dismiss_pending_resolution, fast_forward_dialogue, location_is_visible
+from sincity.rendering import draw_text
+from sincity.rules import close_modal, current_action, current_encounter_reaction_table, dismiss_pending_resolution, fast_forward_dialogue, get_clock_spec_for_state, location_is_visible
 from sincity.screens.encounter_presenters import (
     current_encounter_clock_ids,
     current_encounter_root,
@@ -29,6 +30,8 @@ from sincity.screens.widgets import (
     layout,
 )
 from .ui_core import Z_HAND, Z_LOCATION_MODAL, Z_MESSAGE, Z_WORLD
+from .ui_core import draw_frame, measure_text_width
+from .ui_text import ui_text_size, ui_text_style
 
 
 def draw_encounter_screen(font: Font | None, state: GameState, rng) -> None:
@@ -75,7 +78,84 @@ def _draw_encounter_table(font: Font | None, state: GameState, rng, rect: Rectan
         current_encounter_clock_ids(state),
         state,
     )
+    reaction_table = current_encounter_reaction_table(state)
+    if reaction_table is not None:
+        _draw_reaction_die_table(font, sections.note, state, reaction_table)
     _draw_location_contents(font, state, rng, root, sections.content, nested_locations=False)
+
+
+def _draw_reaction_die_table(font: Font | None, rect: Rectangle, state: GameState, table) -> None:
+    draw_frame(rect, Color(24, 27, 34, 238), Color(88, 78, 56, 210))
+    title_style = ui_text_style("body_sm", "warning")
+    face_style = ui_text_style("body_sm", "accent")
+    empty_style = ui_text_style("body_sm", "disabled")
+    body_style = ui_text_style("body_sm", "muted")
+
+    title = "反应骰"
+    draw_text(font, title, int(rect.x + 10), int(rect.y + 7), title_style.size, title_style.color)
+    title_w = measure_text_width(font, title, title_style.size)
+    draw_text(font, "休整掷 1d6", int(rect.x + 16 + title_w), int(rect.y + 7), body_style.size, body_style.color)
+
+    faces = {face.value: face for face in table.faces}
+    gap = 4.0
+    chip_x = rect.x + 10
+    chip_y = rect.y + 28
+    chip_w = (rect.width - 24 - gap) / 2
+    chip_h = 18.0
+    for value in range(1, 7):
+        face = faces.get(value)
+        col = (value - 1) % 2
+        row = (value - 1) // 2
+        chip = Rectangle(chip_x + col * (chip_w + gap), chip_y + row * (chip_h + 3), chip_w, chip_h)
+        is_empty = face is None or (face.title == "空" and not face.description and not face.effects)
+        fill = Color(22, 24, 30, 220) if is_empty else Color(35, 33, 29, 235)
+        border = Color(68, 70, 78, 130) if is_empty else Color(146, 116, 58, 200)
+        draw_frame(chip, fill, border)
+        label_style = empty_style if is_empty else face_style
+        title_text = "空" if face is None else face.title
+        effect_text = "无" if face is None or not face.effects else _reaction_effect_summary(state, face.effects)
+        draw_text(font, f"{value}", int(chip.x + 6), int(chip.y + 3), label_style.size, label_style.color)
+        draw_text(font, _fit_text(font, title_text, chip.width * 0.48, label_style.size), int(chip.x + 22), int(chip.y + 3), label_style.size, label_style.color)
+        draw_text(font, _fit_text(font, effect_text, chip.width * 0.34, body_style.size), int(chip.x + chip.width * 0.63), int(chip.y + 3), body_style.size, body_style.color)
+
+
+def _reaction_effect_summary(state: GameState, effects) -> str:
+    parts: list[str] = []
+    for effect in effects:
+        value = effect.value
+        if effect.kind == "shift_clock" and isinstance(value, str):
+            key, raw = value.split(":", 1)
+            spec = get_clock_spec_for_state(state, key)
+            amount = int(raw)
+            parts.append(f"{spec.title}{'+' if amount >= 0 else ''}{amount}")
+        elif effect.kind == "add_field" and isinstance(value, str):
+            key, raw = value.split(":", 1)
+            amount = int(raw)
+            parts.append(f"{_field_label(key)}{'+' if amount >= 0 else ''}{amount}")
+        elif effect.kind == "set_field" and isinstance(value, str):
+            key, raw = value.split(":", 1)
+            if raw == "0":
+                parts.append(f"{_field_label(key)}=0")
+            else:
+                parts.append(f"{_field_label(key)}={raw}")
+    return "，".join(parts[:2]) if parts else "变化"
+
+
+def _field_label(key: str) -> str:
+    if key == "health":
+        return "生命"
+    if key == "energy" or key == "stress":
+        return "精力"
+    return key
+
+
+def _fit_text(font: Font | None, text: str, max_width: float, size: int) -> str:
+    if measure_text_width(font, text, size) <= max_width:
+        return text
+    result = text
+    while len(result) > 1 and measure_text_width(font, result + "…", size) > max_width:
+        result = result[:-1]
+    return result + "…"
 
 
 def _draw_encounter_location_table(font: Font | None, state: GameState, rng) -> None:

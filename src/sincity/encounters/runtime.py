@@ -13,6 +13,7 @@ from sincity.content_lang.runtime_core import (
     render_scene as _render_scene,
     unwrap as _unwrap,
     validate_action_template as _validate_action_template,
+    validate_reaction_table as _validate_reaction_table,
     validate_react_template as _validate_react_template,
     validate_schema_forms as _validate_schema_forms_generic,
     validate_scene_template as _validate_scene_template,
@@ -29,6 +30,7 @@ from .defs import (
     EncounterSchemeError,
     ModuleState,
     ReactRule,
+    ReactionTable,
     ReactTemplate,
     RenderedEncounter,
     SceneTemplate,
@@ -78,7 +80,7 @@ def compile_encounter_program(source: str, *, source_path: str | Path | None = N
             content_form = form
             continue
     assert content_form is not None, "Encounter module must contain a `(content ...)` form."
-    kwargs = _keyword_args(content_form[1:], allowed={":meta", ":state", ":reacts", ":on-success", ":on-fail", ":on-cycle", ":root"})
+    kwargs = _keyword_args(content_form[1:], allowed={":meta", ":state", ":reacts", ":reaction-die", ":on-success", ":on-fail", ":on-cycle", ":root"})
     root_expr = kwargs.get(":root")
     assert root_expr is not None, "Encounter content is missing required field: :root"
     module = ModuleState(root_expr=root_expr)
@@ -91,6 +93,7 @@ def compile_encounter_program(source: str, *, source_path: str | Path | None = N
     reacts_expr = kwargs.get(":reacts")
     if reacts_expr is not None:
         _eval_reacts_expr(reacts_expr, runtime_env, module)
+    reaction_die_expr = _reaction_die_body(kwargs.get(":reaction-die"))
     module.rewards = _eval_effect_list(kwargs.get(":on-success"), runtime_env)
     module.fail_effects = _eval_effect_list(kwargs.get(":on-fail"), runtime_env)
     module.cycle_effects = _eval_effect_list(kwargs.get(":on-cycle"), runtime_env)
@@ -108,6 +111,7 @@ def compile_encounter_program(source: str, *, source_path: str | Path | None = N
         rewards=module.rewards,
         fail_effects=module.fail_effects,
         cycle_effects=module.cycle_effects,
+        reaction_die_expr=reaction_die_expr,
     )
     validate_encounter_program(program)
     return program
@@ -170,6 +174,18 @@ def react_rule_matches(program: CompiledEncounterProgram, store: dict[str, int |
     return truthy(_unwrap(value))
 
 
+def evaluate_reaction_die(program: CompiledEncounterProgram, store: dict[str, int | bool | str]) -> ReactionTable | None:
+    if program.reaction_die_expr is None:
+        return None
+    env = _runtime_env(definitions=program.definitions, store=store, store_specs=program.store_specs)
+    value = evaluate(program.reaction_die_expr, env)
+    if value is None or value is False:
+        return None
+    assert isinstance(value, ReactionTable), f"{program.id}: reaction-die must return reaction-table or nil, got: {value!r}"
+    _validate_reaction_table(value)
+    return value
+
+
 def validate_encounter_program(program: CompiledEncounterProgram) -> None:
     assert program.store_specs, f"{program.id}: encounter missing state."
     env = _runtime_env(definitions=program.definitions, store=initial_store(program), store_specs=program.store_specs)
@@ -192,6 +208,12 @@ def validate_encounter_program(program: CompiledEncounterProgram) -> None:
                 _assert_effects_allowed(outcome.effects, allowed=ENCOUNTER_ACTION_EFFECTS, context=f"{program.id}: action `{action.title}` {outcome_name}")
     for rule in program.react_rules:
         _assert_effects_allowed(rule.effects, allowed=ENCOUNTER_ACTION_EFFECTS, context=f"{program.id}: react `{rule.source}`")
+    if program.reaction_die_expr is not None:
+        _validate_schema_forms(program.reaction_die_expr, env, context=f"{program.id}: reaction-die")
+        table = evaluate_reaction_die(program, initial_store(program))
+        if table is not None:
+            for face in table.faces:
+                _assert_effects_allowed(face.effects, allowed=ENCOUNTER_CYCLE_EFFECTS, context=f"{program.id}: reaction face `{face.title}`")
     _assert_effects_allowed(program.cycle_effects, allowed=ENCOUNTER_CYCLE_EFFECTS, context=f"{program.id}: on-cycle")
     for clock_id, spec in program.clocks_by_id.items():
         assert clock_id in program.store_specs, f"{program.id}: clock missing store spec: {clock_id}"
@@ -201,6 +223,8 @@ def validate_encounter_program(program: CompiledEncounterProgram) -> None:
 
 def _validate_all_schema_forms(program: CompiledEncounterProgram, env: Environment) -> None:
     _validate_schema_forms(program.view_expr, env, context=f"{program.id}: root scene")
+    if program.reaction_die_expr is not None:
+        _validate_schema_forms(program.reaction_die_expr, env, context=f"{program.id}: reaction-die")
     for rule in program.react_rules:
         assert isinstance(rule.condition, Procedure) and not rule.condition.params, f"{program.id}: react `{rule.source}` condition must be a zero-argument procedure"
         _validate_schema_forms(rule.condition.body, env, context=f"{program.id}: react `{rule.source}` condition")
@@ -268,6 +292,14 @@ def _eval_reacts_expr(expr: Any, env: Environment, module: ModuleState) -> None:
         assert isinstance(item, ReactTemplate), f"reacts expects react or nil, got: {item!r}"
         _validate_react_template(item)
         module.react_rules.append(ReactRule(condition=item.condition, effects=item.effects, source=f"react[{index}]"))
+
+
+def _reaction_die_body(expr: Any | None) -> Any | None:
+    if expr is None:
+        return None
+    assert _is_call(expr, "reaction-die"), "Encounter :reaction-die must be `(reaction-die expr)`."
+    assert len(expr) == 2, "`reaction-die` expects one expression."
+    return expr[1]
 
 
 def _eval_top_level_definitions(forms: list[Any], env: Environment) -> dict[str, Any]:

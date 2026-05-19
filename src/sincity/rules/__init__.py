@@ -16,6 +16,7 @@ from .progression import (
     continue_dialogue,
     encounter_action_points,
     current_action,
+    current_encounter_reaction_table,
     current_encounter_snapshot,
     current_world_snapshot,
     dismiss_pending_resolution,

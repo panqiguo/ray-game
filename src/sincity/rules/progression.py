@@ -9,7 +9,7 @@ from sincity.content.runtime import react_rule_matches as world_react_rule_match
 from sincity.content.runtime import render_tasks, render_world
 from sincity.dialogues import choose_dialogue_option as choose_runtime_dialogue_option
 from sincity.dialogues import continue_dialogue_session, create_dialogue_session, create_quick_dialogue_session, get_dialogue
-from sincity.encounters import MAX_REACT_STEPS, get_encounter, initial_store, next_react_rule, react_rule_matches, render_encounter
+from sincity.encounters import MAX_REACT_STEPS, evaluate_reaction_die, get_encounter, initial_store, next_react_rule, react_rule_matches, render_encounter
 from sincity.encounters.defs import CompiledEncounterProgram
 from sincity.model.defs import ActionDef, Effect, InputRequirement
 from sincity.model.enums import ResultType, ScreenName
@@ -171,6 +171,12 @@ def current_encounter_snapshot(state: GameState):
     cache.encounter_revision = cache.revision
     cache.encounter_id = encounter_id
     return snapshot
+
+
+def current_encounter_reaction_table(state: GameState):
+    if state.screen != ScreenName.ENCOUNTER or state.active_encounter is None:
+        return None
+    return evaluate_reaction_die(_encounter(state), state.active_encounter.store)
 
 
 def _mark_content_dirty(state: GameState) -> None:
@@ -1317,9 +1323,29 @@ def rest_during_encounter(state: GameState, rng: RandomSource) -> None:
     if state.screen == ScreenName.ENCOUNTER:
         _apply_effects(encounter.cycle_effects, state, rng, extra_lines)
     if state.screen == ScreenName.ENCOUNTER:
+        _resolve_encounter_reaction_die(state, rng, extra_lines)
+    if state.screen == ScreenName.ENCOUNTER:
         reset_hand(state, rng)
     cycle_text = f"；{'，'.join(extra_lines[:2])}" if extra_lines else ""
     _push_log(state, f"你短暂休整了一下：精力 -1，重抽行动卡{cycle_text}。")
+
+
+def _resolve_encounter_reaction_die(state: GameState, rng: RandomSource, extra_lines: list[str]) -> None:
+    assert state.active_encounter is not None
+    encounter = _encounter(state)
+    table = evaluate_reaction_die(encounter, state.active_encounter.store)
+    if table is None:
+        return
+    roll = rng.d6()
+    face = next((item for item in table.faces if item.value == roll), None)
+    if face is None:
+        return
+    if face.title != "空" or face.description or face.effects:
+        body = face.description or f"骰面 {roll}"
+        title = f"反应骰 {roll}：{face.title}"
+        _push_log(state, f"{title}。{face.description}" if face.description else f"{title}。")
+        push_notification(state, "warning", title, body)
+    _apply_effects(face.effects, state, rng, extra_lines)
 
 
 def can_endure_pressure_during_encounter(state: GameState) -> bool:

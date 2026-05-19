@@ -514,7 +514,14 @@
           :desc "房门没有锁。里面有人等你，枪口先开口。"
           :effects (list
             (effect 'set standoff_started true)
-            (effect 'start-encounter '公寓枪对峙)))))))
+            (effect 'start-encounter '公寓枪对峙))))
+      (when (and vera_apartment_found (not chapter_2_done))
+        (action
+          :title "进入公寓（反应骰测试）"
+          :desc "同一个房间，同一把枪。测试薇拉在休整时也会反应的版本。"
+          :effects (list
+            (effect 'set standoff_started true)
+            (effect 'start-encounter '公寓枪对峙2)))))))
 
 (define-node 赌场
   (node

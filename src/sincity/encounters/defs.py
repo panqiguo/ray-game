@@ -54,6 +54,19 @@ class ReactRule:
 
 
 @dataclass(frozen=True)
+class ReactionFace:
+    value: int
+    title: str
+    description: str
+    effects: tuple[Effect, ...] = ()
+
+
+@dataclass(frozen=True)
+class ReactionTable:
+    faces: tuple[ReactionFace, ...]
+
+
+@dataclass(frozen=True)
 class EncounterMeta:
     key: str
     title: str
@@ -74,6 +87,7 @@ class CompiledEncounterProgram:
     rewards: tuple[Effect, ...]
     fail_effects: tuple[Effect, ...]
     cycle_effects: tuple[Effect, ...] = ()
+    reaction_die_expr: Any | None = None
 
 
 @dataclass(frozen=True)

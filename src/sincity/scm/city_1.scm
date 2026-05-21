@@ -577,6 +577,10 @@
         :desc "制造混乱打开短窗口，或直接偷看承担暴露。"
         :effects (list (effect 'start-encounter '测试律师事务所)))
       (action
+        :title "测试：切断与潜入"
+        :desc "操作区域改变环境状态，再反过来影响保险箱难度。"
+        :effects (list (effect 'start-encounter '测试切断潜入)))
+      (action
         :title "测试：姿态对抗"
         :desc "固定姿态循环、反应骰和针对性破绽行动。"
         :effects (list (effect 'start-encounter '测试姿态对抗))))))

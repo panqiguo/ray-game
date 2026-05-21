@@ -36,31 +36,38 @@
     :show-clocks (list clue_c)
     :actions (list (clue-action "搜人事盒" "查一份被撤掉的夜班名单。" clue_c clue_c_done))))
 
+(define define-analysis-risk
+  (lambda ()
+    (cond
+      ((>= clues 2) 'low)
+      ((= clues 1) 'mid)
+      (else 'high))))
+
 (define-scene analysis-scene
   (scene
     :title "判断行动"
-    :desc
-      (cond
-        ((>= clues 3) "线索已经够多，但时间几乎没有了。现在只差最后一笔。")
-        ((= clues 2) "两条线索能互相咬住。现在开始分析，是最稳的平衡点。")
-        ((= clues 1) "只有一条线索也能分析，只是你要补很多空白。")
-        (else "没有线索也能猜，但那更像赌博，不像调查。"))
+      :desc
+        (cond
+          ((>= clues 3) "三条线索全部咬合。你还剩一点就能关上这个案子。")
+          ((= clues 2) "两条线索交叉，指向同一个方向。还差几笔推理。")
+          ((= clues 1) "一条线索太单薄，推理需要跳很多步。")
+          (else "没有线索就去下结论，无异于赌博。"))
     :show-clocks (list analysis)
     :actions (list
       (action
         :title "开始拼图"
-        :desc "停下搜索，把已有线索放到同一张纸上。判断本身也要时间。"
+        :desc "停下搜索，把已有线索放到同一张纸上。"
         :check (check
           :suits (list 逻辑)
-          :risk (if (= clues 0) 'high (if (= clues 1) 'mid 'low))
-          :ok (outcome (list (effect 'clock+ analysis 2)) "你把两个看似无关的名字连到了一起。")
-          :partial (outcome (list (effect 'clock+ analysis 1)) "推理能走，但有一处还悬着。")
-          :fail (outcome (list (effect 'clock+ alert 1)) "你推错了一步，不得不划掉重来。"))))))
+          :risk (define-analysis-risk)
+          :ok (outcome (list (effect 'clock+ analysis 1)) "你把两个看似无关的名字连到了一起。")
+          :partial (outcome (list) "推理卡在一处，还没能咬合。")
+          :fail (outcome (list (effect 'clock+ alert 1)) "你推错了一步，不得不重新来过。"))))))
 
 (define-scene archive-root
   (scene
     :title "档案室 · 时间不够用的拼图"
-    :desc "你不可能搜完全部再从容分析。每多拿一条线索，分析会变简单，但被发现的时间也在逼近。"
+    :desc "你不可能搜完全部再从容分析。线索能让推理变快，但搜线索本身也要时间。"
     :show-clocks (list alert)
     :children (list (clue-a-scene) (clue-b-scene) (clue-c-scene) (analysis-scene))))
 
@@ -70,21 +77,17 @@
   :on-fail (list (effect 'set 'test_archive_failed true) (effect 'add energy -1))
   :on-cycle (list (effect 'clock+ alert 1))
   :reacts (reacts
-    (react :when (and (clock-filled? clue_a) (not clue_a_done)) :then (list (effect 'set clue_a_done true) (effect 'add clues 1) (effect 'start-quick-dialogue "病历柜里有一张被换过的登记页。")))
-    (react :when (and (clock-filled? clue_b) (not clue_b_done)) :then (list (effect 'set clue_b_done true) (effect 'add clues 1) (effect 'start-quick-dialogue "财务夹里有一笔不该由诊所支付的车费。")))
-    (react :when (and (clock-filled? clue_c) (not clue_c_done)) :then (list (effect 'set clue_c_done true) (effect 'add clues 1) (effect 'start-quick-dialogue "人事盒里的夜班名单少了一个人。")))
+    (react :when (and (clock-filled? clue_a) (not clue_a_done)) :then (list (effect 'set clue_a_done true) (effect 'add clues 1) (effect 'clock+ analysis 2) (effect 'start-quick-dialogue "病历柜里有一张被换过的登记页。")))
+    (react :when (and (clock-filled? clue_b) (not clue_b_done)) :then (list (effect 'set clue_b_done true) (effect 'add clues 1) (effect 'clock+ analysis 2) (effect 'start-quick-dialogue "财务夹里有一笔不该由诊所支付的车费。")))
+    (react :when (and (clock-filled? clue_c) (not clue_c_done)) :then (list (effect 'set clue_c_done true) (effect 'add clues 1) (effect 'clock+ analysis 2) (effect 'start-quick-dialogue "人事盒里的夜班名单少了一个人。")))
     (react
-      :when (cond
-        ((>= clues 3) (>= (clock-value analysis) 1))
-        ((= clues 2) (>= (clock-value analysis) 3))
-        ((= clues 1) (>= (clock-value analysis) 5))
-        (else (clock-filled? analysis)))
+      :when (clock-filled? analysis)
       :then (list (effect 'end-encounter 'success)))
     (react :when (clock-filled? alert) :then (list (effect 'end-encounter 'fail))))
   :state (state
     (use-world-basics)
-    (alert (clock :title "被发现" :initial 0 :max 5))
-    (analysis (clock :title "分析" :desc "所需进度随线索数量下降：0条7格，1条5格，2条3格，3条1格。" :initial 0 :max 7))
+    (alert (clock :title "被发现" :initial 0 :max 3))
+    (analysis (clock :title "分析" :desc "每条已完成线索直接推进分析进度。" :initial 0 :max 10))
     (clues 0)
     (clue_a (clock :title "病历线索" :initial 0 :max 3))
     (clue_b (clock :title "财务线索" :initial 0 :max 3))

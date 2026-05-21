@@ -8,7 +8,7 @@ from sincity.labels import ITEM_LABELS
 from sincity.model.defs import ActionDef, InputRequirement
 from sincity.model.state import GameState
 from sincity.rendering import draw_text
-from sincity.rules import get_clock_spec_for_state, get_clock_value
+from sincity.rules import evaluate_condition, get_clock_spec_for_state, get_clock_value
 
 from .ui_core import draw_centered_text, draw_frame, measure_text_width
 from .ui_text import ui_text_color, ui_text_style
@@ -172,9 +172,11 @@ def draw_corner_labels(font: Font | None, rect: Rectangle, labels: tuple[str, ..
         offset += 24.0 * scale
 
 
-def condition_labels(conditions) -> tuple[str, ...]:
+def condition_labels(conditions, state: GameState | None = None) -> tuple[str, ...]:
     labels: list[str] = []
     for item in conditions:
+        if state is not None and evaluate_condition(item, state):
+            continue
         if item.label:
             labels.append(item.label)
             continue
@@ -198,8 +200,8 @@ def requirement_labels(requirements: tuple[InputRequirement, ...]) -> tuple[str,
     return tuple(labels)
 
 
-def action_corner_labels(action: ActionDef) -> tuple[str, ...]:
-    labels = list(condition_labels(action.conditions))
+def action_corner_labels(action: ActionDef, state: GameState | None = None) -> tuple[str, ...]:
+    labels = list(condition_labels(action.conditions, state))
     if action_starts_encounter(action):
         labels.append("外出")
     labels.extend(requirement_labels(action.inputs))

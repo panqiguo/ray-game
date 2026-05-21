@@ -1,3 +1,7 @@
+;; 这个情景感觉是对的, 不断涌来的危机, 目标之间的切换
+
+;; 在这个dsl上我们花费了太多力气了, 他总是中断我们测试游戏的循环.
+
 (include "../enum-symbols.scm")
 (include "../common_clock_macros.scm")
 (include "../common_world_bindings.scm")
@@ -7,7 +11,7 @@
     (object
       (kind kind)
       (life (clock :title "血量" :desc "填满即击倒。" :initial 0 :max 3))
-      (attack (clock :title "攻击" :desc "填满后敌人行动。" :initial 0 :max 2)))))
+      (attack (clock :title "攻击" :desc "填满后敌人行动。" :initial 0 :max (if (= kind 'gun) 3 2))))))
 
 (define enemy-kind
   (lambda (enemy)

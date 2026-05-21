@@ -8,6 +8,7 @@ import sys
 from raylib import ffi
 from pyray import *  # type: ignore
 
+from sincity.model.enums import ScreenName
 from sincity.constants import TARGET_FPS, WINDOW_HEIGHT, WINDOW_WIDTH
 from sincity.content.hot_reload import HOT_RELOADER
 from sincity.dialogue_compile import compile_dialogues
@@ -48,13 +49,17 @@ class GameApp:
         HOT_RELOADER.reload_if_changed(self.state)
         if is_key_pressed(KEY_F1):
             self.state.debug_open = not self.state.debug_open
-        if is_key_pressed(KEY_F5):
-            self.reset_run()
+        if is_key_pressed(KEY_R) and not (is_key_down(KEY_LEFT_CONTROL) or is_key_down(KEY_RIGHT_CONTROL)):
+            if self.state.screen == ScreenName.ENDING:
+                self.reset_run()
         if is_key_pressed(KEY_R) and (is_key_down(KEY_LEFT_CONTROL) or is_key_down(KEY_RIGHT_CONTROL)):
             self.restart_process()
         if self._command_q_pressed() or self._control_w_pressed():
             self.request_exit()
             return
+        if self.state.pending_restart:
+            self.state.pending_restart = False
+            self.reset_run()
         advance_pending_resolution(self.state, self.rng, get_frame_time())
         advance_notifications(self.state, get_frame_time())
 

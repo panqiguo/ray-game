@@ -19,8 +19,10 @@ def _load_program(filename: str) -> CompiledEncounterProgram:
 
 
 ENCOUNTER_FILES = (
-    "教训小混混.scm",
+    "测试切断潜入.scm",
     "潜入别墅.scm",
+    "测试仓库撤退.scm",
+    "教训小混混.scm",
     "酒吧艳遇.scm",
     "逃离疗养院.scm",
     "望月旅馆搜寻.scm",
@@ -34,7 +36,6 @@ ENCOUNTER_FILES = (
     "公寓对峙claude.scm",
     "公寓对峙3关系版.scm",
     "测试赌场后台.scm",
-    "测试仓库撤退.scm",
     "测试档案室拼图.scm",
     "测试律师事务所.scm",
     "测试姿态对抗.scm",

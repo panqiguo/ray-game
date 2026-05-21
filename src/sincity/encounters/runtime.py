@@ -44,6 +44,7 @@ from .lispy import Environment, Procedure, SpecialFormProcedure, StringAtom, _MI
 
 
 MAX_REACT_STEPS = 64
+_TEMPLATE_DEFINITION = "__template_definition__"
 ENCOUNTER_ACTION_EFFECTS = frozenset({
     "set_field",
     "add_field",
@@ -90,18 +91,21 @@ def compile_encounter_program(source: str, *, source_path: str | Path | None = N
     assert root_expr is not None, "Encounter content is missing required field: :root"
     module = ModuleState(root_expr=root_expr)
     _load_state_expr(_resolve_expr(kwargs.get(":state"), raw_definitions), raw_definitions, module)
-    runtime_env = _runtime_env(definitions={}, store=initial_store_from_specs(module.store_specs), store_specs=module.store_specs)
-    definitions = _eval_top_level_definitions(forms, runtime_env)
+    definitions = _top_level_definition_exprs(forms)
+    validation_env = _runtime_env(definitions=definitions, store=initial_store_from_specs(module.store_specs), store_specs=module.store_specs)
     meta_expr = kwargs.get(":meta")
     if meta_expr is not None:
-        module.metadata = _eval_meta_expr(meta_expr, runtime_env)
+        module.metadata = _eval_meta_expr(meta_expr, validation_env)
     reacts_expr = kwargs.get(":reacts")
     if reacts_expr is not None:
-        _eval_reacts_expr(reacts_expr, runtime_env, module)
+        _eval_reacts_expr(reacts_expr, validation_env, module)
     reaction_die_expr = _reaction_die_body(kwargs.get(":reaction-die"))
-    module.rewards = _eval_effect_list(kwargs.get(":on-success"), runtime_env)
-    module.fail_effects = _eval_effect_list(kwargs.get(":on-fail"), runtime_env)
-    module.cycle_effects = _eval_effect_list(kwargs.get(":on-cycle"), runtime_env)
+    rewards_expr = kwargs.get(":on-success")
+    fail_effects_expr = kwargs.get(":on-fail")
+    cycle_effects_expr = kwargs.get(":on-cycle")
+    module.rewards = _eval_effect_list(rewards_expr, validation_env)
+    module.fail_effects = _eval_effect_list(fail_effects_expr, validation_env)
+    module.cycle_effects = _eval_effect_list(cycle_effects_expr, validation_env)
     metadata = module.metadata or EncounterMeta(key=(path.stem if path is not None else "encounter"), title=(path.stem if path is not None else "Encounter"), description="")
     program = CompiledEncounterProgram(
         id=metadata.key,
@@ -116,6 +120,10 @@ def compile_encounter_program(source: str, *, source_path: str | Path | None = N
         rewards=module.rewards,
         fail_effects=module.fail_effects,
         cycle_effects=module.cycle_effects,
+        reacts_expr=reacts_expr,
+        rewards_expr=rewards_expr,
+        fail_effects_expr=fail_effects_expr,
+        cycle_effects_expr=cycle_effects_expr,
         reaction_die_expr=reaction_die_expr,
     )
     validate_encounter_program(program)
@@ -171,7 +179,7 @@ def render_encounter(program: CompiledEncounterProgram, store: dict[str, Any]) -
 
 
 def next_react_rule(program: CompiledEncounterProgram, store: dict[str, Any], blocked_sources: set[str]) -> ReactRule | None:
-    for rule in program.react_rules:
+    for rule in evaluate_react_rules(program, store):
         if rule.source in blocked_sources and react_rule_matches(program, store, rule):
             continue
         if react_rule_matches(program, store, rule):
@@ -195,6 +203,36 @@ def evaluate_reaction_die(program: CompiledEncounterProgram, store: dict[str, An
     assert isinstance(value, ReactionTable), f"{program.id}: reaction-die must return reaction-table or nil, got: {value!r}"
     _validate_reaction_table(value)
     return value
+
+
+def evaluate_react_rules(program: CompiledEncounterProgram, store: dict[str, Any]) -> tuple[ReactRule, ...]:
+    if program.reacts_expr is None:
+        return ()
+    module = ModuleState()
+    env = _runtime_env(definitions=program.definitions, store=store, store_specs=program.store_specs)
+    _eval_reacts_expr(program.reacts_expr, env, module)
+    return tuple(module.react_rules)
+
+
+def evaluate_cycle_effects(program: CompiledEncounterProgram, store: dict[str, Any]) -> tuple[Effect, ...]:
+    if program.cycle_effects_expr is None:
+        return ()
+    env = _runtime_env(definitions=program.definitions, store=store, store_specs=program.store_specs)
+    return _eval_effect_list(program.cycle_effects_expr, env)
+
+
+def evaluate_success_effects(program: CompiledEncounterProgram, store: dict[str, Any]) -> tuple[Effect, ...]:
+    if program.rewards_expr is None:
+        return ()
+    env = _runtime_env(definitions=program.definitions, store=store, store_specs=program.store_specs)
+    return _eval_effect_list(program.rewards_expr, env)
+
+
+def evaluate_fail_effects(program: CompiledEncounterProgram, store: dict[str, Any]) -> tuple[Effect, ...]:
+    if program.fail_effects_expr is None:
+        return ()
+    env = _runtime_env(definitions=program.definitions, store=store, store_specs=program.store_specs)
+    return _eval_effect_list(program.fail_effects_expr, env)
 
 
 def evaluate_effect_expr(program: CompiledEncounterProgram, store: dict[str, Any], expr: Any, *, action_log: Any | None = None) -> Any:
@@ -229,6 +267,12 @@ def validate_encounter_program(program: CompiledEncounterProgram) -> None:
         _assert_effects_allowed(rule.effects, allowed=ENCOUNTER_ACTION_EFFECTS, context=f"{program.id}: react `{rule.source}`")
     if program.reaction_die_expr is not None:
         _validate_schema_forms(program.reaction_die_expr, env, context=f"{program.id}: reaction-die")
+    if program.cycle_effects_expr is not None:
+        _validate_schema_forms(program.cycle_effects_expr, env, context=f"{program.id}: on-cycle")
+    if program.rewards_expr is not None:
+        _validate_schema_forms(program.rewards_expr, env, context=f"{program.id}: on-success")
+    if program.fail_effects_expr is not None:
+        _validate_schema_forms(program.fail_effects_expr, env, context=f"{program.id}: on-fail")
         table = evaluate_reaction_die(program, initial_store(program))
         if table is not None:
             for face in table.faces:
@@ -322,28 +366,31 @@ def _reaction_die_body(expr: Any | None) -> Any | None:
     return expr[1]
 
 
-def _eval_top_level_definitions(forms: list[Any], env: Environment) -> dict[str, Any]:
+def _top_level_definition_exprs(forms: list[Any]) -> dict[str, Any]:
     definitions: dict[str, Any] = {}
     for form in forms:
         if not isinstance(form, list) or not form:
-            evaluate(form, env)
             continue
         head = form[0]
         if head == "content":
             continue
         if head == "define":
             assert len(form) == 3 and isinstance(form[1], str), "`define` expects name and expr."
-            value = evaluate(form[2], env)
-            env.values[form[1]] = value
-            definitions[form[1]] = value
+            definitions[form[1]] = form[2]
             continue
         if head in {"define-node", "define-scene"}:
             assert len(form) == 3 and isinstance(form[1], str), f"`{head}` expects name and expr."
-            value = _dynamic_template_proc(form[1], "node" if head == "define-node" else "scene", form[2])
-            env.values[form[1]] = value
-            definitions[form[1]] = value
+            definitions[form[1]] = [_TEMPLATE_DEFINITION, "node" if head == "define-node" else "scene", form[2]]
             continue
-        evaluate(form, env)
+    return definitions
+
+
+def _eval_top_level_definitions(forms: list[Any], env: Environment) -> dict[str, Any]:
+    definitions: dict[str, Any] = {}
+    for name, expr in _top_level_definition_exprs(forms).items():
+        value = _eval_definition_expr(name, expr, env)
+        env.values[name] = value
+        definitions[name] = value
     return definitions
 
 
@@ -379,11 +426,26 @@ def _runtime_env(
     extra_values: dict[str, Any] | None = None,
 ) -> Environment:
     builtins = _host_values(store_specs=store_specs, store=store)
-    return Environment(
+    env = Environment(
         parent=base_environment(),
-        values={**builtins, **definitions, **({} if extra_values is None else extra_values)},
+        values={**builtins},
         resolver=lambda name: _state_resolver(name, store=store, store_specs=store_specs),
     )
+    for name, expr in definitions.items():
+        env.values[name] = _eval_definition_expr(name, expr, env)
+    if extra_values is not None:
+        env.values.update(extra_values)
+    return env
+
+
+def _eval_definition_expr(name: str, expr: Any, env: Environment) -> Any:
+    if _is_template_definition_expr(expr):
+        return _dynamic_template_proc(name, expr[1], expr[2])
+    return evaluate(expr, env)
+
+
+def _is_template_definition_expr(expr: Any) -> bool:
+    return isinstance(expr, list) and len(expr) == 3 and expr[0] == _TEMPLATE_DEFINITION
 
 
 def _schema_env(*, definitions: dict[str, Any]) -> Environment:

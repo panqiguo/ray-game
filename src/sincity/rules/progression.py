@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from dataclasses import dataclass
 
 from sincity.constants import HAND_SIZE, MAX_LOG_LINES
 from sincity.content import GROWTH_DEFS, SCENARIO
@@ -9,7 +10,7 @@ from sincity.content.runtime import react_rule_matches as world_react_rule_match
 from sincity.content.runtime import render_tasks, render_world
 from sincity.dialogues import choose_dialogue_option as choose_runtime_dialogue_option
 from sincity.dialogues import continue_dialogue_session, create_dialogue_session, create_quick_dialogue_session, get_dialogue
-from sincity.encounters import MAX_REACT_STEPS, evaluate_effect_expr, evaluate_reaction_die, get_encounter, initial_store, next_react_rule, react_rule_matches, render_encounter
+from sincity.encounters import MAX_REACT_STEPS, evaluate_cycle_effects, evaluate_effect_expr, evaluate_fail_effects, evaluate_react_rules, evaluate_reaction_die, evaluate_success_effects, get_encounter, initial_store, next_react_rule, react_rule_matches, render_encounter
 from sincity.encounters.defs import CompiledEncounterProgram
 from sincity.model.defs import ActionDef, Effect, InputRequirement, ProgressClockSpec
 from sincity.model.enums import ResultType, ScreenName
@@ -32,6 +33,19 @@ from sincity.rules.judgment import compute_action_value, roll_result
 from sincity.rules.notifications import push_notification
 from sincity.rules.rng import RandomSource
 from sincity.model.enums import Suit
+
+
+@dataclass(frozen=True)
+class CheckValuePart:
+    label: str
+    value: int
+
+
+@dataclass(frozen=True)
+class CheckValueBreakdown:
+    base: int
+    parts: tuple[CheckValuePart, ...]
+    total: int
 
 
 def _push_log(state: GameState, text: str) -> None:
@@ -402,10 +416,44 @@ def _actor_attribute_value(state: GameState, owner_id: str, suit: Suit) -> int:
 
 
 def slot_effective_value(state: GameState, slot_id: str, check) -> int:
+    return slot_value_breakdown(state, slot_id, check).total
+
+
+def slot_value_breakdown(state: GameState, slot_id: str, check) -> CheckValueBreakdown:
     base_value = slot_current_value(state, slot_id)
     owner_id = state.deck.action_card_owners.get(slot_id, slot_owner(slot_id))
-    attribute_bonus = max((_actor_attribute_value(state, owner_id, suit) for suit in check.suits), default=0)
-    return compute_action_value(base_value + attribute_bonus, check, preferred=None)
+    attribute_parts = tuple(
+        CheckValuePart(label=_suit_label(suit), value=_actor_attribute_value(state, owner_id, suit))
+        for suit in check.suits
+    )
+    active_attribute = max(attribute_parts, key=lambda item: item.value, default=None)
+    active_parts = (active_attribute,) if active_attribute is not None and active_attribute.value != 0 else ()
+    modifier_parts = tuple(
+        CheckValuePart(label=item.label, value=item.value)
+        for item in getattr(check, "modifiers", ())
+        if item.active and item.value != 0
+    )
+    parts = (*active_parts, *modifier_parts)
+    raw_total = base_value + sum(item.value for item in parts)
+    return CheckValueBreakdown(
+        base=base_value,
+        parts=parts,
+        total=compute_action_value(raw_total, check, preferred=None),
+    )
+
+
+def _suit_label(suit: Suit) -> str:
+    if suit == Suit.LOGIC:
+        return "逻辑"
+    if suit == Suit.PERCEPTION:
+        return "感知"
+    if suit == Suit.WILLPOWER:
+        return "意志"
+    if suit == Suit.WOUND:
+        return "流血"
+    if suit == Suit.SHOCK:
+        return "惊悸"
+    return str(suit)
 
 
 def _slot_can_execute_check(state: GameState, slot_id: str, check) -> bool:
@@ -483,6 +531,26 @@ def evaluate_condition(item, state: GameState) -> bool:
         assert isinstance(value, str)
         key, raw = value.split(":", 1)
         return int(_field_value(state, key)) >= int(raw)
+    if item.kind == "field_below":
+        assert isinstance(value, str)
+        key, raw = value.split(":", 1)
+        return int(_field_value(state, key)) < int(raw)
+    if item.kind == "field_equals":
+        assert isinstance(value, str)
+        key, raw = value.split(":", 1)
+        expected: int | bool | str
+        if raw == "true":
+            expected = True
+        elif raw == "false":
+            expected = False
+        elif raw == "nil":
+            expected = ""
+        else:
+            try:
+                expected = int(raw)
+            except ValueError:
+                expected = raw
+        return _field_value(state, key) == expected
     if item.kind == "field_truthy":
         assert isinstance(value, str)
         return bool(_field_value(state, value))
@@ -1289,7 +1357,7 @@ def _resolve_encounter_reacts(state: GameState, rng: RandomSource, extra_lines: 
         blocked_sources = {
             source
             for source in blocked_sources
-            if any(rule.source == source and react_rule_matches(encounter, state.active_encounter.store, rule) for rule in encounter.react_rules)
+            if any(rule.source == source and react_rule_matches(encounter, state.active_encounter.store, rule) for rule in evaluate_react_rules(encounter, state.active_encounter.store))
         }
         rule = next_react_rule(encounter, state.active_encounter.store, blocked_sources)
         if rule is None:
@@ -1340,7 +1408,7 @@ def rest_during_encounter(state: GameState, rng: RandomSource) -> None:
     extra_lines: list[str] = []
     change_energy(state, -1)
     if state.screen == ScreenName.ENCOUNTER:
-        _apply_effects(encounter.cycle_effects, state, rng, extra_lines)
+        _apply_effects(evaluate_cycle_effects(encounter, state.active_encounter.store), state, rng, extra_lines)
     if state.screen == ScreenName.ENCOUNTER:
         _resolve_encounter_reaction_die(state, rng, extra_lines)
     if state.screen == ScreenName.ENCOUNTER:
@@ -1372,7 +1440,7 @@ def can_endure_pressure_during_encounter(state: GameState) -> bool:
         return False
     if state.encounter_pressure_used:
         return False
-    if state.attributes.stress <= 0:
+    if state.attributes.health <= 0:
         return False
     return any(slot_is_available(state, slot_id) for slot_id in state.deck.available_slots)
 
@@ -1380,12 +1448,12 @@ def can_endure_pressure_during_encounter(state: GameState) -> bool:
 def endure_pressure_during_encounter(state: GameState, rng: RandomSource) -> None:
     assert state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None, "Encounter pressure is only available during encounters."
     assert not state.encounter_pressure_used, "Encounter pressure can only be used once per cycle."
-    assert state.attributes.stress > 0, "Encounter pressure requires at least 1 energy."
+    assert state.attributes.health > 0, "Encounter pressure requires at least 1 health."
     available_slots = [slot_id for slot_id in state.deck.available_slots if slot_is_available(state, slot_id)]
     assert available_slots, "Encounter pressure requires at least one available action card."
     clear_assembly(state)
     clear_selected_input(state)
-    change_energy(state, -1)
+    change_health(state, -1)
     target_index = rng.randint(0, len(available_slots) - 1)
     target_slot = available_slots[target_index]
     state.deck.action_card_bonuses[target_slot] = state.deck.action_card_bonuses.get(target_slot, 0) + 1
@@ -1393,7 +1461,7 @@ def endure_pressure_during_encounter(state: GameState, rng: RandomSource) -> Non
     _mark_content_dirty(state)
     owner_name = state.deck.actor_names.get(slot_owner(target_slot), slot_owner(target_slot))
     card_label = owner_name
-    _push_log(state, f"你咬牙承受住压力：精力 -1，{card_label} 的一张行动卡本回合 +1。")
+    _push_log(state, f"你咬牙承受住压力：生命 -1，{card_label} 的一张行动卡本回合 +1。")
     push_notification(state, "warning", "承受压力", "随机一张可用行动卡本回合 +1。")
 
 
@@ -1476,6 +1544,7 @@ def finish_encounter(state: GameState, outcome: str, rng: RandomSource, extra_li
     if state.active_encounter is None:
         return
     encounter = _encounter(state)
+    encounter_store = state.active_encounter.store
     state.active_encounter = None
     state.screen = ScreenName.CITY
     state.modal.kind = ""
@@ -1487,10 +1556,10 @@ def finish_encounter(state: GameState, outcome: str, rng: RandomSource, extra_li
     state.encounter_resource_root_id = ""
     _mark_content_dirty(state)
     if outcome == "success":
-        _apply_effects(encounter.rewards, state, rng, extra_lines)
+        _apply_effects(evaluate_success_effects(encounter, encounter_store), state, rng, extra_lines)
         _push_log(state, f"{encounter.title}：完成。")
     elif outcome == "fail":
-        _apply_effects(encounter.fail_effects, state, rng, extra_lines)
+        _apply_effects(evaluate_fail_effects(encounter, encounter_store), state, rng, extra_lines)
         _push_log(state, f"{encounter.title}：失败。")
     else:
         _push_log(state, f"{encounter.title}：中断。")

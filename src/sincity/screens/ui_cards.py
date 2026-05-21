@@ -71,7 +71,13 @@ def draw_table_card(font: Font | None, rect: Rectangle, state: GameState, model:
     body_y = int(rect.y + 42 * scale)
     body_w = max(1.0, rect.width - 28 * scale)
     line_h = max(12, body_style.line_height)
-    reserved_meta = int(round(24 * scale)) if len(model.metadata) == 2 else len(model.metadata) * int(round(20 * scale))
+    reserved_meta = (
+        int(round(24 * scale))
+        if len(model.metadata) == 2
+        else int(round((24 + max(0, len(model.metadata) - 2) * 20) * scale))
+        if len(model.metadata) > 2
+        else 0
+    )
     max_body_bottom = rect.y + rect.height - (10 * scale) - reserved_meta
     max_lines = max(1, int((max_body_bottom - body_y) // line_h))
     body_lines = wrap_text_lines_any(font, model.body, body_w, body_size)[:max_lines]
@@ -85,7 +91,7 @@ def draw_table_card(font: Font | None, rect: Rectangle, state: GameState, model:
             body_style.color if not model.disabled else ui_text_color("disabled"),
         )
     meta_y = int(body_y + len(body_lines) * line_h + int(round(10 * scale)))
-    if len(model.metadata) == 2:
+    if len(model.metadata) >= 2:
         draw_action_metadata(font, rect, model, meta_y, scale=scale)
     else:
         meta_style = ui_text_style("body_sm", "muted", scale=scale, minimum_size=9)
@@ -101,7 +107,7 @@ def draw_table_card(font: Font | None, rect: Rectangle, state: GameState, model:
 
 
 def draw_action_metadata(font: Font | None, rect: Rectangle, model: TableCardModel, meta_y: int, scale: float = 1.0) -> None:
-    suit_label, risk_label = model.metadata
+    suit_label, risk_label, *modifier_labels = model.metadata
     label_style = ui_text_style("body_sm", scale=scale, minimum_size=10)
     label_size = label_style.size
     padding_x = 12.0 * scale
@@ -115,6 +121,25 @@ def draw_action_metadata(font: Font | None, rect: Rectangle, model: TableCardMod
     risk_width = measure_text_width(font, risk_label, label_size)
     risk_x = rect.x + rect.width - 14.0 * scale - risk_width
     draw_text(font, risk_label, int(risk_x), meta_y, label_size, risk_color)
+    if not modifier_labels:
+        return
+    x = rect.x + 14.0 * scale
+    y = meta_y + 28.0 * scale
+    max_x = rect.x + rect.width - 14.0 * scale
+    for label in modifier_labels:
+        chip_width = measure_text_width(font, label, label_size) + padding_x * 2
+        if x + chip_width > max_x and x > rect.x + 14.0 * scale:
+            x = rect.x + 14.0 * scale
+            y += 20.0 * scale
+        chip_rect = Rectangle(x, y, chip_width, 18.0 * scale)
+        border = Color(120, 132, 150, 190)
+        if " -" in label:
+            border = Color(176, 92, 92, 210)
+        elif " +" in label:
+            border = Color(96, 154, 112, 210)
+        draw_frame(chip_rect, Color(18, 20, 26, 245), border)
+        draw_text(font, label, int(chip_rect.x + padding_x), int(chip_rect.y + 3.0 * scale), max(9, label_size - 1), ui_text_color("muted"))
+        x += chip_width + 6.0 * scale
 
 
 def _risk_text_color(label: str) -> Color:

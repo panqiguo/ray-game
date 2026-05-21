@@ -27,9 +27,9 @@ from sincity.encounters.defs import (
     TaskStepTemplate,
     TaskTemplate,
 )
-from sincity.encounters.lispy import Environment, Procedure, SpecialFormProcedure, evaluate
+from sincity.encounters.lispy import Environment, Procedure, SpecialFormProcedure, evaluate, truthy
 from sincity.labels import lookup_input_label
-from sincity.model.defs import ActionDef, CheckDef, Condition, Effect, InputRequirement, LocationNode, OutcomeDef
+from sincity.model.defs import ActionDef, CheckDef, CheckModifierDef, Condition, Effect, InputRequirement, LocationNode, OutcomeDef
 from sincity.model.enums import Risk, ScreenName, Suit
 
 
@@ -54,6 +54,7 @@ def build_check(check: CheckTemplate) -> CheckDef:
         success=OutcomeDef(text=check.success.text, effects=check.success.effects),
         cost=OutcomeDef(text=check.cost.text, effects=check.cost.effects),
         fail=OutcomeDef(text=check.fail.text, effects=check.fail.effects),
+        modifiers=check.modifiers,
     )
 
 
@@ -290,6 +291,8 @@ def host_values(*, store_specs: dict[str, StoreFieldSpec], store: dict[str, Any]
         "condition": builtin_condition,
         "has-item": builtin_has_item_condition,
         "field-at-least": builtin_field_at_least_condition,
+        "field-below": builtin_field_below_condition,
+        "field-equals": builtin_field_equals_condition,
         "field-truthy": builtin_field_truthy_condition,
         "reacts": lambda *args: [item for item in args if item is not None],
         "react": SpecialFormProcedure(builtin_react),
@@ -304,6 +307,7 @@ def host_values(*, store_specs: dict[str, StoreFieldSpec], store: dict[str, Any]
         "scene": lambda *args: builtin_scene(args),
         "action": lambda *args: builtin_action(args),
         "check": lambda *args: builtin_check(args),
+        "modifier": lambda *args: builtin_check_modifier(args),
         "outcome": lambda *args: builtin_outcome(args),
         "effect": lambda *args: builtin_effect(args),
         "effect-expr": SpecialFormProcedure(builtin_effect_expr),
@@ -414,14 +418,27 @@ def builtin_action(args: tuple[Any, ...]) -> ActionTemplate:
 
 
 def builtin_check(args: tuple[Any, ...]) -> CheckTemplate:
-    kwargs = keyword_args(list(args), allowed={":suits", ":risk", ":ok", ":partial", ":fail"})
+    kwargs = keyword_args(list(args), allowed={":suits", ":risk", ":modifiers", ":ok", ":partial", ":fail"})
     suits = tuple(unwrap(item) for item in as_list(kwargs.get(":suits")))
     risk = keyword_string(kwargs, ":risk", allow_symbol=True)
+    modifiers = tuple(item for item in as_list(kwargs.get(":modifiers")) if item is not None)
+    for item in modifiers:
+        assert isinstance(item, CheckModifierDef), f"check modifier must be modifier form, got: {item!r}"
     success = kwargs.get(":ok")
     cost = kwargs.get(":partial")
     fail = kwargs.get(":fail")
     assert isinstance(success, OutcomeTemplate) and isinstance(cost, OutcomeTemplate) and isinstance(fail, OutcomeTemplate), "Check outcomes must be outcome forms."
-    return CheckTemplate(suits=suits, risk=risk, success=success, cost=cost, fail=fail)
+    return CheckTemplate(suits=suits, risk=risk, success=success, cost=cost, fail=fail, modifiers=modifiers)
+
+
+def builtin_check_modifier(args: tuple[Any, ...]) -> CheckModifierDef:
+    assert args, "`modifier` requires a numeric value."
+    value = int(unwrap(args[0]))
+    kwargs = keyword_args(list(args[1:]), allowed={":when", ":label"})
+    active = True if ":when" not in kwargs else truthy(kwargs[":when"])
+    label = keyword_string(kwargs, ":label", default="")
+    assert label.strip(), "`modifier` requires :label."
+    return CheckModifierDef(value=value, label=label, active=active, source=kwargs.get(":when"))
 
 
 def builtin_condition(kind: Any, value: Any | None = None, label: Any | None = None) -> Condition:
@@ -439,6 +456,18 @@ def builtin_field_at_least_condition(key: Any, amount: Any, label: Any | None = 
     key_value = str(unwrap(key))
     amount_value = int(unwrap(amount))
     return Condition(kind="field_at_least", value=f"{key_value}:{amount_value}", label=("" if label is None else str(unwrap(label))))
+
+
+def builtin_field_below_condition(key: Any, amount: Any, label: Any | None = None) -> Condition:
+    key_value = str(unwrap(key))
+    amount_value = int(unwrap(amount))
+    return Condition(kind="field_below", value=f"{key_value}:{amount_value}", label=("" if label is None else str(unwrap(label))))
+
+
+def builtin_field_equals_condition(key: Any, expected: Any, label: Any | None = None) -> Condition:
+    key_value = str(unwrap(key))
+    expected_value = effect_token(expected)
+    return Condition(kind="field_equals", value=f"{key_value}:{expected_value}", label=("" if label is None else str(unwrap(label))))
 
 
 def builtin_field_truthy_condition(key: Any, label: Any | None = None) -> Condition:
@@ -477,7 +506,48 @@ def builtin_reaction_face(args: tuple[Any, ...]) -> ReactionFace:
 
 def builtin_effect_expr(args: list[Any], env: Environment) -> Effect:
     assert args, "`effect-expr` requires a body."
-    body: Any = args[0] if len(args) == 1 else ["begin", *args]
+    raw_body: Any = args[0] if len(args) == 1 else ["begin", *args]
+
+    def is_local_symbol(name: str) -> bool:
+        curr = env
+        while curr is not None:
+            if name in curr.values:
+                if curr.parent is None or curr.parent.parent is None:
+                    return False
+                return True
+            curr = curr.parent
+        return False
+
+    def resolve_bound_symbols(expr: Any) -> Any:
+        if isinstance(expr, list):
+            if not expr:
+                return []
+            head = expr[0]
+            if head == "quote":
+                return expr
+            if head == "lambda":
+                assert len(expr) >= 3, "`lambda` needs a body."
+                params = expr[1]
+                resolved_body = [resolve_bound_symbols(item) for item in expr[2:]]
+                return ["lambda", params, *resolved_body]
+            if head in {"let", "let*"}:
+                assert len(expr) >= 3 and isinstance(expr[1], list), f"`{head}` expects bindings and body."
+                bindings = expr[1]
+                resolved_bindings = []
+                for binding in bindings:
+                    assert isinstance(binding, list) and len(binding) == 2
+                    resolved_bindings.append([binding[0], resolve_bound_symbols(binding[1])])
+                resolved_body = [resolve_bound_symbols(item) for item in expr[2:]]
+                return [head, resolved_bindings, *resolved_body]
+            return [resolve_bound_symbols(item) for item in expr]
+
+        if isinstance(expr, str) and not expr.startswith(":"):
+            if is_local_symbol(expr):
+                return env.lookup(expr)
+
+        return expr
+
+    body = resolve_bound_symbols(raw_body)
     return Effect(kind="expr", value=body)
 
 

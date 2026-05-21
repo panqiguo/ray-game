@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 from .enums import Risk, ScreenName, Suit
 
@@ -46,12 +47,21 @@ class OutcomeDef:
 
 
 @dataclass(frozen=True)
+class CheckModifierDef:
+    value: int
+    label: str
+    active: bool = True
+    source: Any | None = None
+
+
+@dataclass(frozen=True)
 class CheckDef:
     suits: tuple[Suit, ...]
     risk: Risk
     success: OutcomeDef
     cost: OutcomeDef
     fail: OutcomeDef
+    modifiers: tuple[CheckModifierDef, ...] = ()
 
 
 @dataclass(frozen=True)

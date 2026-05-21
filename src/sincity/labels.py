@@ -13,6 +13,7 @@ ITEM_LABELS = {
     "fake_id": "假证件",
     "passage_ticket": "船票",
     "first_aid": "药品",
+    "tools": "工具",
     "mysterious_item": "神秘物品",
     "wounded_man_lead": "死者线索",
 }

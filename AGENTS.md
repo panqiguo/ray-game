@@ -27,6 +27,7 @@
 - 修改 `.scm` 后重新运行游戏即可生效（或按 Ctrl+R 热重启）
 - 验证 SCM 语法: `python -m sincity.scm_lint src/sincity/scm/city_1.scm`
 - Scheme 基础参考: `encounters/cheat-sheet.md`
+- 行动判定的 `:suits` 只写一个最适合的属性，避免 `(list 逻辑 感知)` 这类多属性行动；行动身份需要明确，由 modifier 表达环境修正。
 
 ### 修改 Schema / DSL 后的验证工作流
 - 这里的 “Schema / DSL” 包括：

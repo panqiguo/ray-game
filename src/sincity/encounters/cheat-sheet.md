@@ -102,6 +102,9 @@ Encounter / World SCM 速查
 (check
   :suits (list 'logic 'perception)
   :risk 'mid
+  :modifiers (list
+    (modifier -1 :when security_online :label "监控")
+    (modifier 1 :when power_cut :label "断电"))
   :ok outcome
   :partial outcome
   :fail outcome)
@@ -110,7 +113,8 @@ Encounter / World SCM 速查
 - `:risk`：`'low` `'mid` `'high`
 - `:suits`：`'logic` `'perception` `'willpower`
 - 不写 `:suits` 或写空列表时，表示不使用人物属性加成
-- 写了 `:suits` 时，行动卡本身仍然无属性；最终值 = 行动卡点数 + 使用者对应属性
+- 写了 `:suits` 时，行动卡本身仍然无属性；最终值 = 行动卡点数 + 使用者对应属性 + 启用的 `:modifiers`
+- `modifier` 用于环境/场景状态修正，`:when` 为真时启用；会显示在行动卡上，例如 `监控 -1`
 
 `outcome`：
 
@@ -137,6 +141,7 @@ Encounter / World SCM 速查
 :conditions (list
   (has-item 'clothes 1 "需要体面的衣服")
   (field-at-least 'money 20 "需要 20 美钞")
+  (field-below 'cash_search_count 4 "零钱已经翻空")
   (field-truthy 'hotel_pass "需要先取得使用权")
   (condition 'clock_at_least "alert:2" "警觉至少 2"))
 ```

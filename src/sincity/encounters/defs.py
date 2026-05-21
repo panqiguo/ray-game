@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TypeAlias
 
-from sincity.model.defs import ActionDef, CheckDef, Effect, InputRequirement, LocationNode, OutcomeDef, ProgressClockSpec
+from sincity.model.defs import ActionDef, CheckDef, CheckModifierDef, Effect, InputRequirement, LocationNode, OutcomeDef, ProgressClockSpec
 
 
 @dataclass(frozen=True)
@@ -100,6 +100,10 @@ class CompiledEncounterProgram:
     rewards: tuple[Effect, ...]
     fail_effects: tuple[Effect, ...]
     cycle_effects: tuple[Effect, ...] = ()
+    reacts_expr: Any | None = None
+    rewards_expr: Any | None = None
+    fail_effects_expr: Any | None = None
+    cycle_effects_expr: Any | None = None
     reaction_die_expr: Any | None = None
 
 
@@ -192,6 +196,7 @@ class CheckTemplate:
     success: OutcomeTemplate
     cost: OutcomeTemplate
     fail: OutcomeTemplate
+    modifiers: tuple[CheckModifierDef, ...] = ()
 
 
 @dataclass(frozen=True)

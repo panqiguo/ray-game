@@ -166,6 +166,7 @@ class GameState:
     pending_game_over_title: str = ""
     pending_game_over_body: str = ""
     debug_open: bool = False
+    pending_restart: bool = False
     seed: int = 0
     render_cache: RenderCacheState = field(default_factory=RenderCacheState)
     card_hint_flash: CardHintFlashState = field(default_factory=CardHintFlashState)

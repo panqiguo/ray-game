@@ -7,7 +7,7 @@ from pyray import *  # type: ignore
 from sincity.model.state import GameState
 from sincity.rendering import draw_text
 from sincity.rules.debug_save import debug_load, debug_save, slot_path
-from sincity.rules.progression import advance_clock, change_energy, change_health
+from sincity.rules.progression import change_energy, change_health
 from sincity.rules.rng import RandomSource
 
 from sincity.rules.notifications import push_notification
@@ -41,13 +41,8 @@ def draw_debug_panel(font: Font | None, state: GameState, rng: RandomSource) -> 
     y += 40
     if text_button(font, Rectangle(1096, y, 140, 30), "生命 -1", button_size):
         change_health(state, -1)
-    if text_button(font, Rectangle(1248, y, 140, 30), "烟卷 +1", button_size):
-        state.world.inventory["cigarettes"] = state.world.inventory.get("cigarettes", 0) + 1
-    y += 40
-    if text_button(font, Rectangle(1096, y, 140, 30), "钥匙 +1", button_size):
-        state.world.inventory["car_key"] = state.world.inventory.get("car_key", 0) + 1
-    if text_button(font, Rectangle(1248, y, 140, 30), "追击 +1", button_size):
-        advance_clock(state, "pursuit", 1)
+    if text_button(font, Rectangle(1248, y, 140, 30), "重启", button_size):
+        state.pending_restart = True
 
     y = 258
     draw_text(font, "━ 存档 ━", 1096, y, body_style.size, body_style.color)

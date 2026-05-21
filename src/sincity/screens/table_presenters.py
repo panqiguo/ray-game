@@ -16,6 +16,7 @@ from sincity.rules import (
     location_is_available,
     location_is_visible,
     slot_effective_value,
+    slot_value_breakdown,
 )
 from sincity.rules.judgment import RESULT_TABLE, clamp_action_value
 
@@ -116,13 +117,13 @@ def present_action_card(state: GameState, action: ActionDef) -> PresentedActionC
     metadata: tuple[str, ...] = ()
     if action.check is not None:
         suits = "通用" if not action.check.suits else " / ".join(SUIT_LABELS[suit] for suit in action.check.suits)
-        metadata = (suits, RISK_LABELS[action.check.risk])
+        metadata = (suits, RISK_LABELS[action.check.risk], *_check_value_tags(state, action))
     return PresentedActionCard(
         action=action,
         card=TableCardModel(
             title=action.title,
             body=action.description,
-            labels=action_corner_labels(action),
+            labels=action_corner_labels(action, state),
             clock_ids=(),
             active=active,
             disabled=not available,
@@ -200,10 +201,12 @@ def _present_action_attachment(
     if action.check is None and not action.effects:
         return None
     if action.check is not None and state.assembly.slotted_card_id is not None:
-        value = slot_effective_value(state, state.assembly.slotted_card_id, action.check)
+        breakdown = slot_value_breakdown(state, state.assembly.slotted_card_id, action.check)
+        value = breakdown.total
         return ActionAttachmentModel(
             mode="preview",
             title=f"状态档 {value}",
+            hint=_format_value_breakdown(breakdown),
             row=RESULT_TABLE[clamp_action_value(value)],
             value=value,
             can_execute=action_ready_to_execute(action, state),
@@ -226,3 +229,27 @@ def _slot_label(requirement: InputRequirement) -> str:
     if requirement.kind == "item" and requirement.amount > 1:
         return f"{label} {requirement.amount}"
     return label
+
+
+def _check_value_tags(state: GameState, action: ActionDef) -> tuple[str, ...]:
+    if action.check is None:
+        return ()
+    labels: list[str] = []
+    owner_id = "cole"
+    values = state.deck.spirit_values
+    for suit in action.check.suits:
+        key = suit.value
+        value = values.get(key, 0) if owner_id == "cole" else 0
+        if value != 0:
+            labels.append(f"{SUIT_LABELS[suit]} +{value}" if value > 0 else f"{SUIT_LABELS[suit]} {value}")
+    for modifier in action.check.modifiers:
+        if modifier.active and modifier.value != 0:
+            labels.append(f"{modifier.label} +{modifier.value}" if modifier.value > 0 else f"{modifier.label} {modifier.value}")
+    return tuple(labels)
+
+
+def _format_value_breakdown(breakdown) -> str:
+    chunks = [f"卡牌 {breakdown.base}"]
+    for part in breakdown.parts:
+        chunks.append(f"{part.label} +{part.value}" if part.value > 0 else f"{part.label} {part.value}")
+    return " · ".join(chunks)

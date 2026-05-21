@@ -97,6 +97,12 @@ def draw_action_grid(font: Font | None, state: GameState, rng, cards: tuple[Pres
         draw_action_card(font, state, presented, card, rng, scale=scale)
 
 
+def _location_grid_natural_height(font: Font | None, cards: tuple[PresentedLocationCard, ...], columns: int) -> float:
+    card_h = max(preferred_location_height(font, card) for card in cards)
+    rows = max(1, (len(cards) + columns - 1) // columns)
+    return rows * card_h + (rows - 1) * 18.0
+
+
 def draw_location_contents(
     font: Font | None,
     state: GameState,
@@ -111,15 +117,10 @@ def draw_location_contents(
         draw_note_block(font, Rectangle(content_rect.x, content_rect.y, content_rect.width, 86), "这里暂时没有可做的事", "换个地方，或者先满足别的条件。")
         return
     if child_cards:
-        child_strip = Rectangle(content_rect.x, content_rect.y, content_rect.width, 114)
-        draw_location_grid(
-            font,
-            state,
-            child_strip,
-            child_cards,
-            columns=max(1, min(3, len(child_cards))),
-            nested=nested_locations,
-        )
+        columns = max(1, min(3, len(child_cards)))
+        grid_h = _location_grid_natural_height(font, child_cards, columns)
+        child_strip = Rectangle(content_rect.x, content_rect.y, content_rect.width, grid_h)
+        draw_location_grid(font, state, child_strip, child_cards, columns=columns, nested=nested_locations)
         action_top = child_strip.y + child_strip.height + 18
     else:
         action_top = content_rect.y

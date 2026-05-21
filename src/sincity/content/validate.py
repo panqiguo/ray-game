@@ -12,6 +12,8 @@ from sincity.model.defs import ActionDef, Condition, Effect, InputRequirement, L
 VALID_CONDITIONS = {
     "has_item",
     "field_at_least",
+    "field_below",
+    "field_equals",
     "field_truthy",
     "inventory_below",
     "clock_at_least",

@@ -214,14 +214,14 @@ Encounter / World SCM 速查
 (begin ...)
 (quote x)
 'x
-(log ...)
+(console-log ...)
 ```
 
 - `let` 是标准并行绑定：绑定表达式在外层环境求值。
 - `let*` 是顺序绑定：后一个绑定可以使用前一个绑定。
 - truthiness：只有 `false` 和 `nil` 为假；`0` 和空列表都是真。
 - `(- x)` 是一元取负。
-- `(log ...)` 会打印到 Python 终端，返回最后一个参数；常用于调试脚本
+- `(console-log ...)` 会打印到 Python 终端，返回最后一个参数；常用于调试脚本
 
 列表：
 

@@ -14,6 +14,7 @@ __all__ = [
     "get_encounter",
     "initial_store",
     "evaluate_reaction_die",
+    "evaluate_effect_expr",
     "next_react_rule",
     "react_rule_matches",
     "render_encounter",
@@ -31,15 +32,17 @@ def __getattr__(name: str):
         "MAX_REACT_STEPS",
         "initial_store",
         "evaluate_reaction_die",
+        "evaluate_effect_expr",
         "next_react_rule",
         "react_rule_matches",
         "render_encounter",
         "validate_encounter_program",
     }:
-        from .runtime import MAX_REACT_STEPS, evaluate_reaction_die, initial_store, next_react_rule, react_rule_matches, render_encounter, validate_encounter_program
+        from .runtime import MAX_REACT_STEPS, evaluate_effect_expr, evaluate_reaction_die, initial_store, next_react_rule, react_rule_matches, render_encounter, validate_encounter_program
 
         values = {
             "MAX_REACT_STEPS": MAX_REACT_STEPS,
+            "evaluate_effect_expr": evaluate_effect_expr,
             "evaluate_reaction_die": evaluate_reaction_die,
             "initial_store": initial_store,
             "next_react_rule": next_react_rule,

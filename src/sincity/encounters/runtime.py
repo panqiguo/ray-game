@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from copy import deepcopy
 from typing import Any
 
 from sincity.content_lang.runtime_core import (
@@ -11,6 +12,7 @@ from sincity.content_lang.runtime_core import (
     host_values as _host_values,
     keyword_args as _keyword_args,
     render_scene as _render_scene,
+    runtime_value as _runtime_value,
     unwrap as _unwrap,
     validate_action_template as _validate_action_template,
     validate_reaction_table as _validate_reaction_table,
@@ -29,6 +31,7 @@ from .defs import (
     EncounterSchemaError,
     EncounterSchemeError,
     ModuleState,
+    ObjectValue,
     ReactRule,
     ReactionTable,
     ReactTemplate,
@@ -46,6 +49,7 @@ ENCOUNTER_ACTION_EFFECTS = frozenset({
     "add_field",
     "copy_field",
     "shift_clock",
+    "expr",
     "reset_hand",
     "start_dialogue",
     "start_quick_dialogue",
@@ -55,6 +59,7 @@ ENCOUNTER_COMPLETION_EFFECTS = frozenset({
     "set_field",
     "add_field",
     "shift_clock",
+    "expr",
     "reset_hand",
     "advance_day",
     "end_game",
@@ -117,15 +122,15 @@ def compile_encounter_program(source: str, *, source_path: str | Path | None = N
     return program
 
 
-def initial_store(program: CompiledEncounterProgram) -> dict[str, int | bool | str]:
+def initial_store(program: CompiledEncounterProgram) -> dict[str, Any]:
     return initial_store_from_specs(program.store_specs)
 
 
-def initial_store_from_specs(store_specs: dict[str, StoreFieldSpec]) -> dict[str, int | bool | str]:
-    return {field_id: spec.initial for field_id, spec in store_specs.items()}
+def initial_store_from_specs(store_specs: dict[str, StoreFieldSpec]) -> dict[str, Any]:
+    return {field_id: deepcopy(spec.initial) for field_id, spec in store_specs.items()}
 
 
-def render_encounter(program: CompiledEncounterProgram, store: dict[str, int | bool | str]) -> RenderedEncounter:
+def render_encounter(program: CompiledEncounterProgram, store: dict[str, Any]) -> RenderedEncounter:
     env = _runtime_env(definitions=program.definitions, store=store, store_specs=program.store_specs)
     scene = evaluate(program.view_expr, env)
     assert isinstance(scene, SceneTemplate), f"Encounter view must resolve to a scene: {program.id}"
@@ -136,6 +141,8 @@ def render_encounter(program: CompiledEncounterProgram, store: dict[str, int | b
     actions_by_location: dict[str, tuple[str, ...]] = {}
     action_handles_by_id: dict[str, ActionHandle] = {}
     shown_clock_ids_by_scene: dict[str, tuple[str, ...]] = {}
+    shown_clocks_by_scene: dict[str, tuple[Any, ...]] = {}
+    nested_clocks_by_id: dict[str, Any] = {}
     _flatten_scene(
         rendered,
         parent_id=None,
@@ -145,6 +152,8 @@ def render_encounter(program: CompiledEncounterProgram, store: dict[str, int | b
         actions_by_location=actions_by_location,
         action_handles_by_id=action_handles_by_id,
         shown_clock_ids_by_scene=shown_clock_ids_by_scene,
+        shown_clocks_by_scene=shown_clocks_by_scene,
+        nested_clocks_by_id=nested_clocks_by_id,
     )
     return RenderedEncounter(
         title=program.title,
@@ -156,10 +165,12 @@ def render_encounter(program: CompiledEncounterProgram, store: dict[str, int | b
         actions_by_location=actions_by_location,
         action_handles_by_id=action_handles_by_id,
         shown_clock_ids_by_scene=shown_clock_ids_by_scene,
+        shown_clocks_by_scene=shown_clocks_by_scene,
+        nested_clocks_by_id=nested_clocks_by_id,
     )
 
 
-def next_react_rule(program: CompiledEncounterProgram, store: dict[str, int | bool | str], blocked_sources: set[str]) -> ReactRule | None:
+def next_react_rule(program: CompiledEncounterProgram, store: dict[str, Any], blocked_sources: set[str]) -> ReactRule | None:
     for rule in program.react_rules:
         if rule.source in blocked_sources and react_rule_matches(program, store, rule):
             continue
@@ -168,13 +179,13 @@ def next_react_rule(program: CompiledEncounterProgram, store: dict[str, int | bo
     return None
 
 
-def react_rule_matches(program: CompiledEncounterProgram, store: dict[str, int | bool | str], rule: ReactRule) -> bool:
+def react_rule_matches(program: CompiledEncounterProgram, store: dict[str, Any], rule: ReactRule) -> bool:
     env = _runtime_env(definitions=program.definitions, store=store, store_specs=program.store_specs)
     value = _eval_react_condition(rule.condition, env)
     return truthy(_unwrap(value))
 
 
-def evaluate_reaction_die(program: CompiledEncounterProgram, store: dict[str, int | bool | str]) -> ReactionTable | None:
+def evaluate_reaction_die(program: CompiledEncounterProgram, store: dict[str, Any]) -> ReactionTable | None:
     if program.reaction_die_expr is None:
         return None
     env = _runtime_env(definitions=program.definitions, store=store, store_specs=program.store_specs)
@@ -184,6 +195,14 @@ def evaluate_reaction_die(program: CompiledEncounterProgram, store: dict[str, in
     assert isinstance(value, ReactionTable), f"{program.id}: reaction-die must return reaction-table or nil, got: {value!r}"
     _validate_reaction_table(value)
     return value
+
+
+def evaluate_effect_expr(program: CompiledEncounterProgram, store: dict[str, Any], expr: Any, *, action_log: Any | None = None) -> Any:
+    extra_values = {}
+    if action_log is not None:
+        extra_values["action-log!"] = action_log
+    env = _runtime_env(definitions=program.definitions, store=store, store_specs=program.store_specs, extra_values=extra_values)
+    return evaluate(expr, env)
 
 
 def validate_encounter_program(program: CompiledEncounterProgram) -> None:
@@ -253,7 +272,8 @@ def _load_state_expr(expr: Any, definitions: dict[str, Any], module: ModuleState
             assert value.spec.persist in {"world_attr", "world_value", "world_inventory"}, f"Unsupported imported state binding for {name}: {value.spec.persist}"
             module.store_specs[name] = value.spec
         else:
-            assert isinstance(value, (bool, int, str)), f"Unsupported state value for {name}: {value!r}"
+            value = _runtime_value(value)
+            assert isinstance(value, (bool, int, str, list, ObjectValue)), f"Unsupported state value for {name}: {value!r}"
             module.store_specs[name] = StoreFieldSpec(id=name, kind="value", initial=value)
 
 
@@ -351,11 +371,17 @@ def _dynamic_template_proc(name: str, constructor: str, body: Any) -> SpecialFor
     return SpecialFormProcedure(_call)
 
 
-def _runtime_env(*, definitions: dict[str, Any], store: dict[str, int | bool | str], store_specs: dict[str, StoreFieldSpec]) -> Environment:
+def _runtime_env(
+    *,
+    definitions: dict[str, Any],
+    store: dict[str, Any],
+    store_specs: dict[str, StoreFieldSpec],
+    extra_values: dict[str, Any] | None = None,
+) -> Environment:
     builtins = _host_values(store_specs=store_specs, store=store)
     return Environment(
         parent=base_environment(),
-        values={**builtins, **definitions},
+        values={**builtins, **definitions, **({} if extra_values is None else extra_values)},
         resolver=lambda name: _state_resolver(name, store=store, store_specs=store_specs),
     )
 

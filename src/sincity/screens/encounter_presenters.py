@@ -28,9 +28,19 @@ def current_encounter_clock_ids(state: GameState) -> tuple[str, ...]:
     return snapshot.shown_clock_ids_by_scene.get(snapshot.root_location_id, ())
 
 
+def current_encounter_clocks(state: GameState):
+    snapshot = _snapshot(state)
+    return snapshot.shown_clocks_by_scene.get(snapshot.root_location_id, ())
+
+
 def present_encounter_location_clock_ids(state: GameState, location_id: str) -> tuple[str, ...]:
     snapshot = _snapshot(state)
     return snapshot.shown_clock_ids_by_scene.get(location_id, ())
+
+
+def present_encounter_location_clocks(state: GameState, location_id: str):
+    snapshot = _snapshot(state)
+    return snapshot.shown_clocks_by_scene.get(location_id, ())
 
 
 def current_encounter_titles(state: GameState) -> tuple[str, str, str]:

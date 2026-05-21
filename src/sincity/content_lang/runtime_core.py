@@ -12,12 +12,15 @@ from sincity.encounters.defs import (
     EncounterMeta,
     EncounterSchemaError,
     EncounterSchemeError,
+    ObjectValue,
     OutcomeTemplate,
     ReactionFace,
     ReactionTable,
     ReactTemplate,
     RenderedAction,
+    RenderedClock,
     RenderedScene,
+    RuntimeClockValue,
     SceneTemplate,
     StateBindingValue,
     StoreFieldSpec,
@@ -181,6 +184,7 @@ def validate_schema_forms(
 def render_scene(program: Any, scene: SceneTemplate, *, scene_path: tuple[str, ...], source_index: int = 0) -> RenderedScene:
     scene_key = _hash_key(scene.title, (*scene_path, f"slot:{source_index}"), "scene")
     path = (*scene_path, scene_key)
+    shown_clock_ids, shown_clocks, nested_clocks = _rendered_scene_clocks(program, scene.shown_clock_ids, scene_key)
     rendered_actions: list[RenderedAction] = []
     for source_index, action in enumerate(scene.actions):
         rendered_actions.append(_render_action(program, action, scene_path=path, source_index=source_index))
@@ -190,7 +194,7 @@ def render_scene(program: Any, scene: SceneTemplate, *, scene_path: tuple[str, .
         title=scene.title,
         description=scene.description,
         position=scene.position,
-        show_clock_ids=scene.shown_clock_ids,
+        show_clock_ids=shown_clock_ids,
         actions=tuple(item.action for item in rendered_actions),
         children=tuple(child.root for child in rendered_children),
         conditions=tuple(scene.conditions),
@@ -198,7 +202,9 @@ def render_scene(program: Any, scene: SceneTemplate, *, scene_path: tuple[str, .
     return RenderedScene(
         scene_id=scene_key,
         root=root,
-        shown_clock_ids=scene.shown_clock_ids,
+        shown_clock_ids=shown_clock_ids,
+        shown_clocks=shown_clocks,
+        nested_clocks=nested_clocks,
         actions=tuple(rendered_actions),
         children=rendered_children,
     )
@@ -214,6 +220,8 @@ def flatten_scene(
     actions_by_location: dict[str, tuple[str, ...]],
     action_handles_by_id: dict[str, ActionHandle],
     shown_clock_ids_by_scene: dict[str, tuple[str, ...]],
+    shown_clocks_by_scene: dict[str, tuple[RenderedClock, ...]] | None = None,
+    nested_clocks_by_id: dict[str, RuntimeClockValue] | None = None,
 ) -> None:
     root = rendered.root
     assert root.id not in locations_by_id, f"Duplicate rendered scene id: {root.id}"
@@ -221,6 +229,10 @@ def flatten_scene(
     parent_by_id[root.id] = parent_id
     actions_by_location[root.id] = tuple(item.action.id for item in rendered.actions)
     shown_clock_ids_by_scene[root.id] = rendered.shown_clock_ids
+    if shown_clocks_by_scene is not None:
+        shown_clocks_by_scene[root.id] = rendered.shown_clocks
+    if nested_clocks_by_id is not None:
+        nested_clocks_by_id.update(rendered.nested_clocks)
     for item in rendered.actions:
         assert item.action.id not in actions_by_id, f"Duplicate rendered action id: {item.action.id}"
         actions_by_id[item.action.id] = item.action
@@ -235,10 +247,41 @@ def flatten_scene(
             actions_by_location=actions_by_location,
             action_handles_by_id=action_handles_by_id,
             shown_clock_ids_by_scene=shown_clock_ids_by_scene,
+            shown_clocks_by_scene=shown_clocks_by_scene,
+            nested_clocks_by_id=nested_clocks_by_id,
         )
 
 
-def host_values(*, store_specs: dict[str, StoreFieldSpec], store: dict[str, int | bool | str]) -> dict[str, Any]:
+def _rendered_scene_clocks(program: Any, items: tuple[Any, ...], scene_key: str) -> tuple[tuple[str, ...], tuple[RenderedClock, ...], dict[str, RuntimeClockValue]]:
+    clock_ids: list[str] = []
+    clocks: list[RenderedClock] = []
+    nested: dict[str, RuntimeClockValue] = {}
+    nested_index = 0
+    for item in items:
+        if isinstance(item, RuntimeClockValue):
+            clock_id = f"{scene_key}:nested-clock:{nested_index}"
+            nested_index += 1
+            clock_ids.append(clock_id)
+            nested[clock_id] = item
+            clocks.append(RenderedClock(id=clock_id, title=item.title, description=item.description, value=item.value, maximum=item.maximum))
+        elif isinstance(item, StateBindingValue):
+            assert item.spec.kind == "clock", f"Expected clock binding, got: {item.name}"
+            spec = getattr(program, "clocks_by_id", {}).get(item.name)
+            title = getattr(spec, "title", item.spec.title)
+            description = getattr(spec, "description", "")
+            maximum = getattr(spec, "segments", item.spec.maximum)
+            assert maximum is not None, f"Clock binding missing maximum: {item.name}"
+            clock_ids.append(item.name)
+            clocks.append(RenderedClock(id=item.name, title=title, description=description, value=int(item.value), maximum=int(maximum)))
+        else:
+            clock_ids.append(clock_id_for_show(item))
+            spec = getattr(program, "clocks_by_id", {}).get(str(item))
+            if spec is not None:
+                clocks.append(RenderedClock(id=str(item), title=spec.title, description=spec.description, value=0, maximum=spec.segments))
+    return tuple(clock_ids), tuple(clocks), nested
+
+
+def host_values(*, store_specs: dict[str, StoreFieldSpec], store: dict[str, Any]) -> dict[str, Any]:
     return {
         "clock": builtin_clock,
         "clocks": lambda *args: [item for item in args if item is not None],
@@ -263,16 +306,20 @@ def host_values(*, store_specs: dict[str, StoreFieldSpec], store: dict[str, int 
         "check": lambda *args: builtin_check(args),
         "outcome": lambda *args: builtin_outcome(args),
         "effect": lambda *args: builtin_effect(args),
+        "effect-expr": SpecialFormProcedure(builtin_effect_expr),
         "item": builtin_item_input,
         "card": builtin_card_input,
-        "log": builtin_log,
+        "console-log": builtin_log,
         "clock-value": lambda value: clock_metric(value, "value"),
         "clock-max": lambda value: clock_metric(value, "maximum"),
+        "clock-shift": builtin_clock_shift,
+        "clock-reset": lambda value: builtin_clock_shift(value, -clock_metric(value, "value")),
         "clock-half": lambda value: (clock_metric(value, "maximum") + 1) // 2,
         "clock-empty?": lambda value: clock_metric(value, "value") == 0,
         "clock-filled?": lambda value: clock_metric(value, "value") == clock_metric(value, "maximum"),
         "clock-partial?": lambda value: 0 < clock_metric(value, "value") < clock_metric(value, "maximum"),
         "clock-at-least-half?": lambda value: clock_metric(value, "value") >= ((clock_metric(value, "maximum") + 1) // 2),
+        "set!": SpecialFormProcedure(lambda args, env: builtin_set_bang(args, env, store=store, store_specs=store_specs)),
     }
 
 
@@ -341,7 +388,7 @@ def builtin_scene(args: tuple[Any, ...]) -> SceneTemplate:
         title=keyword_string(kwargs, ":title"),
         description=keyword_string(kwargs, ":desc", default=""),
         position=position_tuple(kwargs.get(":position")),
-        shown_clock_ids=tuple(clock_id(item) for item in as_list(kwargs.get(":show-clocks")) if item is not None),
+        shown_clock_ids=tuple(clock_value_for_show(item) for item in as_list(kwargs.get(":show-clocks")) if item is not None),
         conditions=tuple(item for item in as_list_or_single(kwargs.get(":conditions")) if item is not None),
         actions=tuple(item for item in as_list_or_single(kwargs.get(":actions")) if item is not None),
         children=tuple(item for item in as_list_or_single(kwargs.get(":children")) if item is not None),
@@ -426,6 +473,21 @@ def builtin_reaction_face(args: tuple[Any, ...]) -> ReactionFace:
     face = ReactionFace(value=value, title=title, description=description, effects=effects)
     validate_reaction_face(face)
     return face
+
+
+def builtin_effect_expr(args: list[Any], env: Environment) -> Effect:
+    assert args, "`effect-expr` requires a body."
+    body: Any = args[0] if len(args) == 1 else ["begin", *args]
+    return Effect(kind="expr", value=body)
+
+
+def builtin_set_bang(args: list[Any], env: Environment, *, store: dict[str, Any], store_specs: dict[str, StoreFieldSpec]) -> Any:
+    assert len(args) == 2 and isinstance(args[0], str), "`set!` expects a state field and value expression."
+    target = args[0]
+    assert target in store_specs, f"`set!` target must be an encounter state field: {target}"
+    value = runtime_value(evaluate(args[1], env))
+    store[target] = value
+    return value
 
 
 def builtin_task(args: list[Any], env: Environment) -> TaskTemplate:
@@ -550,7 +612,23 @@ def eval_effect_list(expr: Any, env: Environment) -> tuple[Effect, ...]:
     return tuple(item for item in value if item is not None)
 
 
+def runtime_value(value: Any) -> Any:
+    raw = unwrap(value)
+    if isinstance(raw, ClockTemplate):
+        return RuntimeClockValue(title=raw.title, description=raw.description, value=raw.initial, maximum=raw.maximum)
+    if isinstance(raw, ObjectValue):
+        return ObjectValue(fields={key: runtime_value(item) for key, item in raw.fields.items()})
+    if isinstance(raw, list):
+        return [runtime_value(item) for item in raw]
+    return raw
+
+
 def clock_metric(value: Any, field: str) -> int:
+    raw = unwrap(value)
+    if isinstance(raw, RuntimeClockValue):
+        if field == "value":
+            return raw.value
+        return raw.maximum
     bound = binding(value)
     assert bound.spec.kind == "clock", f"Clock operation requires a clock binding: {bound.name}"
     if field == "value":
@@ -579,6 +657,20 @@ def clock_id(value: Any) -> str:
     return bound.name
 
 
+def clock_value_for_show(value: Any) -> Any:
+    raw = unwrap(value)
+    if isinstance(raw, RuntimeClockValue):
+        return raw
+    bound = binding(value)
+    assert bound.spec.kind == "clock", f"Expected clock binding, got: {bound.name}"
+    return bound
+
+
+def clock_id_for_show(value: Any) -> str:
+    assert isinstance(value, str), f"Expected rendered clock id, got: {value!r}"
+    return value
+
+
 def effect_token(value: Any) -> str:
     raw = unwrap(value)
     if raw is None:
@@ -588,6 +680,14 @@ def effect_token(value: Any) -> str:
     if raw is False:
         return "false"
     return str(raw)
+
+
+def builtin_clock_shift(value: Any, amount: Any) -> RuntimeClockValue:
+    raw = unwrap(value)
+    assert isinstance(raw, RuntimeClockValue), f"`clock-shift` expects a nested clock value, got: {raw!r}"
+    delta = int(unwrap(amount))
+    next_value = max(0, min(raw.maximum, raw.value + delta))
+    return RuntimeClockValue(title=raw.title, description=raw.description, value=next_value, maximum=raw.maximum)
 
 
 def condition_value(value: Any | None) -> Any:

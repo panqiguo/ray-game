@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
-from .defs import EncounterModuleError, EncounterReadError, EncounterSchemeError, SexpNode, StringAtom
+from .defs import ClockTemplate, EncounterModuleError, EncounterReadError, EncounterSchemeError, ObjectValue, RuntimeClockValue, SexpNode, StringAtom
 
 
 @dataclass(frozen=True)
@@ -233,6 +233,10 @@ def base_environment() -> Environment:
             "cons": _cons,
             "append": _append,
             "length": lambda value: len(_list_value(value)),
+            "object": SpecialFormProcedure(_object_builtin),
+            "object?": lambda value: isinstance(_scalar(value), ObjectValue),
+            "get": _object_get,
+            "update": SpecialFormProcedure(_object_update_builtin),
             "list?": lambda value: isinstance(_scalar(value), list),
             "pair?": lambda value: isinstance(_scalar(value), list) and len(_scalar(value)) > 0,
             "assoc": _assoc,
@@ -241,6 +245,10 @@ def base_environment() -> Environment:
             "assoc-remove": _assoc_remove,
             "map": _map_builtin,
             "filter": _filter_builtin,
+            "any": _any_builtin,
+            "some": _any_builtin,
+            "exists": _any_builtin,
+            "all": _all_builtin,
             "member": _member_builtin,
             "reverse": _reverse_builtin,
             "apply": _apply_builtin,
@@ -268,7 +276,7 @@ def base_environment() -> Environment:
             "zero?": lambda value: int(_scalar(value)) == 0,
             "positive?": lambda value: int(_scalar(value)) > 0,
             "negative?": lambda value: int(_scalar(value)) < 0,
-            "log": _log_builtin,
+            "console-log": _log_builtin,
         }
     )
 
@@ -334,6 +342,46 @@ def _append(*values: Any) -> list[Any]:
     return result
 
 
+def _object_builtin(args: list[Any], env: Environment) -> ObjectValue:
+    fields: dict[str, Any] = {}
+    for item in args:
+        assert isinstance(item, list) and len(item) == 2 and isinstance(item[0], str), "`object` fields must be `(name expr)` pairs."
+        key = item[0]
+        assert not key.startswith(":"), f"`object` field names must be symbols, got: {key}"
+        assert key not in fields, f"Duplicate object field: {key}"
+        fields[key] = _runtime_value(evaluate(item[1], env))
+    return ObjectValue(fields=fields)
+
+
+def _object_get(obj: Any, key: Any, default: Any | None = None) -> Any:
+    raw = _scalar(obj)
+    assert isinstance(raw, ObjectValue), f"`get` expects object, got: {raw!r}"
+    field = _scalar(key)
+    assert isinstance(field, str), f"`get` key must be a symbol/string, got: {field!r}"
+    return raw.fields.get(field, default)
+
+
+def _object_update_builtin(args: list[Any], env: Environment) -> ObjectValue:
+    assert args, "`update` expects object plus field updates."
+    raw = _scalar(evaluate(args[0], env))
+    assert isinstance(raw, ObjectValue), f"`update` expects object, got: {raw!r}"
+    fields = dict(raw.fields)
+    for item in args[1:]:
+        assert isinstance(item, list) and len(item) == 2 and isinstance(item[0], str), "`update` fields must be `(name expr)` pairs."
+        fields[item[0]] = _runtime_value(evaluate(item[1], env))
+    return ObjectValue(fields=fields)
+
+
+def _runtime_value(value: Any) -> Any:
+    if isinstance(value, ClockTemplate):
+        return RuntimeClockValue(title=value.title, description=value.description, value=value.initial, maximum=value.maximum)
+    if isinstance(value, ObjectValue):
+        return ObjectValue(fields={key: _runtime_value(item) for key, item in value.fields.items()})
+    if isinstance(value, list):
+        return [_runtime_value(item) for item in value]
+    return value
+
+
 def _assoc(key: Any, alist: Any) -> Any:
     needle = _scalar(key)
     for entry in _list_value(alist):
@@ -380,12 +428,36 @@ def _assoc_remove(alist: Any, key: Any) -> list[Any]:
     return result
 
 
-def _map_builtin(proc: Any, values: Any) -> list[Any]:
+def _map_builtin(first: Any, second: Any) -> list[Any]:
+    if callable(first) or isinstance(first, Procedure):
+        proc, values = first, second
+    else:
+        values, proc = first, second
     return [apply(proc, [item]) for item in _list_value(values)]
 
 
-def _filter_builtin(proc: Any, values: Any) -> list[Any]:
+def _filter_builtin(first: Any, second: Any) -> list[Any]:
+    if callable(first) or isinstance(first, Procedure):
+        proc, values = first, second
+    else:
+        values, proc = first, second
     return [item for item in _list_value(values) if truthy(apply(proc, [item]))]
+
+
+def _any_builtin(first: Any, second: Any) -> bool:
+    if callable(first) or isinstance(first, Procedure):
+        proc, values = first, second
+    else:
+        values, proc = first, second
+    return any(truthy(apply(proc, [item])) for item in _list_value(values))
+
+
+def _all_builtin(first: Any, second: Any) -> bool:
+    if callable(first) or isinstance(first, Procedure):
+        proc, values = first, second
+    else:
+        values, proc = first, second
+    return all(truthy(apply(proc, [item])) for item in _list_value(values))
 
 
 def _member_builtin(value: Any, values: Any) -> Any:

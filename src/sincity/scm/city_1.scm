@@ -521,7 +521,21 @@
           :desc "同一个房间，同一把枪。测试薇拉在休整时也会反应的版本。"
           :effects (list
             (effect 'set standoff_started true)
-            (effect 'start-encounter '公寓枪对峙2)))))))
+            (effect 'start-encounter '公寓枪对峙2))))
+      (when (and vera_apartment_found (not chapter_2_done))
+        (action
+          :title "进入公寓（Claude 版）"
+          :desc "测试 Claude 写的三时钟版本：缓和、危险、距离。"
+          :effects (list
+            (effect 'set standoff_started true)
+            (effect 'start-encounter '公寓对峙))))
+      (when (and vera_apartment_found (not chapter_2_done))
+        (action
+          :title "进入公寓（关系版测试）"
+          :desc "测试枪、情绪、距离三条关系轴的版本；夺枪失败后会关闭夺枪路线。"
+          :effects (list
+            (effect 'set standoff_started true)
+            (effect 'start-encounter '公寓对峙3关系版)))))))
 
 (define-node 赌场
   (node
@@ -540,6 +554,32 @@
           :ok (outcome (list (effect 'add money 30)))
           :partial (outcome (list (effect 'add money 8) (effect 'add energy -1)))
           :fail (outcome (list (effect 'add energy -1))))))))
+
+(define-node 情景测试C
+  (node
+    :desc "临时测试入口。这里不接主线，只用来快速比较几个情景模型的手感。"
+    :position '(1460 520)
+    :actions (list
+      (action
+        :title "测试：赌场后台"
+        :desc "代币、准备时间、负期望裸赌与正期望规则赌博。"
+        :effects (list (effect 'start-encounter '测试赌场后台)))
+      (action
+        :title "测试：仓库撤退"
+        :desc "持续涌现敌人、通道和出口推进之间的分诊。"
+        :effects (list (effect 'start-encounter '测试仓库撤退)))
+      (action
+        :title "测试：档案室拼图"
+        :desc "线索越多分析越简单，但总时间不够。"
+        :effects (list (effect 'start-encounter '测试档案室拼图)))
+      (action
+        :title "测试：律师事务所"
+        :desc "制造混乱打开短窗口，或直接偷看承担暴露。"
+        :effects (list (effect 'start-encounter '测试律师事务所)))
+      (action
+        :title "测试：姿态对抗"
+        :desc "固定姿态循环、反应骰和针对性破绽行动。"
+        :effects (list (effect 'start-encounter '测试姿态对抗))))))
 
 (define world-state
   (state
@@ -843,4 +883,5 @@
       (when vera_thread_unlocked (废弃区))
       (when frederick_real_lead_found (望月旅馆))
       (when vera_apartment_found (公寓))
-      (when casino_unlocked (赌场)))))
+      (when casino_unlocked (赌场))
+      (情景测试C))))

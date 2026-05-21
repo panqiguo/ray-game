@@ -40,10 +40,23 @@ class EncounterSchemaError(EncounterCompileError):
 class StoreFieldSpec:
     id: str
     kind: str
-    initial: int | bool | str
+    initial: Any
     title: str = ""
     maximum: int | None = None
     persist: str = "encounter"
+
+
+@dataclass(frozen=True)
+class ObjectValue:
+    fields: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class RuntimeClockValue:
+    title: str
+    description: str
+    value: int
+    maximum: int
 
 
 @dataclass(frozen=True)
@@ -105,10 +118,21 @@ class RenderedAction:
 
 
 @dataclass(frozen=True)
+class RenderedClock:
+    id: str
+    title: str
+    description: str
+    value: int
+    maximum: int
+
+
+@dataclass(frozen=True)
 class RenderedScene:
     scene_id: str
     root: LocationNode
     shown_clock_ids: tuple[str, ...]
+    shown_clocks: tuple[RenderedClock, ...]
+    nested_clocks: dict[str, RuntimeClockValue]
     actions: tuple[RenderedAction, ...]
     children: tuple["RenderedScene", ...]
 
@@ -124,6 +148,8 @@ class RenderedEncounter:
     actions_by_location: dict[str, tuple[str, ...]]
     action_handles_by_id: dict[str, ActionHandle]
     shown_clock_ids_by_scene: dict[str, tuple[str, ...]]
+    shown_clocks_by_scene: dict[str, tuple[RenderedClock, ...]]
+    nested_clocks_by_id: dict[str, RuntimeClockValue]
 
     @property
     def root_location_id(self) -> str:
@@ -185,7 +211,7 @@ class SceneTemplate:
     title: str
     description: str
     position: tuple[int, int] | None = None
-    shown_clock_ids: tuple[str, ...] = ()
+    shown_clock_ids: tuple[Any, ...] = ()
     conditions: tuple[Any, ...] = ()
     actions: tuple[ActionTemplate, ...] = ()
     children: tuple["SceneTemplate", ...] = ()

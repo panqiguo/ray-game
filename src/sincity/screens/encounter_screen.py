@@ -6,19 +6,19 @@ from sincity.model.state import GameState
 from sincity.rendering import draw_text
 from sincity.rules import close_modal, current_action, current_encounter_reaction_table, dismiss_pending_resolution, fast_forward_dialogue, get_clock_spec_for_state, location_is_visible
 from sincity.screens.encounter_presenters import (
-    current_encounter_clock_ids,
+    current_encounter_clocks,
     current_encounter_root,
     current_encounter_titles,
     present_encounter_action_cards,
     present_encounter_child_location_cards,
-    present_encounter_location_clock_ids,
+    present_encounter_location_clocks,
 )
 from sincity.screens.table_views import draw_location_contents, floating_table_rect, split_desktop_area
 from sincity.screens.widgets import (
     begin_layer,
     any_input_pressed,
     draw_card_pile_modal,
-    draw_clock_row,
+    draw_rendered_clock_row,
     draw_dialogue_modal,
     draw_hand,
     draw_message_feed,
@@ -72,11 +72,10 @@ def _draw_encounter_table(font: Font | None, state: GameState, rng, rect: Rectan
         title=title,
         subtitle=state_description or root.description,
     )
-    draw_clock_row(
+    draw_rendered_clock_row(
         font,
         Rectangle(sections.header.x + 18, sections.header.y + 84, sections.header.width - 36, 48),
-        current_encounter_clock_ids(state),
-        state,
+        current_encounter_clocks(state),
     )
     reaction_table = current_encounter_reaction_table(state)
     if reaction_table is not None:
@@ -96,27 +95,56 @@ def _draw_reaction_die_table(font: Font | None, rect: Rectangle, state: GameStat
     title_w = measure_text_width(font, title, title_style.size)
     draw_text(font, "休整掷 1d6", int(rect.x + 16 + title_w), int(rect.y + 7), body_style.size, body_style.color)
 
+    groups = _reaction_face_groups(state, table)
+    bar_x = rect.x + 10
+    bar_y = rect.y + 30
+    bar_w = rect.width - 20
+    bar_h = 16.0
+    cursor_x = bar_x
+    for start, end, title_text, effect_text, is_empty, count in groups:
+        seg_w = bar_w * (count / 6)
+        fill = Color(22, 24, 30, 220) if is_empty else Color(66, 43, 35, 235)
+        border = Color(68, 70, 78, 130) if is_empty else Color(178, 92, 72, 220)
+        draw_frame(Rectangle(cursor_x, bar_y, max(1.0, seg_w - 2), bar_h), fill, border)
+        cursor_x += seg_w
+
+    line_y = rect.y + 52
+    for start, end, title_text, effect_text, is_empty, _count in groups[:3]:
+        label_style = empty_style if is_empty else face_style
+        range_text = str(start) if start == end else f"{start}-{end}"
+        draw_text(font, range_text, int(rect.x + 12), int(line_y), label_style.size, label_style.color)
+        draw_text(font, _fit_text(font, title_text, 74, label_style.size), int(rect.x + 44), int(line_y), label_style.size, label_style.color)
+        draw_text(font, _fit_text(font, effect_text, rect.width - 128, body_style.size), int(rect.x + 120), int(line_y), body_style.size, body_style.color)
+        line_y += body_style.line_height - 2
+
+
+def _reaction_face_groups(state: GameState, table) -> list[tuple[int, int, str, str, bool, int]]:
     faces = {face.value: face for face in table.faces}
-    gap = 4.0
-    chip_x = rect.x + 10
-    chip_y = rect.y + 28
-    chip_w = (rect.width - 24 - gap) / 2
-    chip_h = 18.0
+    groups: list[tuple[int, int, str, str, bool, int]] = []
+    current: tuple[str, str, bool] | None = None
+    start = 1
+    end = 1
     for value in range(1, 7):
         face = faces.get(value)
-        col = (value - 1) % 2
-        row = (value - 1) // 2
-        chip = Rectangle(chip_x + col * (chip_w + gap), chip_y + row * (chip_h + 3), chip_w, chip_h)
         is_empty = face is None or (face.title == "空" and not face.description and not face.effects)
-        fill = Color(22, 24, 30, 220) if is_empty else Color(35, 33, 29, 235)
-        border = Color(68, 70, 78, 130) if is_empty else Color(146, 116, 58, 200)
-        draw_frame(chip, fill, border)
-        label_style = empty_style if is_empty else face_style
         title_text = "空" if face is None else face.title
         effect_text = "无" if face is None or not face.effects else _reaction_effect_summary(state, face.effects)
-        draw_text(font, f"{value}", int(chip.x + 6), int(chip.y + 3), label_style.size, label_style.color)
-        draw_text(font, _fit_text(font, title_text, chip.width * 0.48, label_style.size), int(chip.x + 22), int(chip.y + 3), label_style.size, label_style.color)
-        draw_text(font, _fit_text(font, effect_text, chip.width * 0.34, body_style.size), int(chip.x + chip.width * 0.63), int(chip.y + 3), body_style.size, body_style.color)
+        key = (title_text, effect_text, is_empty)
+        if current is None:
+            current = key
+            start = value
+            end = value
+            continue
+        if key == current and value == end + 1:
+            end = value
+            continue
+        groups.append((start, end, current[0], current[1], current[2], end - start + 1))
+        current = key
+        start = value
+        end = value
+    assert current is not None
+    groups.append((start, end, current[0], current[1], current[2], end - start + 1))
+    return groups
 
 
 def _reaction_effect_summary(state: GameState, effects) -> str:
@@ -179,9 +207,9 @@ def _draw_encounter_location_table(font: Font | None, state: GameState, rng) -> 
     if closed and not resolving:
         close_modal(state)
         return
-    location_clock_ids = present_encounter_location_clock_ids(state, target.id)
-    if location_clock_ids:
-        draw_clock_row(font, Rectangle(sections.header.x + 18, sections.header.y + 84, sections.header.width - 36, 48), location_clock_ids, state)
+    location_clocks = present_encounter_location_clocks(state, target.id)
+    if location_clocks:
+        draw_rendered_clock_row(font, Rectangle(sections.header.x + 18, sections.header.y + 84, sections.header.width - 36, 48), location_clocks)
     _draw_location_contents(font, state, rng, target, sections.content, nested_locations=True)
 
 

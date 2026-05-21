@@ -9,9 +9,9 @@ from sincity.content.runtime import react_rule_matches as world_react_rule_match
 from sincity.content.runtime import render_tasks, render_world
 from sincity.dialogues import choose_dialogue_option as choose_runtime_dialogue_option
 from sincity.dialogues import continue_dialogue_session, create_dialogue_session, create_quick_dialogue_session, get_dialogue
-from sincity.encounters import MAX_REACT_STEPS, evaluate_reaction_die, get_encounter, initial_store, next_react_rule, react_rule_matches, render_encounter
+from sincity.encounters import MAX_REACT_STEPS, evaluate_effect_expr, evaluate_reaction_die, get_encounter, initial_store, next_react_rule, react_rule_matches, render_encounter
 from sincity.encounters.defs import CompiledEncounterProgram
-from sincity.model.defs import ActionDef, Effect, InputRequirement
+from sincity.model.defs import ActionDef, Effect, InputRequirement, ProgressClockSpec
 from sincity.model.enums import ResultType, ScreenName
 from sincity.model.state import (
     ActiveEncounterState,
@@ -184,6 +184,10 @@ def _mark_content_dirty(state: GameState) -> None:
 
 
 def get_clock_value(state: GameState, clock_id: str) -> int:
+    if state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None:
+        nested = current_encounter_snapshot(state).nested_clocks_by_id.get(clock_id)
+        if nested is not None:
+            return nested.value
     if state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None and clock_id in _encounter(state).clocks_by_id:
         raw = state.active_encounter.store[clock_id]
         assert isinstance(raw, int)
@@ -200,6 +204,9 @@ def sync_world_progress_clocks(state: GameState) -> None:
 
 def get_clock_spec_for_state(state: GameState, clock_id: str):
     if state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None:
+        nested = current_encounter_snapshot(state).nested_clocks_by_id.get(clock_id)
+        if nested is not None:
+            return ProgressClockSpec(id=clock_id, title=nested.title, description=nested.description, segments=nested.maximum)
         encounter = _encounter(state)
         if clock_id in encounter.clocks_by_id:
             return encounter.clocks_by_id[clock_id]
@@ -1214,6 +1221,18 @@ def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines
         assert isinstance(value, str)
         start_quick_dialogue(state, value)
         return
+    if item.kind == "expr":
+        assert state.active_encounter is not None, "Dynamic effect expressions are only supported inside encounters."
+        def action_log(message: object) -> None:
+            _push_log(state, str(message))
+
+        result = evaluate_effect_expr(_encounter(state), state.active_encounter.store, value, action_log=action_log)
+        if isinstance(result, Effect):
+            _apply_effect(result, state, rng, extra_lines)
+        elif isinstance(result, list) and all(isinstance(entry, Effect) for entry in result):
+            _apply_effects(tuple(result), state, rng, extra_lines)
+        _mark_content_dirty(state)
+        return
     if item.kind == "end_encounter":
         assert isinstance(value, str)
         finish_encounter(state, value, rng, extra_lines)
@@ -1340,10 +1359,10 @@ def _resolve_encounter_reaction_die(state: GameState, rng: RandomSource, extra_l
     face = next((item for item in table.faces if item.value == roll), None)
     if face is None:
         return
+    title = f"反应骰 {roll}：{face.title}"
+    _push_log(state, f"{title}。{face.description}" if face.description else f"{title}。")
     if face.title != "空" or face.description or face.effects:
         body = face.description or f"骰面 {roll}"
-        title = f"反应骰 {roll}：{face.title}"
-        _push_log(state, f"{title}。{face.description}" if face.description else f"{title}。")
         push_notification(state, "warning", title, body)
     _apply_effects(face.effects, state, rng, extra_lines)
 

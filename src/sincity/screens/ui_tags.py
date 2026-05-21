@@ -108,6 +108,40 @@ def draw_clock_row(font: Font | None, rect: Rectangle, clock_ids: tuple[str, ...
         x += width + 20.0 * scale
 
 
+def draw_rendered_clock_row(font: Font | None, rect: Rectangle, clocks, scale: float = 1.0) -> None:
+    x = rect.x
+    y = rect.y
+    for clock in clocks:
+        title_style = ui_text_style("body", "muted", scale=scale, minimum_size=11)
+        desc_style = ui_text_style("caption", "subtle", scale=scale, minimum_size=9)
+        desc_size = desc_style.size
+        desc_width = measure_text_width(font, clock.description, desc_size) if clock.description else 0.0
+        width = max(
+            156.0 * scale,
+            measure_text_width(font, clock.title, title_style.size) + clock.maximum * 18.0 * scale + 52.0 * scale,
+            desc_width + 8.0 * scale,
+        )
+        chip = Rectangle(x, y, width, 42.0 * scale if clock.description else 24.0 * scale)
+        draw_text(font, clock.title, int(chip.x), int(chip.y) + max(1, int(round(2 * scale))), title_style.size, title_style.color)
+        draw_inline_clock(
+            font,
+            Rectangle(chip.x + 74.0 * scale, chip.y + 1.0 * scale, chip.width - 74.0 * scale, 20.0 * scale),
+            clock.maximum,
+            clock.value,
+            scale=scale,
+        )
+        if clock.description:
+            draw_text(
+                font,
+                clock.description,
+                int(chip.x),
+                int(chip.y + 22.0 * scale),
+                desc_style.size,
+                desc_style.color,
+            )
+        x += width + 20.0 * scale
+
+
 def draw_action_corner_clocks(rect: Rectangle, clock_ids: tuple[str, ...], state: GameState, align: str = "left", scale: float = 1.0) -> None:
     offset = 0.0
     for clock_id in clock_ids:

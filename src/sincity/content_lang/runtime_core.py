@@ -29,7 +29,7 @@ from sincity.encounters.defs import (
 )
 from sincity.encounters.lispy import Environment, Procedure, SpecialFormProcedure, evaluate, truthy
 from sincity.labels import lookup_input_label
-from sincity.model.defs import ActionDef, CheckDef, CheckModifierDef, Condition, Effect, InputRequirement, LocationNode, OutcomeDef
+from sincity.model.defs import ActionDef, CheckDef, CheckFactorDef, Condition, Effect, InputRequirement, LocationNode, OutcomeDef
 from sincity.model.enums import Risk, ScreenName, Suit
 
 
@@ -54,7 +54,7 @@ def build_check(check: CheckTemplate) -> CheckDef:
         success=OutcomeDef(text=check.success.text, effects=check.success.effects),
         cost=OutcomeDef(text=check.cost.text, effects=check.cost.effects),
         fail=OutcomeDef(text=check.fail.text, effects=check.fail.effects),
-        modifiers=check.modifiers,
+        factors=check.factors,
     )
 
 
@@ -307,7 +307,7 @@ def host_values(*, store_specs: dict[str, StoreFieldSpec], store: dict[str, Any]
         "scene": lambda *args: builtin_scene(args),
         "action": lambda *args: builtin_action(args),
         "check": lambda *args: builtin_check(args),
-        "modifier": lambda *args: builtin_check_modifier(args),
+        "factor": lambda *args: builtin_check_factor(args),
         "outcome": lambda *args: builtin_outcome(args),
         "effect": lambda *args: builtin_effect(args),
         "effect-expr": SpecialFormProcedure(builtin_effect_expr),
@@ -418,27 +418,27 @@ def builtin_action(args: tuple[Any, ...]) -> ActionTemplate:
 
 
 def builtin_check(args: tuple[Any, ...]) -> CheckTemplate:
-    kwargs = keyword_args(list(args), allowed={":suits", ":risk", ":modifiers", ":ok", ":partial", ":fail"})
+    kwargs = keyword_args(list(args), allowed={":suits", ":risk", ":factors", ":ok", ":partial", ":fail"})
     suits = tuple(unwrap(item) for item in as_list(kwargs.get(":suits")))
     risk = keyword_string(kwargs, ":risk", allow_symbol=True)
-    modifiers = tuple(item for item in as_list(kwargs.get(":modifiers")) if item is not None)
-    for item in modifiers:
-        assert isinstance(item, CheckModifierDef), f"check modifier must be modifier form, got: {item!r}"
+    factors = tuple(item for item in as_list(kwargs.get(":factors")) if item is not None)
+    for item in factors:
+        assert isinstance(item, CheckFactorDef), f"check factor must be factor form, got: {item!r}"
     success = kwargs.get(":ok")
     cost = kwargs.get(":partial")
     fail = kwargs.get(":fail")
     assert isinstance(success, OutcomeTemplate) and isinstance(cost, OutcomeTemplate) and isinstance(fail, OutcomeTemplate), "Check outcomes must be outcome forms."
-    return CheckTemplate(suits=suits, risk=risk, success=success, cost=cost, fail=fail, modifiers=modifiers)
+    return CheckTemplate(suits=suits, risk=risk, success=success, cost=cost, fail=fail, factors=factors)
 
 
-def builtin_check_modifier(args: tuple[Any, ...]) -> CheckModifierDef:
-    assert args, "`modifier` requires a numeric value."
+def builtin_check_factor(args: tuple[Any, ...]) -> CheckFactorDef:
+    assert args, "`factor` requires a numeric value."
     value = int(unwrap(args[0]))
     kwargs = keyword_args(list(args[1:]), allowed={":when", ":label"})
     active = True if ":when" not in kwargs else truthy(kwargs[":when"])
     label = keyword_string(kwargs, ":label", default="")
-    assert label.strip(), "`modifier` requires :label."
-    return CheckModifierDef(value=value, label=label, active=active, source=kwargs.get(":when"))
+    assert label.strip(), "`factor` requires :label."
+    return CheckFactorDef(value=value, label=label, active=active, source=kwargs.get(":when"))
 
 
 def builtin_condition(kind: Any, value: Any | None = None, label: Any | None = None) -> Condition:

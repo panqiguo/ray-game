@@ -17,6 +17,7 @@ from sincity.rules import (
     location_is_visible,
     slot_effective_value,
     slot_value_breakdown,
+    party_actor,
 )
 from sincity.rules.judgment import RESULT_TABLE, clamp_action_value
 
@@ -56,11 +57,21 @@ class ActionAttachmentModel:
 
 
 @dataclass(frozen=True)
+class ActionFactorPreview:
+    label: str
+    value: int
+    source: str
+    actor_id: str | None = None
+
+
+@dataclass(frozen=True)
 class PresentedActionCard:
     action: ActionDef
     card: TableCardModel
     slots: tuple[ActionSlotModel, ...]
     attachment: ActionAttachmentModel | None
+    actor_factors: tuple[ActionFactorPreview, ...] = ()
+    environment_factors: tuple[ActionFactorPreview, ...] = ()
     position: tuple[int, int] | None = None
 
 
@@ -117,7 +128,7 @@ def present_action_card(state: GameState, action: ActionDef) -> PresentedActionC
     metadata: tuple[str, ...] = ()
     if action.check is not None:
         suits = "通用" if not action.check.suits else " / ".join(SUIT_LABELS[suit] for suit in action.check.suits)
-        metadata = (suits, RISK_LABELS[action.check.risk], *_check_value_tags(state, action))
+        metadata = (suits, RISK_LABELS[action.check.risk])
     return PresentedActionCard(
         action=action,
         card=TableCardModel(
@@ -133,6 +144,8 @@ def present_action_card(state: GameState, action: ActionDef) -> PresentedActionC
         ),
         slots=_present_action_slots(state, action, pending is not None),
         attachment=_present_action_attachment(state, action, pending),
+        actor_factors=_actor_factor_previews(state, action),
+        environment_factors=_environment_factor_previews(action),
         position=action.position,
     )
 
@@ -231,25 +244,36 @@ def _slot_label(requirement: InputRequirement) -> str:
     return label
 
 
-def _check_value_tags(state: GameState, action: ActionDef) -> tuple[str, ...]:
+def _actor_factor_previews(state: GameState, action: ActionDef) -> tuple[ActionFactorPreview, ...]:
     if action.check is None:
         return ()
-    labels: list[str] = []
-    owner_id = "cole"
-    values = state.deck.spirit_values
+    previews: list[ActionFactorPreview] = []
+    actor_ids = [state.player_actor_id, *state.companion_actor_ids] if state.active_encounter is not None else [state.player_actor_id]
     for suit in action.check.suits:
-        key = suit.value
-        value = values.get(key, 0) if owner_id == "cole" else 0
-        if value != 0:
-            labels.append(f"{SUIT_LABELS[suit]} +{value}" if value > 0 else f"{SUIT_LABELS[suit]} {value}")
-    for modifier in action.check.modifiers:
-        if modifier.active and modifier.value != 0:
-            labels.append(f"{modifier.label} +{modifier.value}" if modifier.value > 0 else f"{modifier.label} {modifier.value}")
-    return tuple(labels)
+        for actor_id in actor_ids:
+            actor = party_actor(state, actor_id)
+            if not actor.can_act:
+                continue
+            value = getattr(actor, suit.value)
+            previews.append(ActionFactorPreview(label=f"{actor.name} {SUIT_LABELS[suit]}", value=value, source="actor", actor_id=actor_id))
+    return tuple(previews)
+
+
+def _environment_factor_previews(action: ActionDef) -> tuple[ActionFactorPreview, ...]:
+    if action.check is None:
+        return ()
+    return tuple(
+        ActionFactorPreview(label=factor.label, value=factor.value, source="environment")
+        for factor in action.check.factors
+        if factor.active
+    )
 
 
 def _format_value_breakdown(breakdown) -> str:
     chunks = [f"卡牌 {breakdown.base}"]
-    for part in breakdown.parts:
+    if breakdown.actor_part is not None:
+        part = breakdown.actor_part
+        chunks.append(f"{part.label} +{part.value}" if part.value > 0 else f"{part.label} {part.value}")
+    for part in breakdown.environment_parts:
         chunks.append(f"{part.label} +{part.value}" if part.value > 0 else f"{part.label} {part.value}")
     return " · ".join(chunks)

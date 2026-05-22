@@ -2,17 +2,17 @@
 (include "../common_clock_macros.scm")
 (include "../common_world_bindings.scm")
 
-(define stealth-modifiers
+(define stealth-factors
   (lambda ()
     (list
-      (modifier -1 :when security_online :label "监控"))))
+      (factor -1 :when security_online :label "监控"))))
 
-(define safe-modifiers
+(define safe-factors
   (lambda ()
     (append
-      (stealth-modifiers)
+      (stealth-factors)
       (list
-        (modifier -1 :when (and guard_at_safe (not power_cut)) :label "守卫")))))
+        (factor -1 :when (and guard_at_safe (not power_cut)) :label "守卫")))))
 
 (define-scene power-room
   (scene
@@ -33,7 +33,7 @@
         :check (check
           :suits (list 逻辑)
           :risk 'mid
-          :modifiers (stealth-modifiers)
+          :factors (stealth-factors)
           :ok (outcome (list (effect 'clock+ power_progress 2)) "你切开一组主线，配电柜的嗡鸣低了一截。")
           :partial (outcome (list (effect 'clock+ power_progress 1) (effect 'clock+ alert 1)) "线路松了，但电火花照亮了半面墙。")
           :fail (outcome (list (effect 'clock+ alert 1)) "你没能找到正确的线路，继电器响了一声。")))
@@ -63,7 +63,7 @@
         :check (check
           :suits (list 逻辑)
           :risk 'mid
-          :modifiers (stealth-modifiers)
+          :factors (stealth-factors)
           :ok (outcome (list (effect 'clock+ camera_progress 2)) "你拔掉一组线路，屏幕墙抖了一下。")
           :partial (outcome (list (effect 'clock+ camera_progress 1) (effect 'clock+ alert 1)) "你找到了线路，但短路声传进走廊。")
           :fail (outcome (list (effect 'clock+ alert 1)) "警报灯闪了一下，你不得不缩回手。")))
@@ -89,7 +89,7 @@
         :check (check
           :suits (list 感知)
           :risk 'low
-          :modifiers (stealth-modifiers)
+          :factors (stealth-factors)
           :ok (outcome (list (effect 'clock+ tool_progress 2)) "你找到一套薄撬片和短柄螺丝刀。")
           :partial (outcome (list (effect 'clock+ tool_progress 1)) "你摸到几件能用的小工具，但还差关键那件。")
           :fail (outcome (list (effect 'clock+ alert 1)) "箱子翻得太响，走廊里有人停了一下。")))
@@ -100,7 +100,7 @@
         :check (check
           :suits (list 感知)
           :risk 'low
-          :modifiers (stealth-modifiers)
+          :factors (stealth-factors)
           :ok (outcome (list (effect 'clock+ money_search 1) (effect 'add money 4)) "你摸出几张皱巴巴的钞票。")
           :partial (outcome (list (effect 'clock+ money_search 1) (effect 'add money 2)) "你翻出一点零钱。")
           :fail (outcome (list (effect 'clock+ money_search 1) (effect 'clock+ alert 1)) "抽屉卡住，响声有点刺耳。"))))))
@@ -118,7 +118,7 @@
         :check (check
           :suits (list 逻辑)
           :risk 'high
-          :modifiers (safe-modifiers)
+          :factors (safe-factors)
           :ok (outcome (list (effect 'clock+ safe 2)) "锁舌松开了一大截。")
           :partial (outcome (list (effect 'clock+ safe 1) (effect 'clock+ alert 1)) "你推进了锁芯，但金属声太清楚。")
           :fail (outcome (list (effect 'clock+ alert 1)) "锁芯卡住，看守似乎听见了什么。")))
@@ -137,12 +137,12 @@
     :children (list (power-room) (camera-room) (storage-room) (hall))))
 
 (content
-  :meta (meta :key '测试切断潜入 :title "测试切断与潜入" :desc "测试监控关注、断电窗口、监控断开窗口、工具和看守状态。")
+  :meta (meta :key '测试切断潜入 :title "不错:切断与潜入" :desc "测试监控关注、断电窗口、监控断开窗口、工具和看守状态。")
   :on-success (list (effect 'set 'test_infiltration_done true))
   :on-fail (list (effect 'set 'test_infiltration_failed true) (effect 'add health -1))
   :on-cycle (list
-    (when (not power_cut)
-      (effect 'clock+ alert 1))
+    ;; (when (not power_cut)
+    ;;   (effect 'clock+ alert 1))
     (when power_cut
       (effect 'clock+ backup_power 1))
     (when monitor_cut

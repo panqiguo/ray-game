@@ -20,7 +20,7 @@ from sincity.rules import (
     claim_growth,
     close_modal,
     count_spirit_cards,
-    encounter_action_points,
+    encounter_action_cards,
     endure_pressure_during_encounter,
     open_modal,
     requirement_is_slotted,
@@ -34,6 +34,7 @@ from sincity.rules import (
     slot_is_exhausted,
     slot_is_locked,
     slot_trauma_count,
+    party_actor,
 )
 
 from sincity.rules.notifications import push_notification
@@ -77,6 +78,10 @@ def draw_hud(font: Font | None, state: GameState) -> None:
         f"警察 {state.world.values.get('police_relation', 0)}"
     )
     draw_text(font, relation_text, int(hud.x + 392), int(hud.y + 17), day_style.size, day_style.color)
+    if state.companion_actor_ids:
+        companion_text = "同行 " + "、".join(state.party[actor_id].name for actor_id in state.companion_actor_ids)
+        companion_x = int(hud.x + 660)
+        draw_text(font, companion_text, companion_x, int(hud.y + 17), day_style.size, ui_text_color("accent"))
     draw_text(font, f"第 {state.day} 天", int(hud.x + hud.width - 248), int(hud.y + 17), day_style.size, day_style.color)
     if text_button(font, Rectangle(hud.x + hud.width - 148, hud.y + 10, 120, 34), f"档案 {state.growth_points}", ui_text_size("body")):
         if state.modal.kind == "profile":
@@ -92,17 +97,17 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
     hand_title_style = ui_text_style("subtitle")
     subtitle_style = ui_text_style("body", "muted")
     draw_text(font, "行动卡", int(hand.x) + 18, int(hand.y) + 14, hand_title_style.size, hand_title_style.color)
-    encounter_points = encounter_action_points(state)
-    energy_exhausted = False
-    if encounter_points is not None:
-        current, cap = encounter_points
-        energy_exhausted = current <= 0
-        energy_style = ui_text_style("subtitle", "danger" if energy_exhausted else "accent", scale=0.8, minimum_size=18)
-        energy_label = f"行动 {current}/{cap}"
+    encounter_cards = encounter_action_cards(state)
+    cards_exhausted = False
+    if encounter_cards is not None:
+        current, cap = encounter_cards
+        cards_exhausted = current <= 0
+        energy_style = ui_text_style("subtitle", "danger" if cards_exhausted else "accent", scale=0.8, minimum_size=18)
+        energy_label = f"可用 {current}/{cap}"
         energy_x = int(hand.x) + 166
         draw_text(font, energy_label, energy_x, int(hand.y) + 14, energy_style.size, energy_style.color)
-        detail = "行动需要放入一张行动卡；执行后消耗这张卡。"
-        detail_style = ui_text_style("body", "danger" if energy_exhausted else "muted")
+        detail = "行动只需要可用行动卡；执行后消耗这张卡。"
+        detail_style = ui_text_style("body", "danger" if cards_exhausted else "muted")
         detail_x = energy_x + int(measure_text_width(font, energy_label, energy_style.size)) + 10
         draw_text(font, detail, detail_x, int(hand.y) + 17, detail_style.size, detail_style.color)
         pressure_rect = Rectangle(hand.x + hand.width - INVENTORY_PANEL_RIGHT_OFFSET - 198, hand.y + 12, 84, 30)
@@ -118,33 +123,49 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
         subtitle = "灰掉表示今天已经使用。行动卡本身无属性，点数受健康影响。"
         draw_text(font, subtitle, int(hand.x) + 166, int(hand.y) + 17, subtitle_style.size, subtitle_style.color)
     x = int(hand.x) + 18
-    y = int(hand.y) + 48
+    y = int(hand.y) + 50
     cards_right_limit = _inventory_panel_rect().x - 12
     clicked_exhausted_card = False
+    current_owner = ""
     for slot_index, slot_id in enumerate(list_all_spirit_slots(state.deck)):
+        owner_id = slot_id.split(":", 1)[0]
+        if owner_id != current_owner:
+            current_owner = owner_id
+            actor = party_actor(state, owner_id)
+            if slot_index > 0:
+                x += 24
+                y = int(hand.y) + 50
+            group_style = ui_text_style("body_sm", "accent" if actor.is_player else "muted")
+            group_label = ("主角" if actor.is_player else f"同伴 · {actor.name}") + f"  生命 {actor.health}/{actor.max_health}  精力 {actor.energy}/{actor.max_energy}"
+            draw_text(font, group_label, x, y, group_style.size, group_style.color)
+            y += 20
         rect = Rectangle(x, y, 150, 106)
         if rect.x + rect.width > cards_right_limit:
             break
         locked = slot_is_locked(state, slot_id)
-        disabled = locked or energy_exhausted or slot_is_exhausted(state, slot_id) or not slot_is_available(state, slot_id)
+        actor = party_actor(state, owner_id)
+        actor_exhausted = False
+        disabled = locked or cards_exhausted or actor_exhausted or slot_is_exhausted(state, slot_id) or not slot_is_available(state, slot_id)
         if disabled and state.selected_input.kind == "card" and state.selected_input.index == slot_index:
             clear_selected_input(state)
         selected = (state.selected_input.kind == "card" and state.selected_input.index == slot_index) and not disabled
         slotted = (state.assembly.slotted_card_index == slot_index) and not disabled
         hinted = (not disabled) and card_hint_flash_active(state, action) and card_matches_action_check(action, slot_id)
-        if energy_exhausted and pointer_pressed(rect, z=Z_HAND):
+        if cards_exhausted and pointer_pressed(rect, z=Z_HAND):
             clicked_exhausted_card = True
         if locked:
             _draw_locked_slot(font, rect, "健康不足", "行动槽位已锁定")
+        elif actor_exhausted:
+            _draw_locked_slot(font, rect, "精力不足", f"{actor.name} 不能行动")
         elif draw_compact_card(
             font,
             rect,
             slot_id,
             selected or slotted,
-            interactive=(not energy_exhausted) and slot_is_available(state, slot_id) and not disabled,
+            interactive=(not cards_exhausted) and slot_is_available(state, slot_id) and not disabled,
             hinted=hinted,
             disabled=disabled,
-            no_energy=energy_exhausted,
+            no_energy=cards_exhausted,
             state=state,
             action=action,
         ):
@@ -183,7 +204,8 @@ def draw_compact_card(
     action: ActionDef | None = None,
 ) -> bool:
     owner_id = card_id.split(":", 1)[0]
-    owner_name = state.deck.actor_names.get(owner_id, owner_id) if state is not None else owner_id
+    owner_name = party_actor(state, owner_id).name if state is not None else owner_id
+    owner_is_player = party_actor(state, owner_id).is_player if state is not None else owner_id == "cole"
     boosted = state is not None and state.deck.action_card_bonuses.get(card_id, 0) > 0
     if disabled is None:
         disabled = state is not None and (slot_is_exhausted(state, card_id) or not slot_is_available(state, card_id))
@@ -199,6 +221,8 @@ def draw_compact_card(
         border = Color(230, 206, 126, 255)
     clicked = clickable(rect) if (interactive and not disabled) else False
     draw_frame(rect, fill, border)
+    if not disabled and not owner_is_player:
+        _draw_actor_card_tint(rect, _actor_theme_color(owner_id))
     if hinted and not selected:
         draw_rectangle_rounded_lines_ex(rect, 0.03, 8, 2.0, Color(230, 206, 126, 190))
     if disabled:
@@ -219,7 +243,13 @@ def _draw_hand_card_head(font: Font | None, rect: Rectangle, name: str, *, card_
     x = int(rect.x) + 12
     y = int(rect.y) + 12
     draw_text(font, number_text, x, y, text_size, number_style.color)
-    draw_text(font, name, x + int(measure_text_width(font, number_text, text_size)) + 6, y + 1, suffix_size, suffix_style.color)
+    name_x = x + int(measure_text_width(font, number_text, text_size)) + 8
+    owner_id = card_id.split(":", 1)[0]
+    owner_is_player = state is None or party_actor(state, owner_id).is_player
+    if not owner_is_player and not disabled:
+        _draw_actor_name_chip(font, Rectangle(name_x, y + 1, rect.width - (name_x - rect.x) - 14, 22), name, _actor_theme_color(owner_id), suffix_size)
+    else:
+        draw_text(font, name, name_x, y + 1, suffix_size, suffix_style.color)
     if bonus > 0 and not disabled:
         bonus_rect = Rectangle(rect.x + rect.width - 48, rect.y + 10, 34, 20)
         draw_frame(bonus_rect, Color(84, 68, 46, 255), Color(214, 184, 96, 245))
@@ -228,6 +258,33 @@ def _draw_hand_card_head(font: Font | None, rect: Rectangle, name: str, *, card_
     if trauma and not disabled:
         trauma_style = ui_text_style("body_sm", "warning")
         draw_text(font, f"创伤 {trauma}", x, y + 34, trauma_style.size, trauma_style.color)
+
+
+def _actor_theme_color(actor_id: str) -> Color:
+    if actor_id == "lena":
+        return Color(70, 142, 190, 255)
+    if actor_id == "marco":
+        return Color(122, 106, 190, 255)
+    return Color(140, 146, 158, 255)
+
+
+def _draw_actor_card_tint(rect: Rectangle, color: Color) -> None:
+    draw_rectangle_rec(
+        Rectangle(rect.x + 2, rect.y + 2, rect.width - 4, rect.height - 4),
+        Color(color.r, color.g, color.b, 24),
+    )
+    draw_rectangle_rec(
+        Rectangle(rect.x + 2, rect.y + 2, 8, rect.height - 4),
+        Color(color.r, color.g, color.b, 96),
+    )
+
+
+def _draw_actor_name_chip(font: Font | None, rect: Rectangle, name: str, color: Color, size: int) -> None:
+    padding_x = 8
+    chip_w = min(rect.width, measure_text_width(font, name, size) + padding_x * 2)
+    chip = Rectangle(rect.x, rect.y, chip_w, 20)
+    draw_rectangle_rec(chip, Color(color.r, color.g, color.b, 96))
+    draw_text(font, name, int(chip.x + padding_x), int(chip.y + 2), size, ui_text_color("default"))
 
 
 def _draw_hand_card_suit(
@@ -244,17 +301,14 @@ def _draw_hand_card_suit(
     suit_label = owner_name
     if action is not None and action.check is not None and state is not None:
         effective = slot_effective_value(state, card_id, action.check)
-        attr_label = "通用" if not action.check.suits else " / ".join(SUIT_LABELS[suit] for suit in action.check.suits)
-        suffix = (
-            "已使用"
-            if slot_is_exhausted(state, card_id)
-            else "精力不足"
-            if no_energy
-            else "不可用"
-            if disabled
-            else f"{attr_label} => {effective}"
-        )
-        suit_label = f"{suit_label}  {suffix}"
+        if slot_is_exhausted(state, card_id):
+            suit_label = "已使用"
+        elif no_energy:
+            suit_label = "精力不足"
+        elif disabled:
+            suit_label = "不可用"
+        else:
+            suit_label = f"预览：状态档 {effective}"
     elif disabled:
         suit_label = f"{suit_label}  不可用"
     suit_style = ui_text_style("body", "subtle" if disabled else "muted")
@@ -294,9 +348,17 @@ def draw_selected_card_curve_overlay(state: GameState) -> None:
     if state.selected_input.kind == "card" and state.selected_input.index is not None:
         hand = layout().hand
         x = int(hand.x) + 18
-        y = int(hand.y) + 48
+        y = int(hand.y) + 50
         cards_right_limit = _inventory_panel_rect().x - 12
+        current_owner = ""
         for index, card_id in enumerate(list_all_spirit_slots(state.deck)):
+            owner_id = card_id.split(":", 1)[0]
+            if owner_id != current_owner:
+                current_owner = owner_id
+                if index > 0:
+                    x += 24
+                    y = int(hand.y) + 50
+                y += 20
             rect = Rectangle(x, y, 150, 106)
             if rect.x + rect.width > cards_right_limit:
                 return
@@ -462,7 +524,7 @@ def draw_profile_modal(font: Font | None, state: GameState, growth_defs=GROWTH_D
     section_style = ui_text_style("body", "accent")
     body_style = ui_text_style("body_sm", "muted")
     faint_style = ui_text_style("body", "subtle")
-    draw_text(font, "个人档案", int(rect.x) + 20, int(rect.y) + 18, title_style.size, title_style.color)
+    draw_text(font, "队伍档案", int(rect.x) + 20, int(rect.y) + 18, title_style.size, title_style.color)
     if text_button(font, Rectangle(rect.x + rect.width - 98, rect.y + 18, 70, 28), "关闭", ui_text_size("body")):
         close_modal(state)
         end_layer("profile")
@@ -473,59 +535,90 @@ def draw_profile_modal(font: Font | None, state: GameState, growth_defs=GROWTH_D
 
     content_y = int(rect.y) + 96
     content_h = int(rect.height) - 118
-    left = Rectangle(rect.x + 20, content_y, 300, content_h)
-    right = Rectangle(rect.x + 330, content_y, rect.width - 350, content_h)
+    left = Rectangle(rect.x + 20, content_y, 380, content_h)
+    right = Rectangle(left.x + left.width + 10, content_y, 210, content_h)
+    companions = Rectangle(right.x + right.width + 10, content_y, rect.x + rect.width - (right.x + right.width + 30), content_h)
     draw_frame(left, Color(18, 20, 26, 240), Color(78, 84, 96, 210))
     draw_frame(right, Color(18, 20, 26, 240), Color(78, 84, 96, 210))
+    draw_frame(companions, Color(18, 20, 26, 240), Color(78, 84, 96, 210))
     draw_text(font, "成长选项", int(left.x) + 12, int(left.y) + 10, section_style.size, section_style.color)
-    draw_text(font, "当前精神", int(right.x) + 12, int(right.y) + 10, section_style.size, section_style.color)
+    draw_text(font, "主角", int(right.x) + 12, int(right.y) + 10, section_style.size, section_style.color)
+    draw_text(font, "同伴", int(companions.x) + 12, int(companions.y) + 10, section_style.size, section_style.color)
 
-    choice_y = int(left.y) + 38
     counts = count_spirit_cards(state)
-    for growth_id in (
+    growth_ids = (
         "upgrade_logic",
         "upgrade_perception",
         "upgrade_willpower",
         "major_logic_slot",
         "major_perception_slot",
         "major_willpower_slot",
-    ):
+    )
+    card_gap = 10
+    card_w = (left.width - 30) / 2
+    card_h = min(104, (left.height - 58 - card_gap * 2) / 3)
+    for index, growth_id in enumerate(growth_ids):
         growth = growth_defs[growth_id]
         can_claim = state.growth_points > 0
         unmet_labels = tuple(condition.label for condition in growth.conditions if condition.label)
         if unmet_labels:
             if growth_id == "major_logic_slot":
-                can_claim = state.deck.spirit_values["logic"] >= 3
+                can_claim = party_actor(state, state.player_actor_id).logic >= 3
             elif growth_id == "major_perception_slot":
-                can_claim = state.deck.spirit_values["perception"] >= 3
+                can_claim = party_actor(state, state.player_actor_id).perception >= 3
             elif growth_id == "major_willpower_slot":
-                can_claim = state.deck.spirit_values["willpower"] >= 3
-        card_rect = Rectangle(left.x + 10, choice_y, left.width - 20, 92)
+                can_claim = party_actor(state, state.player_actor_id).willpower >= 3
+        col = index % 2
+        row = index // 2
+        card_rect = Rectangle(left.x + 10 + col * (card_w + card_gap), left.y + 38 + row * (card_h + card_gap), card_w, card_h)
         draw_frame(card_rect, Color(24, 27, 34, 255), Color(92, 96, 104, 220) if can_claim else Color(70, 72, 78, 180))
-        draw_text(font, growth.title, int(card_rect.x) + 12, int(card_rect.y) + 10, section_style.size, section_style.color if can_claim else ui_text_color("disabled"))
+        draw_text(font, growth.title, int(card_rect.x) + 10, int(card_rect.y) + 8, body_style.size, section_style.color if can_claim else ui_text_color("disabled"))
         body_lines = wrap_text_lines_any(font, growth.description, card_rect.width - 24, body_style.size)
-        body_y = int(card_rect.y) + 34
+        body_y = int(card_rect.y) + 30
         for line in body_lines[:2]:
-            draw_text(font, line, int(card_rect.x) + 12, body_y, body_style.size, body_style.color)
+            draw_text(font, line, int(card_rect.x) + 10, body_y, body_style.size, body_style.color)
             body_y += body_style.line_height - 2
         if unmet_labels and not can_claim:
-            draw_text(font, unmet_labels[0], int(card_rect.x) + 12, int(card_rect.y + card_rect.height) - 24, body_style.size, faint_style.color)
+            draw_text(font, unmet_labels[0], int(card_rect.x) + 10, int(card_rect.y + card_rect.height) - 24, body_style.size, faint_style.color)
         button_label = "确认" if can_claim else "不可用"
-        if text_button(font, Rectangle(card_rect.x + card_rect.width - 92, card_rect.y + card_rect.height - 28, 80, 20), button_label, ui_text_size("body_sm"), disabled=not can_claim):
+        if text_button(font, Rectangle(card_rect.x + card_rect.width - 76, card_rect.y + card_rect.height - 26, 66, 20), button_label, ui_text_size("body_sm"), disabled=not can_claim):
             claim_growth(state, growth_id)
             end_layer("profile")
             return
-        choice_y += 102
 
     owned_y = int(right.y) + 40
     for label, key in (("逻辑", "logic"), ("感知", "perception"), ("意志", "willpower")):
-        value = state.deck.spirit_values[key]
+        value = getattr(party_actor(state, state.player_actor_id), key)
         slots = counts[key]
         draw_text(font, f"· {label} 值 {value} / 槽位 {slots}", int(right.x) + 12, owned_y, meta_style.size, meta_style.color)
         owned_y += 24
     owned_y += 16
-    draw_text(font, "每点生命损失会按固定顺序给精力叠加创伤。每层创伤让该项精力的值 -1。", int(right.x) + 12, owned_y, faint_style.size, faint_style.color)
+    draw_text(font, "每点生命损失会按固定顺序给精力叠加创伤。", int(right.x) + 12, owned_y, faint_style.size, faint_style.color)
+    _draw_companion_profile_column(font, companions, state, meta_style.size)
     end_layer("profile")
+
+
+def _draw_companion_profile_column(font: Font | None, rect: Rectangle, state: GameState, text_size: int) -> None:
+    if not state.companion_actor_ids:
+        empty_style = ui_text_style("body", "subtle")
+        draw_text(font, "暂无同行同伴。", int(rect.x) + 12, int(rect.y) + 42, empty_style.size, empty_style.color)
+        return
+    y = int(rect.y) + 42
+    label_style = ui_text_style("body", "muted")
+    small_style = ui_text_style("body_sm", "subtle")
+    for actor_id in state.companion_actor_ids:
+        actor = party_actor(state, actor_id)
+        color = _actor_theme_color(actor_id)
+        draw_rectangle_rec(Rectangle(rect.x + 12, y, rect.width - 24, 28), Color(color.r, color.g, color.b, 70))
+        draw_text(font, actor.name, int(rect.x) + 22, y + 5, label_style.size, ui_text_color("default"))
+        y += 36
+        draw_text(font, f"生命 {actor.health}/{actor.max_health}  精力 {actor.energy}/{actor.max_energy}", int(rect.x) + 16, y, text_size, label_style.color)
+        y += 24
+        draw_text(font, f"逻辑 {actor.logic}  感知 {actor.perception}  意志 {actor.willpower}", int(rect.x) + 16, y, text_size, label_style.color)
+        best = max((("逻辑", actor.logic), ("感知", actor.perception), ("意志", actor.willpower)), key=lambda item: item[1])
+        y += 22
+        draw_text(font, f"擅长：{best[0]}", int(rect.x) + 16, y, small_style.size, small_style.color)
+        y += 34
 
 
 def draw_card_pile_modal(font: Font | None, state: GameState) -> None:

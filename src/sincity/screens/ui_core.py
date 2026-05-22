@@ -290,13 +290,13 @@ def text_button(font: Font | None, rect: Rectangle, label: str, size: int | None
     return clicked
 
 
-def pill(font: Font | None, rect: Rectangle, label: str, selected: bool = False, disabled: bool = False, scale: float = 1.0) -> bool:
+def pill(font: Font | None, rect: Rectangle, label: str, selected: bool = False, disabled: bool = False, scale: float = 1.0, z: int | None = None) -> bool:
     fill = Color(80, 66, 47, 255) if selected else Color(30, 34, 42, 255)
     border = Color(190, 162, 96, 255) if selected else Color(88, 92, 100, 220)
     if disabled:
         fill = Color(24, 27, 34, 255)
         border = Color(70, 72, 78, 180)
-    clicked = False if disabled else clickable(rect)
+    clicked = False if disabled else clickable(rect, z=z)
     draw_frame(rect, fill, border)
     label_style = ui_text_style("body", "disabled" if disabled else "default", scale=scale, minimum_size=11)
     draw_centered_text(font, label, rect, label_style.size, label_style.color)

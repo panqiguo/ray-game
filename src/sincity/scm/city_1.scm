@@ -560,26 +560,32 @@
     :desc "临时测试入口。这里不接主线，只用来快速比较几个情景模型的手感。"
     :position '(1460 520)
     :actions (list
-      (action
-        :title "测试：赌场后台"
-        :desc "代币、准备时间、负期望裸赌与正期望规则赌博。"
-        :effects (list (effect 'start-encounter '测试赌场后台)))
+      ;; 不错, 但是数值还是单人的, 一旦加了一个队友, 情况就不同了
       (action
         :title "测试：仓库撤退"
         :desc "持续涌现敌人、通道和出口推进之间的分诊。"
         :effects (list (effect 'start-encounter '测试仓库撤退)))
       (action
+        :title "测试：切断与潜入"
+        :desc "操作区域改变环境状态，再反过来影响保险箱难度。"
+        :effects (list (effect 'start-encounter '测试切断潜入)))
+
+      ;; 如果是多人, 那么需求三个线索的不同性质的行为就变得有趣了
+      (action
         :title "测试：档案室拼图"
         :desc "线索越多分析越简单，但总时间不够。"
         :effects (list (effect 'start-encounter '测试档案室拼图)))
+
+      ;; emm
+      (action
+        :title "测试：赌场后台"
+        :desc "代币、准备时间、负期望裸赌与正期望规则赌博。"
+        :effects (list (effect 'start-encounter '测试赌场后台)))
       (action
         :title "测试：律师事务所"
         :desc "制造混乱打开短窗口，或直接偷看承担暴露。"
         :effects (list (effect 'start-encounter '测试律师事务所)))
-      (action
-        :title "测试：切断与潜入"
-        :desc "操作区域改变环境状态，再反过来影响保险箱难度。"
-        :effects (list (effect 'start-encounter '测试切断潜入)))
+      
       (action
         :title "测试：姿态对抗"
         :desc "固定姿态循环、反应骰和针对性破绽行动。"

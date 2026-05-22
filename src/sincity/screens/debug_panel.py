@@ -7,7 +7,7 @@ from pyray import *  # type: ignore
 from sincity.model.state import GameState
 from sincity.rendering import draw_text
 from sincity.rules.debug_save import debug_load, debug_save, slot_path
-from sincity.rules.progression import change_energy, change_health
+from sincity.rules.progression import add_next_companion_for_debug, change_energy, change_health, remove_companions_for_debug
 from sincity.rules.rng import RandomSource
 
 from sincity.rules.notifications import push_notification
@@ -43,8 +43,17 @@ def draw_debug_panel(font: Font | None, state: GameState, rng: RandomSource) -> 
         change_health(state, -1)
     if text_button(font, Rectangle(1248, y, 140, 30), "重启", button_size):
         state.pending_restart = True
+    y += 40
+    draw_text(font, "同伴：" + _companion_summary(state), 1096, y + 6, body_style.size, body_style.color)
+    y += 34
+    if text_button(font, Rectangle(1096, y, 140, 30), "添加同伴", button_size, disabled=len(state.companion_actor_ids) >= 2):
+        name = add_next_companion_for_debug(state, rng)
+        push_notification(state, "success", "同伴加入", name or "队伍已满")
+    if text_button(font, Rectangle(1248, y, 140, 30), "移除同伴", button_size, disabled=not state.companion_actor_ids):
+        removed = remove_companions_for_debug(state, rng)
+        push_notification(state, "warning", "同伴离队", "、".join(removed) if removed else "没有同伴")
 
-    y = 258
+    y = 298
     draw_text(font, "━ 存档 ━", 1096, y, body_style.size, body_style.color)
     y += 20
 
@@ -80,3 +89,14 @@ SLOT_LABELS: dict[int, str] = {
     3: "save_02",
     4: "save_03",
 }
+
+
+def _companion_summary(state: GameState) -> str:
+    if not state.companion_actor_ids:
+        return "无"
+    parts: list[str] = []
+    for actor_id in state.companion_actor_ids:
+        actor = state.party[actor_id]
+        best = max((("逻辑", actor.logic), ("感知", actor.perception), ("意志", actor.willpower)), key=lambda item: item[1])
+        parts.append(f"{actor.name} {best[0]}{best[1]}")
+    return "，".join(parts)

@@ -16,7 +16,9 @@ def debug_panel_rect() -> Rectangle:
 
 def profile_panel_rect() -> Rectangle:
     hud = layout().hud
-    return Rectangle(hud.x + hud.width - 500, hud.y + hud.height + 12, 500, 440)
+    width = min(860, hud.width - 40)
+    height = min(560, max(440, get_screen_height() - int(hud.y + hud.height + 44)))
+    return Rectangle(hud.x + hud.width - width, hud.y + hud.height + 12, width, height)
 
 
 def profile_blocking_rect() -> Rectangle:

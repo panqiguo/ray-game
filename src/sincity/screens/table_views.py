@@ -18,11 +18,11 @@ from sincity.rules import (
 )
 
 from .city_presenters import PresentedWorldObject
-from .table_presenters import ActionSlotModel, PresentedActionCard, PresentedLocationCard
-from .ui_core import draw_frame, layout, pill, wrap_text_lines, wrap_text_lines_any
+from .table_presenters import ActionFactorPreview, ActionSlotModel, PresentedActionCard, PresentedLocationCard
+from .ui_core import current_layer_z, draw_frame, layout, measure_text_width, pill, register_input_region, wrap_text_lines, wrap_text_lines_any
 from .ui_cards import draw_table_card
 from .ui_panels import draw_result_strip
-from .ui_text import ui_text_size, ui_text_style
+from .ui_text import ui_text_color, ui_text_size, ui_text_style
 from .widgets import draw_note_block, draw_scrim, draw_slot_chip, draw_table_shell
 
 
@@ -91,10 +91,20 @@ def draw_world_objects(font: Font | None, state: GameState, rng, rect: Rectangle
 def draw_action_grid(font: Font | None, state: GameState, rng, cards: tuple[PresentedActionCard, ...], rect: Rectangle) -> None:
     if not cards:
         return
-    columns = max(1, min(len(cards), int((rect.width + 18.0) // (232.0 + 18.0))))
+    columns = action_grid_columns(rect, cards)
     laid_out = layout_action_cards(rect, cards, columns)
     for presented, (card, scale) in zip(cards, laid_out):
         draw_action_card(font, state, presented, card, rng, scale=scale)
+
+
+def action_grid_columns(rect: Rectangle, cards: tuple[PresentedActionCard, ...]) -> int:
+    card_w = 232.0
+    reserved_w = card_w + 2 * action_factor_reserve(cards)
+    comfortable = max(1, int((rect.width + 18.0) // (reserved_w + 18.0)))
+    compact = max(1, int((rect.width + 18.0) // (card_w + 18.0)))
+    if comfortable >= len(cards):
+        return len(cards)
+    return min(len(cards), max(comfortable, min(compact, 3)))
 
 
 def _location_grid_natural_height(font: Font | None, cards: tuple[PresentedLocationCard, ...], columns: int) -> float:
@@ -132,6 +142,17 @@ def draw_action_card(font: Font | None, state: GameState, presented: PresentedAc
     action = presented.action
     pending = state.pending_resolution if state.pending_resolution and state.pending_resolution.resolution.action_id == action.id else None
     draw_table_card(font, rect, state, presented.card, scale=scale)
+    draw_action_factor_sidebars(font, rect, presented, scale=scale)
+
+    button_rects: tuple[Rectangle, Rectangle] | None = None
+    button_z = current_layer_z() + 1
+    if presented.attachment is not None:
+        button_strip = Rectangle(rect.x + 18.0 * scale, rect.y + rect.height + 8.0 * scale, rect.width - 36.0 * scale, 24.0 * scale)
+        retract_rect = Rectangle(button_strip.x, button_strip.y, 78.0 * scale, 22.0 * scale)
+        execute_rect = Rectangle(button_strip.x + button_strip.width - 78.0 * scale, button_strip.y, 78.0 * scale, 22.0 * scale)
+        register_input_region("action_retract_button", retract_rect, z=button_z)
+        register_input_region("action_execute_button", execute_rect, z=button_z, interactive=presented.attachment.can_execute)
+        button_rects = (retract_rect, execute_rect)
 
     metadata_rows = max(0, len(presented.card.metadata) - 1)
     slot_y = rect.y + (124.0 + metadata_rows * 18.0) * scale
@@ -151,11 +172,53 @@ def draw_action_card(font: Font | None, state: GameState, presented: PresentedAc
 
     if presented.attachment is not None:
         preview_rect = Rectangle(rect.x + 14.0 * scale, rect.y + rect.height - 90.0 * scale, rect.width - 28.0 * scale, 68.0 * scale)
-        button_rect = Rectangle(rect.x + 18.0 * scale, rect.y + rect.height + 8.0 * scale, rect.width - 36.0 * scale, 24.0 * scale)
-        draw_action_attachment(font, state, action, presented, preview_rect, button_rect, rng, pending, scale=scale)
+        assert button_rects is not None
+        draw_action_attachment(font, state, action, presented, preview_rect, button_rects, rng, pending, scale=scale, button_z=button_z)
     elif presented.card.disabled:
         disabled_style = ui_text_style("body_sm", "subtle", scale=scale, minimum_size=10)
         draw_text(font, "条件未满足或当前资源不足。", int(rect.x + 14.0 * scale), int(rect.y + rect.height - 26.0 * scale), disabled_style.size, disabled_style.color)
+
+
+def draw_action_factor_sidebars(font: Font | None, rect: Rectangle, presented: PresentedActionCard, scale: float = 1.0) -> None:
+    sidebar_w = (128.0 if scale >= 0.9 else 96.0) * scale
+    offset = (138.0 if scale >= 0.9 else 78.0) * scale
+    if presented.actor_factors:
+        draw_factor_stack(font, Rectangle(rect.x - offset, rect.y + 104.0 * scale, sidebar_w, 96.0 * scale), presented.actor_factors, align="right", scale=scale)
+    if presented.environment_factors:
+        draw_factor_stack(font, Rectangle(rect.x + rect.width + 10.0 * scale, rect.y + 104.0 * scale, sidebar_w, 96.0 * scale), presented.environment_factors, align="left", scale=scale)
+
+
+def draw_factor_stack(font: Font | None, rect: Rectangle, factors: tuple[ActionFactorPreview, ...], *, align: str, scale: float = 1.0) -> None:
+    chip_h = 18.0 * scale
+    gap = 5.0 * scale
+    y = rect.y
+    for factor in factors[:5]:
+        label = _factor_label(factor)
+        style = ui_text_style("body_sm", scale=scale, minimum_size=9)
+        chip_w = min(rect.width, measure_text_width(font, label, style.size) + 18.0 * scale)
+        x = rect.x + rect.width - chip_w if align == "right" else rect.x
+        color = _factor_theme_color(factor)
+        chip = Rectangle(x, y, chip_w, chip_h)
+        draw_frame(chip, Color(color.r, color.g, color.b, 78), Color(color.r, color.g, color.b, 178))
+        draw_text(font, label, int(chip.x + 8.0 * scale), int(chip.y + 2.0 * scale), style.size, ui_text_color("default"))
+        y += chip_h + gap
+
+
+def _factor_label(factor: ActionFactorPreview) -> str:
+    sign = "+" if factor.value > 0 else ""
+    return f"{factor.label} {sign}{factor.value}"
+
+
+def _factor_theme_color(factor: ActionFactorPreview) -> Color:
+    if factor.actor_id == "cole":
+        return Color(194, 158, 78, 255)
+    if factor.actor_id == "lena":
+        return Color(70, 142, 190, 255)
+    if factor.actor_id == "marco":
+        return Color(122, 106, 190, 255)
+    if factor.source == "environment":
+        return Color(104, 122, 142, 255)
+    return Color(140, 146, 158, 255)
 
 
 def draw_action_attachment(
@@ -164,14 +227,15 @@ def draw_action_attachment(
     action: ActionDef,
     presented: PresentedActionCard,
     rect: Rectangle,
-    button_rect: Rectangle,
+    button_rects: tuple[Rectangle, Rectangle],
     rng,
     pending: PendingResolutionState | None,
     scale: float = 1.0,
+    button_z: int | None = None,
 ) -> None:
     draw_frame(rect, Color(18, 20, 26, 255), Color(78, 84, 98, 220))
     if pending is not None:
-        draw_pending_attachment(font, state, rect, button_rect, pending, scale=scale)
+        draw_pending_attachment(font, state, rect, button_rects, pending, scale=scale, button_z=button_z)
         return
     assert presented.attachment is not None
     title_style = ui_text_style(
@@ -194,13 +258,14 @@ def draw_action_attachment(
             draw_text(font, line, hint_x, hint_y, body_style.size, body_style.color)
             hint_y += body_style.line_height - 1
         end_scissor_mode()
-    if pill(font, Rectangle(button_rect.x, button_rect.y, 78.0 * scale, 22.0 * scale), "收回", False, scale=scale):
+    retract_rect, execute_rect = button_rects
+    if pill(font, retract_rect, "收回", False, scale=scale, z=button_z):
         clear_assembly(state)
-    if pill(font, Rectangle(button_rect.x + button_rect.width - 78.0 * scale, button_rect.y, 78.0 * scale, 22.0 * scale), "执行", False, disabled=not presented.attachment.can_execute, scale=scale):
+    if pill(font, execute_rect, "执行", False, disabled=not presented.attachment.can_execute, scale=scale, z=button_z):
         perform_current_action(state, rng)
 
 
-def draw_pending_attachment(font: Font | None, state: GameState, rect: Rectangle, button_rect: Rectangle, pending: PendingResolutionState, scale: float = 1.0) -> None:
+def draw_pending_attachment(font: Font | None, state: GameState, rect: Rectangle, button_rects: tuple[Rectangle, Rectangle], pending: PendingResolutionState, scale: float = 1.0, button_z: int | None = None) -> None:
     resolution = pending.resolution
     title_style = ui_text_style("body", "muted", scale=scale, minimum_size=10)
     body_style = ui_text_style("body_sm", scale=scale, minimum_size=10)
@@ -387,7 +452,20 @@ def layout_location_cards(font: Font | None, rect: Rectangle, cards: tuple[Prese
 def layout_action_cards(rect: Rectangle, cards: tuple[PresentedActionCard, ...], columns: int) -> list[tuple[Rectangle, float]]:
     if all_positioned(card.position for card in cards):
         return fit_absolute_card_positions(rect, cards, lambda item: item.position, lambda item: item.card.style.width, lambda item: item.card.style.height)
-    return fit_grid_cards(rect, len(cards), 232.0, 224.0, 18.0, 96.0, columns)
+    reserve = action_factor_reserve(cards)
+    laid_out = fit_grid_cards(rect, len(cards), 232.0 + reserve * 2, 224.0, 18.0, 96.0, columns)
+    result: list[tuple[Rectangle, float]] = []
+    for cell, scale in laid_out:
+        result.append((Rectangle(cell.x + reserve * scale, cell.y, 232.0 * scale, cell.height), scale))
+    return result
+
+
+def action_factor_reserve(cards: tuple[PresentedActionCard, ...]) -> float:
+    if not any(card.actor_factors or card.environment_factors for card in cards):
+        return 0.0
+    if len(cards) <= 3:
+        return 138.0
+    return 72.0
 
 
 def all_positioned(positions) -> bool:

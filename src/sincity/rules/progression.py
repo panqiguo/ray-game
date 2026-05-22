@@ -4,7 +4,7 @@ import time
 from dataclasses import dataclass
 
 from sincity.constants import HAND_SIZE, MAX_LOG_LINES
-from sincity.content import GROWTH_DEFS, SCENARIO
+from sincity.content import DEBUG_COMPANION_ORDER, GROWTH_DEFS, PLAYER_ACTOR_ID, SCENARIO, build_initial_party
 from sincity.content.runtime import next_react_rule as next_world_react_rule
 from sincity.content.runtime import react_rule_matches as world_react_rule_matches
 from sincity.content.runtime import render_tasks, render_world
@@ -39,12 +39,15 @@ from sincity.model.enums import Suit
 class CheckValuePart:
     label: str
     value: int
+    source: str = "environment"
+    actor_id: str | None = None
 
 
 @dataclass(frozen=True)
 class CheckValueBreakdown:
     base: int
-    parts: tuple[CheckValuePart, ...]
+    actor_part: CheckValuePart | None
+    environment_parts: tuple[CheckValuePart, ...]
     total: int
 
 
@@ -85,8 +88,11 @@ def start_new_run(seed: int) -> tuple[GameState, RandomSource]:
         growth_points=0,
         seed=seed,
     )
+    state.player_actor_id = PLAYER_ACTOR_ID
+    state.party = build_initial_party(player_health=state.attributes.health, player_energy=state.attributes.stress)
+    state.companion_actor_ids = []
     sync_trauma_cards_with_health(state)
-    start_city_day(state.deck, rng, HAND_SIZE, health=state.attributes.health)
+    start_city_day(state.deck, rng, HAND_SIZE, actors=_active_card_actors(state))
     _reset_action_cycle_from_deck(state)
     sync_world_progress_clocks(state)
     _resolve_world_reacts(state, rng, [])
@@ -128,20 +134,8 @@ def _current_encounter_root_id(state: GameState) -> str:
 
 
 def _reset_action_cycle_from_deck(state: GameState) -> None:
-    cap = len(state.deck.available_slots)
-    state.encounter_action_point_cap = cap
-    state.encounter_action_points = cap
     state.encounter_pressure_used = False
     state.deck.action_card_bonuses.clear()
-
-
-def _sync_action_cycle_cap(state: GameState) -> None:
-    cap = len(state.deck.available_slots) + len(state.deck.exhausted_slots)
-    if cap == state.encounter_action_point_cap:
-        return
-    spent = max(0, state.encounter_action_point_cap - state.encounter_action_points)
-    state.encounter_action_point_cap = cap
-    state.encounter_action_points = max(0, cap - spent)
 
 
 def _reset_encounter_action_cycle(state: GameState) -> None:
@@ -156,12 +150,11 @@ def _sync_encounter_action_cycle(state: GameState) -> None:
         state.encounter_resource_root_id = root_id
 
 
-def encounter_action_points(state: GameState) -> tuple[int, int] | None:
+def encounter_action_cards(state: GameState) -> tuple[int, int] | None:
     if state.screen != ScreenName.ENCOUNTER or state.active_encounter is None:
         return None
     _sync_encounter_action_cycle(state)
-    _sync_action_cycle_cap(state)
-    return (state.encounter_action_points, state.encounter_action_point_cap)
+    return (len(state.deck.available_slots), len(state.deck.available_slots) + len(state.deck.exhausted_slots))
 
 
 def current_world_snapshot(state: GameState):
@@ -238,8 +231,6 @@ def _field_value(state: GameState, key: str) -> int | bool | str:
             return state.world.values.get(key, spec.initial)
         if spec.persist == "world_inventory":
             return state.world.inventory.get(key, int(spec.initial))
-    if key in state.deck.spirit_values:
-        return state.deck.spirit_values[key]
     if key in {"energy", "stress", "health", "logic", "perception", "willpower"}:
         return _world_attr_value(state, key)
     if key in state.world.values:
@@ -276,19 +267,15 @@ def _set_field(state: GameState, key: str, value: int | bool | str, extra_lines:
             state.active_encounter.store[key] = state.world.inventory.get(key, 0)
             _mark_content_dirty(state)
             return
-    if key in state.deck.spirit_values:
-        state.deck.spirit_values[key] = int(value)
-        sync_trauma_cards_with_health(state)
-        _mark_content_dirty(state)
-        return
     if key == "energy":
-        state.attributes.stress = max(0, min(state.attributes.max_stress, int(value)))
+        _set_world_attr(state, key, int(value))
         _mark_content_dirty(state)
         return
     if hasattr(state.attributes, key):
-        setattr(state.attributes, key, int(value))
         if key == "health":
-            sync_trauma_cards_with_health(state)
+            _set_world_attr(state, key, int(value))
+        else:
+            setattr(state.attributes, key, int(value))
         _mark_content_dirty(state)
         return
     if key in {"gang_relation", "finance_relation", "police_relation"}:
@@ -308,31 +295,35 @@ def _set_field(state: GameState, key: str, value: int | bool | str, extra_lines:
 
 
 def _world_attr_value(state: GameState, key: str) -> int:
+    actor = _player_actor(state)
     if key == "energy":
-        return state.attributes.stress
+        return actor.energy
     if key == "stress":
-        return state.attributes.stress
+        return actor.energy
     if key == "health":
-        return state.attributes.health
+        return actor.health
     if key == "logic":
-        return state.attributes.logic
+        return actor.logic
     if key == "perception":
-        return state.attributes.perception
+        return actor.perception
     if key == "willpower":
-        return state.attributes.willpower
+        return actor.willpower
     raise AssertionError(f"Unknown world attr: {key}")
 
 
 def _set_world_attr(state: GameState, key: str, value: int) -> None:
+    actor = _player_actor(state)
     if key in {"energy", "stress"}:
-        state.attributes.stress = max(0, min(state.attributes.max_stress, value))
+        actor.energy = max(0, min(actor.max_energy, value))
+        state.attributes.stress = actor.energy
         return
     if key == "health":
-        state.attributes.health = value
+        actor.health = max(0, min(actor.max_health, value))
+        state.attributes.health = actor.health
         sync_trauma_cards_with_health(state)
         return
     assert key in {"logic", "perception", "willpower"}, f"Unknown world attr: {key}"
-    setattr(state.attributes, key, value)
+    setattr(actor, key, value)
 
 
 def _add_field(state: GameState, key: str, amount: int, extra_lines: list[str] | None = None) -> None:
@@ -362,6 +353,53 @@ def slot_owner(slot_id: str) -> str:
     owner, _, _slot_index = slot_id.partition(":")
     assert owner, f"Unknown action card: {slot_id}"
     return owner
+
+
+def _player_actor(state: GameState):
+    actor = state.party.get(state.player_actor_id)
+    assert actor is not None, f"Missing player actor: {state.player_actor_id}"
+    return actor
+
+
+def party_actor(state: GameState, actor_id: str):
+    actor = state.party.get(actor_id)
+    assert actor is not None, f"Unknown party actor: {actor_id}"
+    return actor
+
+
+def actor_name(state: GameState, actor_id: str) -> str:
+    return party_actor(state, actor_id).name
+
+
+def add_next_companion_for_debug(state: GameState, rng: RandomSource | None = None) -> str | None:
+    for actor_id in DEBUG_COMPANION_ORDER:
+        if actor_id not in state.companion_actor_ids:
+            state.companion_actor_ids.append(actor_id)
+            _refresh_cards_after_party_change(state, rng)
+            _mark_content_dirty(state)
+            return actor_name(state, actor_id)
+    return None
+
+
+def remove_companions_for_debug(state: GameState, rng: RandomSource | None = None) -> tuple[str, ...]:
+    removed = tuple(actor_name(state, actor_id) for actor_id in state.companion_actor_ids)
+    state.companion_actor_ids.clear()
+    _refresh_cards_after_party_change(state, rng)
+    _mark_content_dirty(state)
+    return removed
+
+
+def _refresh_cards_after_party_change(state: GameState, rng: RandomSource | None = None) -> None:
+    if rng is None:
+        rng = RandomSource(state.seed)
+    clear_assembly(state)
+    clear_selected_input(state)
+    reset_hand(state, rng)
+
+
+def _active_card_actors(state: GameState) -> tuple:
+    ids = [state.player_actor_id] if state.screen != ScreenName.ENCOUNTER else [state.player_actor_id, *state.companion_actor_ids]
+    return tuple(actor for actor_id in ids if (actor := state.party.get(actor_id)) is not None and actor.can_act)
 
 
 def _all_spirit_slots(state: GameState) -> list[str]:
@@ -404,14 +442,13 @@ def slot_is_preferred_for_check(slot_id: str, check) -> bool | None:
 
 
 def _actor_attribute_value(state: GameState, owner_id: str, suit: Suit) -> int:
-    if owner_id != "cole":
-        return 0
+    actor = party_actor(state, owner_id)
     if suit == Suit.LOGIC:
-        return state.deck.spirit_values.get("logic", 0)
+        return actor.logic
     if suit == Suit.PERCEPTION:
-        return state.deck.spirit_values.get("perception", 0)
+        return actor.perception
     if suit == Suit.WILLPOWER:
-        return state.deck.spirit_values.get("willpower", 0)
+        return actor.willpower
     return 0
 
 
@@ -423,21 +460,21 @@ def slot_value_breakdown(state: GameState, slot_id: str, check) -> CheckValueBre
     base_value = slot_current_value(state, slot_id)
     owner_id = state.deck.action_card_owners.get(slot_id, slot_owner(slot_id))
     attribute_parts = tuple(
-        CheckValuePart(label=_suit_label(suit), value=_actor_attribute_value(state, owner_id, suit))
+        CheckValuePart(label=f"{actor_name(state, owner_id)} {_suit_label(suit)}", value=_actor_attribute_value(state, owner_id, suit), source="actor", actor_id=owner_id)
         for suit in check.suits
     )
     active_attribute = max(attribute_parts, key=lambda item: item.value, default=None)
-    active_parts = (active_attribute,) if active_attribute is not None and active_attribute.value != 0 else ()
-    modifier_parts = tuple(
-        CheckValuePart(label=item.label, value=item.value)
-        for item in getattr(check, "modifiers", ())
+    actor_part = active_attribute if active_attribute is not None else None
+    environment_parts = tuple(
+        CheckValuePart(label=item.label, value=item.value, source="environment")
+        for item in getattr(check, "factors", ())
         if item.active and item.value != 0
     )
-    parts = (*active_parts, *modifier_parts)
-    raw_total = base_value + sum(item.value for item in parts)
+    raw_total = base_value + (actor_part.value if actor_part is not None else 0) + sum(item.value for item in environment_parts)
     return CheckValueBreakdown(
         base=base_value,
-        parts=parts,
+        actor_part=actor_part,
+        environment_parts=environment_parts,
         total=compute_action_value(raw_total, check, preferred=None),
     )
 
@@ -465,9 +502,6 @@ def _slot_can_execute_check(state: GameState, slot_id: str, check) -> bool:
 
 def _slot_can_spend_energy(state: GameState, slot_id: str) -> bool:
     _sync_encounter_action_cycle(state)
-    _sync_action_cycle_cap(state)
-    if state.encounter_action_points <= 0:
-        return False
     if not slot_is_available(state, slot_id):
         return False
     return True
@@ -963,8 +997,6 @@ def action_ready_to_execute(action: ActionDef, state: GameState) -> bool:
         return False
     if action.check is None and not action.effects:
         return False
-    if action_requires_energy_slot(action) and state.encounter_action_points <= 0:
-        return False
     for requirement in action.inputs:
         if not requirement_is_slotted(state, requirement):
             return False
@@ -1151,8 +1183,6 @@ def _consume_check_resource(state: GameState, slot_id: str) -> None:
 def _consume_energy_from_slot(state: GameState, slot_id: str) -> None:
     assert _slot_can_spend_energy(state, slot_id), f"energy slot cannot spend energy: {slot_id}"
     _sync_encounter_action_cycle(state)
-    assert state.encounter_action_points > 0, "energy points must be positive before spend"
-    state.encounter_action_points -= 1
     _consume_slotted_card(state)
     _mark_content_dirty(state)
 
@@ -1395,7 +1425,7 @@ def _resolve_world_reacts(state: GameState, rng: RandomSource, extra_lines: list
 
 
 def reset_hand(state: GameState, rng: RandomSource) -> None:
-    refresh_spirit_slots(state.deck, rng, health=state.attributes.health)
+    refresh_spirit_slots(state.deck, rng, actors=_active_card_actors(state))
     _reset_action_cycle_from_deck(state)
     _mark_content_dirty(state)
 
@@ -1459,7 +1489,7 @@ def endure_pressure_during_encounter(state: GameState, rng: RandomSource) -> Non
     state.deck.action_card_bonuses[target_slot] = state.deck.action_card_bonuses.get(target_slot, 0) + 1
     state.encounter_pressure_used = True
     _mark_content_dirty(state)
-    owner_name = state.deck.actor_names.get(slot_owner(target_slot), slot_owner(target_slot))
+    owner_name = actor_name(state, slot_owner(target_slot))
     card_label = owner_name
     _push_log(state, f"你咬牙承受住压力：生命 -1，{card_label} 的一张行动卡本回合 +1。")
     push_notification(state, "warning", "承受压力", "随机一张可用行动卡本回合 +1。")
@@ -1518,6 +1548,7 @@ def start_encounter(state: GameState, encounter_id: str) -> None:
     clear_assembly(state)
     clear_selected_input(state)
     state.encounter_resource_root_id = ""
+    reset_hand(state, RandomSource(state.seed))
     _mark_content_dirty(state)
     _push_log(state, f"进入侦探任务：{encounter.title}")
     _resolve_encounter_reacts(state, RandomSource(state.seed), [])
@@ -1554,6 +1585,7 @@ def finish_encounter(state: GameState, outcome: str, rng: RandomSource, extra_li
     clear_assembly(state)
     clear_selected_input(state)
     state.encounter_resource_root_id = ""
+    reset_hand(state, rng)
     _mark_content_dirty(state)
     if outcome == "success":
         _apply_effects(evaluate_success_effects(encounter, encounter_store), state, rng, extra_lines)
@@ -1571,10 +1603,12 @@ def finish_encounter_from_dialogue(state: GameState, outcome: str) -> None:
 
 
 def change_health(state: GameState, amount: int, extra_lines: list[str] | None = None) -> None:
-    state.attributes.health = max(0, min(state.attributes.max_health, state.attributes.health + amount))
+    actor = _player_actor(state)
+    actor.health = max(0, min(actor.max_health, actor.health + amount))
+    state.attributes.health = actor.health
     sync_trauma_cards_with_health(state)
     _mark_content_dirty(state)
-    if state.attributes.health <= 0:
+    if actor.health <= 0:
         state.ending_id = "collapse"
         state.ending_title = "倒下了"
         state.ending_body = "你最终还是没能撑住。"
@@ -1582,13 +1616,16 @@ def change_health(state: GameState, amount: int, extra_lines: list[str] | None =
 
 
 def change_energy(state: GameState, amount: int, extra_lines: list[str] | None = None) -> None:
+    actor = _player_actor(state)
     if amount >= 0:
-        state.attributes.stress = min(state.attributes.max_stress, state.attributes.stress + amount)
+        actor.energy = min(actor.max_energy, actor.energy + amount)
+        state.attributes.stress = actor.energy
         _mark_content_dirty(state)
         return
     loss = -amount
-    absorbed = min(state.attributes.stress, loss)
-    state.attributes.stress -= absorbed
+    absorbed = min(actor.energy, loss)
+    actor.energy -= absorbed
+    state.attributes.stress = actor.energy
     overflow = loss - absorbed
     _mark_content_dirty(state)
     if overflow > 0:
@@ -1614,8 +1651,9 @@ def count_spirit_cards(state: GameState) -> dict[str, int]:
 
 
 def _upgrade_spirit_value(state: GameState, spirit: str, amount: int, extra_lines: list[str] | None = None) -> None:
-    assert spirit in state.deck.spirit_values, f"Unknown spirit: {spirit}"
-    state.deck.spirit_values[spirit] += amount
+    actor = _player_actor(state)
+    assert spirit in {"logic", "perception", "willpower"}, f"Unknown spirit: {spirit}"
+    setattr(actor, spirit, getattr(actor, spirit) + amount)
     sync_trauma_cards_with_health(state)
     _mark_content_dirty(state)
     if extra_lines is not None:

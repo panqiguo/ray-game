@@ -9,12 +9,10 @@ from .enums import ResultType, ScreenName
 
 @dataclass
 class DeckState:
-    spirit_values: dict[str, int] = field(default_factory=dict)
     extra_slots: dict[str, int] = field(default_factory=dict)
     action_card_values: dict[str, int] = field(default_factory=dict)
     action_card_bonuses: dict[str, int] = field(default_factory=dict)
     action_card_owners: dict[str, str] = field(default_factory=dict)
-    actor_names: dict[str, str] = field(default_factory=dict)
     available_slots: list[str] = field(default_factory=list)
     exhausted_slots: list[str] = field(default_factory=list)
     locked_slots: list[str] = field(default_factory=list)
@@ -27,6 +25,24 @@ class AttributeState:
     max_health: int = 10
     stress: int = 0
     max_stress: int = 5
+
+
+@dataclass
+class PartyActorState:
+    id: str
+    name: str
+    health: int
+    max_health: int
+    energy: int
+    max_energy: int
+    logic: int = 0
+    perception: int = 0
+    willpower: int = 0
+    is_player: bool = False
+
+    @property
+    def can_act(self) -> bool:
+        return self.health > 0
 
 
 @dataclass
@@ -145,6 +161,9 @@ class CardHintFlashState:
 class GameState:
     deck: DeckState
     attributes: AttributeState = field(default_factory=AttributeState)
+    party: dict[str, PartyActorState] = field(default_factory=dict)
+    player_actor_id: str = "cole"
+    companion_actor_ids: list[str] = field(default_factory=list)
     world: WorldState = field(default_factory=WorldState)
     screen: ScreenName = ScreenName.CITY
     day: int = 1
@@ -170,8 +189,6 @@ class GameState:
     seed: int = 0
     render_cache: RenderCacheState = field(default_factory=RenderCacheState)
     card_hint_flash: CardHintFlashState = field(default_factory=CardHintFlashState)
-    encounter_action_points: int = 4
-    encounter_action_point_cap: int = 4
     encounter_pressure_used: bool = False
     encounter_resource_root_id: str = ""
     task_panel_scroll: float = 0.0

@@ -102,9 +102,9 @@ Encounter / World SCM 速查
 (check
   :suits (list 'logic 'perception)
   :risk 'mid
-  :modifiers (list
-    (modifier -1 :when security_online :label "监控")
-    (modifier 1 :when power_cut :label "断电"))
+  :factors (list
+    (factor -1 :when security_online :label "监控")
+    (factor 1 :when power_cut :label "断电"))
   :ok outcome
   :partial outcome
   :fail outcome)
@@ -113,8 +113,8 @@ Encounter / World SCM 速查
 - `:risk`：`'low` `'mid` `'high`
 - `:suits`：`'logic` `'perception` `'willpower`
 - 不写 `:suits` 或写空列表时，表示不使用人物属性加成
-- 写了 `:suits` 时，行动卡本身仍然无属性；最终值 = 行动卡点数 + 使用者对应属性 + 启用的 `:modifiers`
-- `modifier` 用于环境/场景状态修正，`:when` 为真时启用；会显示在行动卡上，例如 `监控 -1`
+- 写了 `:suits` 时，行动卡本身仍然无属性；最终值 = 行动卡点数 + 使用者对应属性 + 启用的 `:factors`
+- `factor` 用于环境/场景状态修正，`:when` 为真时启用；会显示在行动卡上，例如 `监控 -1`
 
 `outcome`：
 

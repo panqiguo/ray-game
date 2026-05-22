@@ -47,7 +47,7 @@ class OutcomeDef:
 
 
 @dataclass(frozen=True)
-class CheckModifierDef:
+class CheckFactorDef:
     value: int
     label: str
     active: bool = True
@@ -61,7 +61,7 @@ class CheckDef:
     success: OutcomeDef
     cost: OutcomeDef
     fail: OutcomeDef
-    modifiers: tuple[CheckModifierDef, ...] = ()
+    factors: tuple[CheckFactorDef, ...] = ()
 
 
 @dataclass(frozen=True)

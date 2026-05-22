@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TypeAlias
 
-from sincity.model.defs import ActionDef, CheckDef, CheckModifierDef, Effect, InputRequirement, LocationNode, OutcomeDef, ProgressClockSpec
+from sincity.model.defs import ActionDef, CheckDef, CheckFactorDef, Effect, InputRequirement, LocationNode, OutcomeDef, ProgressClockSpec
 
 
 @dataclass(frozen=True)
@@ -196,7 +196,7 @@ class CheckTemplate:
     success: OutcomeTemplate
     cost: OutcomeTemplate
     fail: OutcomeTemplate
-    modifiers: tuple[CheckModifierDef, ...] = ()
+    factors: tuple[CheckFactorDef, ...] = ()
 
 
 @dataclass(frozen=True)

@@ -94,7 +94,7 @@
       (table-scene))))
 
 (content
-  :meta (meta :key '测试赌场后台 :title "测试赌场后台" :desc "测试准备时间与赌博期望值的选择。")
+  :meta (meta :key '投资机制-赌场后台 :title "投资机制-赌场后台" :desc "测试准备时间与赌博期望值的选择。")
   :on-success (list (effect 'set 'test_casino_done true) (effect 'add money 20))
   :on-fail (list (effect 'set 'test_casino_failed true) (effect 'add money -8))
   :on-cycle (list (effect 'clock+ presence 1))

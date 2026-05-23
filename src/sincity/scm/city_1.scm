@@ -569,27 +569,34 @@
         :title "测试：切断与潜入"
         :desc "操作区域改变环境状态，再反过来影响保险箱难度。"
         :effects (list (effect 'start-encounter '测试切断潜入)))
+      (action
+        :title "测试：关系平衡"
+        :desc "在获取情报时维持安全关系区间，避免冷掉或越界。"
+        :effects (list (effect 'start-encounter '测试关系平衡)))
 
       ;; 如果是多人, 那么需求三个线索的不同性质的行为就变得有趣了
       (action
         :title "测试：档案室拼图"
         :desc "线索越多分析越简单，但总时间不够。"
         :effects (list (effect 'start-encounter '测试档案室拼图)))
-
-      ;; emm
-      (action
-        :title "测试：赌场后台"
-        :desc "代币、准备时间、负期望裸赌与正期望规则赌博。"
-        :effects (list (effect 'start-encounter '测试赌场后台)))
-      (action
-        :title "测试：律师事务所"
-        :desc "制造混乱打开短窗口，或直接偷看承担暴露。"
-        :effects (list (effect 'start-encounter '测试律师事务所)))
       
+      (action
+        :title "投资降低风险-翻看账本"
+        :desc "制造混乱打开短窗口，或直接偷看承担暴露。"
+        :effects (list (effect 'start-encounter '投资降低风险-翻看账本)))
+
+      ;; 感觉不太对劲, 这个就是感觉摸不到头脑, 不知道该有什么策略
       (action
         :title "测试：姿态对抗"
         :desc "固定姿态循环、反应骰和针对性破绽行动。"
-        :effects (list (effect 'start-encounter '测试姿态对抗))))))
+        :effects (list (effect 'start-encounter '测试姿态对抗)))
+
+      ;; 这是一个时间/精力投资, 适合当做其中一个机制, 但不适合全部
+      (action
+        :title "投资机制-赌场后台"
+        :desc "代币、准备时间、负期望裸赌与正期望规则赌博。"
+        :effects (list (effect 'start-encounter '投资机制-赌场后台)))
+      )))
 
 (define world-state
   (state

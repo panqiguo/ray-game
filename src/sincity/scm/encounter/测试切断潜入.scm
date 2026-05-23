@@ -141,13 +141,13 @@
   :on-success (list (effect 'set 'test_infiltration_done true))
   :on-fail (list (effect 'set 'test_infiltration_failed true) (effect 'add health -1))
   :on-cycle (list
-    ;; (when (not power_cut)
-    ;;   (effect 'clock+ alert 1))
-    (when power_cut
-      (effect 'clock+ backup_power 1))
-    (when monitor_cut
-      (effect 'clock+ monitor_window 1))
-    )
+             ;; (when (not power_cut)
+             ;;   (effect 'clock+ alert 1))
+             (when power_cut
+               (effect 'clock+ backup_power 1))
+             (when monitor_cut
+               (effect 'clock+ monitor_window 1))
+             )
   :reacts (reacts
     (react :when (clock-filled? power_progress) :then (list
       (effect 'set power_cut true)

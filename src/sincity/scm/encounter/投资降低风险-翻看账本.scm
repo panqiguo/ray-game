@@ -61,7 +61,7 @@
     :children (list (chaos-scene) (ledger-scene))))
 
 (content
-  :meta (meta :key '测试律师事务所 :title "测试律师事务所" :desc "测试守门人状态与混乱窗口。")
+  :meta (meta :key '投资降低风险-翻看账本 :title "投资降低风险-翻看账本" :desc "测试守门人状态与混乱窗口。")
   :on-success (list (effect 'set 'test_law_office_done true))
   :on-fail (list (effect 'set 'test_law_office_failed true) (effect 'add 'police_relation -1))
   :on-cycle (list

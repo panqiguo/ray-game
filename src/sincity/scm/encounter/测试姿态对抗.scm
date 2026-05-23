@@ -41,7 +41,7 @@
         :title "防守反击"
         :desc "架住他的攻势再回敬。进攻姿态下效果好但风险更高。"
         :check (check
-          :suits (list 意志 感知)
+          :suits (list 逻辑)
           :risk (if (= stance 'attack) 'high 'mid)
           :ok (outcome
                 (if (= stance 'attack)

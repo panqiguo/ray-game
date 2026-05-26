@@ -21,6 +21,9 @@ def _load_program(filename: str) -> CompiledEncounterProgram:
 ENCOUNTER_FILES = (
     "测试切断潜入.scm",
     "测试关系平衡.scm",
+    "关系平衡-效率.scm",
+    "关系平衡-意愿骰.scm",
+    "测试茶楼三处搜刮.scm",
     "潜入别墅.scm",
     "测试仓库撤退.scm",
     "教训小混混.scm",

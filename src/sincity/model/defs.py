@@ -14,9 +14,40 @@ class Condition:
 
 
 @dataclass(frozen=True)
+class FieldRef:
+    name: str
+
+
+@dataclass(frozen=True)
+class DynamicValue:
+    body: Any
+
+
+EffectScalar = str | int | bool | None
+
+
+@dataclass(frozen=True)
+class SetFieldPayload:
+    target: str
+    value: EffectScalar | FieldRef | DynamicValue
+
+
+@dataclass(frozen=True)
+class AddFieldPayload:
+    target: str
+    amount: int
+
+
+@dataclass(frozen=True)
+class ShiftClockPayload:
+    target: str
+    amount: int
+
+
+@dataclass(frozen=True)
 class Effect:
     kind: str
-    value: str | int | bool | tuple[str, ...] | None = None
+    value: str | int | bool | tuple[str, ...] | FieldRef | DynamicValue | SetFieldPayload | AddFieldPayload | ShiftClockPayload | None = None
 
 
 @dataclass(frozen=True)

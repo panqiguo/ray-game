@@ -21,7 +21,7 @@ from sincity.content_lang.runtime_core import (
     validate_scene_template as _validate_scene_template,
     validate_template as _validate_template,
 )
-from sincity.model.defs import ActionDef, Effect, LocationNode, ProgressClockSpec
+from sincity.model.defs import ActionDef, AddFieldPayload, Effect, LocationNode, ProgressClockSpec, SetFieldPayload, ShiftClockPayload
 
 from .defs import (
     ActionHandle,
@@ -36,6 +36,7 @@ from .defs import (
     ReactionTable,
     ReactTemplate,
     RenderedEncounter,
+    RuntimeClockValue,
     SceneTemplate,
     StateBindingValue,
     StoreFieldSpec,
@@ -355,7 +356,7 @@ def _eval_reacts_expr(expr: Any, env: Environment, module: ModuleState) -> None:
             continue
         assert isinstance(item, ReactTemplate), f"reacts expects react or nil, got: {item!r}"
         _validate_react_template(item)
-        module.react_rules.append(ReactRule(condition=item.condition, effects=item.effects, source=f"react[{index}]"))
+        module.react_rules.append(ReactRule(condition=item.condition, effects=item.effects, source=f"react[{index}]", effects_expr=item.effects_expr))
 
 
 def _reaction_die_body(expr: Any | None) -> Any | None:
@@ -475,7 +476,11 @@ def _is_schema_definition_expr(expr: Any) -> bool:
 def _state_resolver(name: str, *, store: dict[str, int | bool | str], store_specs: dict[str, StoreFieldSpec]) -> Any:
     if name in store_specs:
         spec = store_specs[name]
-        return StateBindingValue(name=name, spec=spec, value=store.get(name, spec.initial))
+        value = store.get(name, spec.initial)
+        if spec.kind == "clock":
+            assert spec.maximum is not None, f"Clock binding missing maximum: {name}"
+            value = RuntimeClockValue(title=spec.title, description="", value=int(value), maximum=spec.maximum)
+        return StateBindingValue(name=name, spec=spec, value=value)
     return _MISSING
 
 
@@ -484,11 +489,19 @@ def _validate_completion_effects(program: CompiledEncounterProgram) -> None:
         _assert_effects_allowed(effects, allowed=ENCOUNTER_COMPLETION_EFFECTS, context=f"{program.id}: {bucket_name}")
         for effect in effects:
             if effect.kind in {"set_field", "add_field", "copy_field", "shift_clock"}:
-                assert isinstance(effect.value, str), f"{program.id}: {bucket_name} effect payload must be string"
-                key, _, _ = effect.value.partition(":")
+                key = _effect_target(effect)
                 spec = program.store_specs.get(key)
                 assert spec is None or spec.persist != "encounter", f"{program.id}: {bucket_name} cannot target encounter-local field `{key}`"
             assert effect.kind != "end_encounter", f"{program.id}: {bucket_name} cannot contain end-encounter effect"
+
+
+def _effect_target(effect: Effect) -> str:
+    value = effect.value
+    if isinstance(value, (SetFieldPayload, AddFieldPayload, ShiftClockPayload)):
+        return value.target
+    assert isinstance(value, str), f"Effect `{effect.kind}` payload must be structured or string: {value!r}"
+    key, _, _ = value.partition(":")
+    return key
 
 
 def _assert_effects_allowed(effects: tuple[Effect, ...], *, allowed: frozenset[str], context: str) -> None:

@@ -64,6 +64,7 @@ class ReactRule:
     condition: Any
     effects: tuple[Effect, ...]
     source: str
+    effects_expr: Any | None = None
 
 
 @dataclass(frozen=True)
@@ -226,6 +227,7 @@ class SceneTemplate:
 class ReactTemplate:
     condition: Any
     effects: tuple[Effect, ...]
+    effects_expr: Any | None = None
 
 
 @dataclass(frozen=True)

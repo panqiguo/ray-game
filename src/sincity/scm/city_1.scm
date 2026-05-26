@@ -129,8 +129,60 @@
         :suits (list suit)
         :risk 'mid
         :ok (outcome (list (effect 'clock+ clock 2)) "线索露出了一小截。你把它按在纸上。")
-        :partial (outcome (list (effect 'clock+ clock 1) (effect 'add energy -1)) "你得到了一点碎片，足够继续往下问。")
-        :fail (outcome (list (effect 'add energy -1)) "你问得太快，周围的人开始闭嘴。")))))
+            :partial (outcome (list (effect 'clock+ clock 1) (effect 'add energy -1)) "你得到了一点碎片，足够继续往下问。")
+            :fail (outcome (list (effect 'add energy -1)) "你问得太快，周围的人开始闭嘴。")))))
+
+(define office-salary
+  (lambda ()
+    (+ 18 (* (clock-value office_rank) 8))))
+
+(define office-overtime-pay
+  (lambda ()
+    (+ 6 (* (clock-value office_rank) 2))))
+
+(define office-overtime-fail-pay
+  (lambda ()
+    (+ 3 (clock-value office_rank))))
+
+(define office-performance-clock
+  (lambda ()
+    (cond
+      ((= (clock-value office_rank) 0) office_performance_rank0)
+      ((= (clock-value office_rank) 1) office_performance_rank1)
+      (else office_performance_rank2))))
+
+(define office-performance-effect
+  (lambda (amount)
+    (effect 'clock+ (office-performance-clock) amount)))
+
+(define office-action-desc
+  (lambda ()
+    (cond
+      ((= (clock-value office_rank) 0)
+        "日薪 18 元。每天出勤满 3 格会立刻结算当天工资；如果没即时结算，第二天也会补结。职级 0 晋升需要 8 点绩效。满勤后继续工作视为加班，立刻给少量加班费。")
+      ((= (clock-value office_rank) 1)
+        "日薪 26 元。每天出勤满 3 格会立刻结算当天工资；如果没即时结算，第二天也会补结。职级 1 晋升需要 12 点绩效。满勤后继续工作视为加班，立刻给少量加班费。")
+      (else
+        "日薪 34 元。每天出勤满 3 格会立刻结算当天工资；如果没即时结算，第二天也会补结。职级 2 的绩效要求为 16 点，填满后发绩效奖金。满勤后继续工作视为加班，立刻给少量加班费。"))))
+
+(define piecework-desc
+  (lambda ()
+    (cond
+      ((= piecework_bad_halves 0) "废弃区的小工厂按件结钱。当前零件还算完整；两半都做完后按正常品付钱。")
+      ((= piecework_bad_halves 1) "废弃区的小工厂按件结钱。当前零件已有一半残次；做完后只能按三分之一价格结算。")
+      (else "废弃区的小工厂按件结钱。当前零件已经是废品；做完也拿不到钱。"))))
+
+(define office-desc
+  (lambda ()
+    (if office_demoted_notice
+      "玻璃门、打卡机和永远亮着的走廊灯。昨天出勤没满，职级已经被扣了；今天仍然要把三段出勤凑齐。"
+      (cond
+        ((= (clock-value office_rank) 0)
+          "玻璃门、打卡机和永远亮着的走廊灯。这里给你稳定工资；第二天出勤未满 3 会直接降职。当前职级日薪 18 元，晋升需要 8 点绩效。")
+        ((= (clock-value office_rank) 1)
+          "玻璃门、打卡机和永远亮着的走廊灯。这里给你稳定工资；第二天出勤未满 3 会直接降职。当前职级日薪 26 元，晋升需要 12 点绩效。")
+        (else
+          "玻璃门、打卡机和永远亮着的走廊灯。这里给你稳定工资；第二天出勤未满 3 会直接降职。当前职级日薪 34 元，绩效奖金需要 16 点绩效。")))))
 
 (define-node 办公室
   (node
@@ -371,7 +423,7 @@
   (node
     :desc "酒吧白天像咖啡馆，晚上像供词室。这里没有秘密，只有还没轮到你听见的消息。"
     :position '(245 520)
-    :show-clocks (list (when (and blonde_intro_seen (not blonde_drinks_done)) blonde_drink_progress))
+    :show-clocks (list gambling_debt (when (and blonde_intro_seen (not blonde_drinks_done)) blonde_drink_progress))
     :actions (list
       (action
         :title "点一杯酒"
@@ -382,6 +434,17 @@
         :effects (list
           (effect 'add energy 2)
           (when (and blonde_intro_seen (not blonde_drinks_done)) (effect 'clock+ blonde_drink_progress 1))))
+      (action
+        :title "吧台小赌"
+        :desc "把十块钱压在一局牌上。酒吧里的赌博更像消遣，但欠账会记在墙后。"
+        :conditions (list (field-at-least 'money 10 "需要 10 元赌本"))
+        :inputs (list (item 'money 10 "赌本"))
+        :check (check
+          :suits (list 感知)
+          :risk 'high
+          :ok (outcome (list (effect 'add money 24)) "你读懂了对面那点迟疑，今晚的酒钱有人替你付。")
+          :partial (outcome (list (effect 'add money 8) (effect 'add energy -1)) "你赢回一点，但坐得太久，头也开始发沉。")
+          :fail (outcome (list (effect 'clock+ gambling_debt 1) (effect 'add energy -1)) "牌面翻下去，你只剩下一笔被人记住的小账。")))
       ;; 薇拉主线 — 电话中已接下委托，直接去三个地方打听
       (when (and vera_thread_unlocked (not vera_bar_checked))
         (action
@@ -436,8 +499,21 @@
   (node
     :desc "旧铺面、窄楼梯、晾衣绳和熟人的眼神。老街没有明确入口，但你总能从这里找到一点活路。"
     :position '(450 520)
-    :show-clocks (list (when (and hotel_infiltrated (not vera_apartment_found)) vera_follow_progress))
+    :show-clocks (list
+      (when (and hotel_infiltrated (not vera_apartment_found)) vera_follow_progress)
+      (when (and exploitation_incident_active (= exploitation_incident_location 'street)) exploitation_incident_timer)
+      (when (and exploitation_incident_active (= exploitation_incident_location 'street)) exploitation_incident_resolution))
     :actions (list
+      (when (and exploitation_incident_active (= exploitation_incident_location 'street))
+        (action
+          :title "处理民怨事端"
+          :desc "富人飞地的催租把老街逼出了事。三天内不解决，会伤到你的关系和钱包。"
+          :check (check
+            :suits (list 意志)
+            :risk 'high
+            :ok (outcome (list (effect 'clock+ exploitation_incident_resolution 2)) "你把几个带头的人压了下去，局面开始松动。")
+            :partial (outcome (list (effect 'clock+ exploitation_incident_resolution 1) (effect 'add energy -1)) "你暂时压住了事，但火还在下面烧。")
+            :fail (outcome (list (effect 'add health -1) (effect 'add energy -1)) "他们不再只骂业主，也开始认你的脸。"))))
       (when (and vera_thread_unlocked (not vera_street_checked))
         (action
           :title "去老街修鞋铺问薇拉的消息"
@@ -456,7 +532,30 @@
   (node
     :desc "倒塌的围墙、被水泡坏的广告牌，还有那些不愿意白天提起的交易。"
     :position '(655 520)
+    :show-clocks (list
+      piecework_part
+      (when (and exploitation_incident_active (= exploitation_incident_location 'waste)) exploitation_incident_timer)
+      (when (and exploitation_incident_active (= exploitation_incident_location 'waste)) exploitation_incident_resolution))
     :actions (list
+      (when (and exploitation_incident_active (= exploitation_incident_location 'waste))
+        (action
+          :title "处理民怨事端"
+          :desc "富人飞地压低工钱的后果回到了废弃区。三天内不解决，会伤到你的关系和钱包。"
+          :check (check
+            :suits (list 意志)
+            :risk 'high
+            :ok (outcome (list (effect 'clock+ exploitation_incident_resolution 2)) "你把几个带头的人压了下去，局面开始松动。")
+            :partial (outcome (list (effect 'clock+ exploitation_incident_resolution 1) (effect 'add energy -1)) "你暂时压住了事，但火还在下面烧。")
+            :fail (outcome (list (effect 'add health -1) (effect 'add energy -1)) "他们不再只骂包工头，也开始认你的脸。"))))
+      (action
+        :title "工厂计件：组装螺丝"
+        :desc (piecework-desc)
+        :check (check
+          :suits (list 逻辑)
+          :risk 'mid
+          :ok (outcome (list (effect 'clock+ piecework_part 1)) "这一半零件咬合得很顺，像是机器也终于肯帮你一次。")
+          :partial (outcome (list (effect 'clock+ piecework_part 1) (effect 'add piecework_bad_halves 1) (effect 'add energy -1)) "这一半勉强装上了，但已经算残次。")
+          :fail (outcome (list (effect 'clock+ piecework_part 1) (effect 'add piecework_bad_halves 1) (effect 'add energy -1)) "这一半坏了。工头没说话，只把账记在你这件零件上。")))
       (when (and vera_thread_unlocked (not vera_waste_checked))
         (action
           :title "搜索废弃区"
@@ -537,23 +636,62 @@
             (effect 'set standoff_started true)
             (effect 'start-encounter '公寓对峙3关系版)))))))
 
+(define-node 大厦
+  (node
+    :desc (office-desc)
+    :position '(1270 280)
+    :show-clocks (list
+      office_attendance
+      (office-performance-clock)
+      office_rank)
+    :actions (list
+      (action
+        :title "上班工作"
+        :desc (office-action-desc)
+        :check (check
+          :suits (list 逻辑)
+          :risk 'mid
+          :ok (if (clock-filled? office_attendance)
+            (outcome (list (effect 'add money (office-overtime-pay)) (office-performance-effect 1)) "你留下来把别人推掉的活收尾。加班费当场塞进信封，数额不大，但不用等。")
+            (outcome (list (effect 'set office_checked_day day) (effect 'set office_demoted_notice false) (effect 'clock+ office_attendance 1) (office-performance-effect 2))))
+          :partial (if (clock-filled? office_attendance)
+            (outcome (list (effect 'add money (office-overtime-pay)) (effect 'add energy -1)) "你多熬了一段，换来一小笔加班费，也把脑子熬得发硬。")
+            (outcome (list (effect 'set office_checked_day day) (effect 'set office_demoted_notice false) (effect 'clock+ office_attendance 1) (office-performance-effect 1) (effect 'add energy -1))))
+          :fail (if (clock-filled? office_attendance)
+            (outcome (list (effect 'add money (office-overtime-fail-pay)) (effect 'add energy -1)) "你留下来耗到很晚，只拿到一点象征性的加班钱。")
+            (outcome (list (effect 'set office_checked_day day) (effect 'set office_demoted_notice false) (effect 'clock+ office_attendance 1) (effect 'add energy -1)))))))))
+
+(define-node 富人飞地
+  (node
+    :desc "铁门、花墙和不需要解释来源的钱。这里的工作很轻，代价常常先落在别人身上。"
+    :position '(1475 280)
+    :show-clocks (list exploitation_unrest)
+    :actions (list
+      (action
+        :title "代业主催租"
+        :desc "收益高，耗力少。你把压力转嫁给租客，钱立刻回来，民怨也会积起来。"
+        :check (check
+          :suits (list 意志)
+          :risk 'low
+          :ok (outcome (list (effect 'set exploitation_incident_location 'street) (effect 'add money 35) (effect 'clock+ exploitation_unrest 2)) "你说的是规矩，听起来像威胁。业主很满意。")
+          :partial (outcome (list (effect 'set exploitation_incident_location 'street) (effect 'add money 25) (effect 'clock+ exploitation_unrest 1)) "钱收回来一部分，楼下的怨声也多了一点。")
+          :fail (outcome (list (effect 'set exploitation_incident_location 'street) (effect 'add money 12) (effect 'clock+ exploitation_unrest 2) (effect 'add energy -1)) "租客没有钱，只有愤怒。你带走一点现金，留下更多火星。")))
+      (action
+        :title "压低工钱"
+        :desc "替包工头砍掉尾款。轻松、体面、来钱快，但每一次都在废弃区和老街积一层火。"
+        :check (check
+          :suits (list 逻辑)
+          :risk 'mid
+          :ok (outcome (list (effect 'set exploitation_incident_location 'waste) (effect 'add money 45) (effect 'clock+ exploitation_unrest 2)) "合同上的小字替你完成了大部分暴力。")
+          :partial (outcome (list (effect 'set exploitation_incident_location 'waste) (effect 'add money 30) (effect 'clock+ exploitation_unrest 2) (effect 'add energy -1)) "账压下去了，但有人记住了你的脸。")
+          :fail (outcome (list (effect 'set exploitation_incident_location 'waste) (effect 'add money 15) (effect 'clock+ exploitation_unrest 3) (effect 'add energy -1)) "你没压住场面，只压出了更难收拾的怒气。"))))))
+
 (define-node 赌场
   (node
     :desc "地下室、绿绒桌、假笑和真债。这里能赢钱，也能把明天提前输掉。"
     :position '(1270 520)
     :actions (list
-      (make-work-action "替赌场看一晚场子" "不问问题，只看住门口。" 意志 'high 18 12 6 1)
-      (action
-        :title "小赌一局"
-        :desc "把十块钱放上桌，试试今晚的手气。"
-        :conditions (list (field-at-least 'money 10 "需要 10 元赌本"))
-        :inputs (list (item 'money 10 "赌本"))
-        :check (check
-          :suits (list 感知)
-          :risk 'high
-          :ok (outcome (list (effect 'add money 30)))
-          :partial (outcome (list (effect 'add money 8) (effect 'add energy -1)))
-          :fail (outcome (list (effect 'add energy -1))))))))
+      (make-work-action "替赌场看一晚场子" "不问问题，只看住门口。" 意志 'high 18 12 6 1))))
 
 (define-node 情景测试C
   (node
@@ -573,6 +711,18 @@
         :title "测试：关系平衡"
         :desc "在获取情报时维持安全关系区间，避免冷掉或越界。"
         :effects (list (effect 'start-encounter '测试关系平衡)))
+      (action
+        :title "测试：关系效率"
+        :desc "关系决定情报开采效率，比较先投资关系与直接追问的收益。"
+        :effects (list (effect 'start-encounter '关系平衡-效率)))
+      (action
+        :title "测试：意愿话题"
+        :desc "反应骰表示她当前想聊什么，顺势攒筹码或强行引向情报。"
+        :effects (list (effect 'start-encounter '关系平衡-意愿骰)))
+      (action
+        :title "测试：茶楼搜刮"
+        :desc "三处区域警惕重新分布，每个 cycle 两个行动，测试干扰与搜刮路线。"
+        :effects (list (effect 'start-encounter '测试茶楼三处搜刮)))
 
       ;; 如果是多人, 那么需求三个线索的不同性质的行为就变得有趣了
       (action
@@ -669,6 +819,26 @@
     (gang_relation 0)
     (finance_relation 0)
     (police_relation 0)
+
+    (piecework_part (clock :title "组装零件" :desc "每格代表零件的一半。两半都完成后按品质结算。" :initial 0 :max 2))
+    (piecework_bad_halves 0)
+    (gambling_debt (clock :title "赌债" :desc "酒吧小赌欠下的账。满格后会伤到健康。" :initial 0 :max 4))
+
+    (office_checked_day 1)
+    (office_paid_day 0)
+    (office_demoted_notice false)
+    (office_attendance (clock :title "今日出勤" :desc "每天填满 3 格即全勤，工资会在满勤时立刻结算。" :initial 0 :max 3))
+    (office_performance_rank0 (clock :title "绩效" :desc "职级 0 时，填满 8 格后升职。" :initial 0 :max 4))
+    (office_performance_rank1 (clock :title "绩效" :desc "职级 1 时，填满 12 格后升职。" :initial 0 :max 6))
+    (office_performance_rank2 (clock :title "绩效" :desc "职级 2 时，填满 16 格后发绩效奖金。" :initial 0 :max 8))
+    (office_rank (clock :title "职级" :desc "职级越高，每日全勤工资越高。最多 2 级。" :initial 0 :max 2))
+
+    (exploitation_unrest (clock :title "民怨" :desc "压榨型工作会增加民怨，满格后生成事端。" :initial 0 :max 6))
+    (exploitation_incident_active false)
+    (exploitation_incident_location 'none)
+    (exploitation_incident_checked_day 1)
+    (exploitation_incident_timer (clock :title "事端倒计时" :desc "事端出现后每天推进；满 3 后造成关系和金钱损失。" :initial 0 :max 3))
+    (exploitation_incident_resolution (clock :title "平息事端" :desc "填满后摆平当前民怨事端。" :initial 0 :max 3))
 
     (logic_book (clock :title "《县城账簿与谎言》" :desc "读完后逻辑 +1。" :initial 0 :max 3))
     (perception_book (clock :title "《街口观察法》" :desc "读完后感知 +1。" :initial 0 :max 3))
@@ -774,6 +944,105 @@
       :then (list
         (effect 'set gambler_clocktower_ready true)
         (effect 'start-quick-dialogue gambler-clocktower-text)))
+
+    (react
+      :when (clock-filled? piecework_part)
+      :then (list
+        (cond
+          ((= piecework_bad_halves 0) (effect 'add money 14))
+          ((= piecework_bad_halves 1) (effect 'add money 5))
+          (else nil))
+        (cond
+          ((= piecework_bad_halves 0) (effect 'start-quick-dialogue "# 计件工资\n\n# speaker: 工头\n“正常品。十四块。”"))
+          ((= piecework_bad_halves 1) (effect 'start-quick-dialogue "# 计件工资\n\n# speaker: 工头\n“残次品。只能按三分之一算。”"))
+          (else (effect 'start-quick-dialogue "# 计件工资\n\n# speaker: 工头\n“废品。这个不给钱。”")))
+        (effect-reset-clock piecework_part)
+        (effect 'set piecework_bad_halves 0)))
+
+    (react
+      :when (clock-filled? gambling_debt)
+      :then (list
+        (effect-reset-clock gambling_debt)
+        (effect 'add health -1)
+        (effect 'start-quick-dialogue "# 酒吧赌债\n\n# speaker: 科尔\n酒吧里欠下的小账不会永远小下去。今晚有人在后巷提醒了我这一点。")))
+
+    (react
+      :when (and (= office_checked_day day) (clock-filled? office_attendance) (< office_paid_day day))
+      :then (list
+        (effect 'add money (office-salary))
+        (effect 'set office_paid_day day)))
+
+    (react
+      :when (> day office_checked_day)
+      :then (append
+        (if (clock-filled? office_attendance)
+          (if (< office_paid_day office_checked_day)
+            (list
+              (effect 'add money (office-salary))
+              (effect 'set office_paid_day office_checked_day))
+            (list))
+          (list
+            (when (> (clock-value office_rank) 0) (effect 'clock- office_rank 1))
+            (when (> (clock-value office_rank) 0) (effect 'set office_demoted_notice true))))
+        (list
+          (effect-reset-clock office_attendance)
+          (effect 'set office_checked_day day))))
+
+    (react
+      :when (and (= (clock-value office_rank) 0) (clock-filled? office_performance_rank0))
+      :then (list
+        (effect 'clock+ office_rank 1)
+        (effect-reset-clock office_performance_rank0)
+        (effect 'start-quick-dialogue "# 大厦升职\n\n# speaker: 主管\n“你最近表现不错。工资会涨一点，当然，期待也会涨。”")))
+
+    (react
+      :when (and (= (clock-value office_rank) 1) (clock-filled? office_performance_rank1))
+      :then (list
+        (effect 'clock+ office_rank 1)
+        (effect-reset-clock office_performance_rank1)
+        (effect 'start-quick-dialogue "# 大厦升职\n\n# speaker: 主管\n“你最近表现不错。工资会再涨一点，当然，活也不会少。”")))
+
+    (react
+      :when (and (clock-filled? office_rank) (clock-filled? office_performance_rank2))
+      :then (list
+        (effect 'add money 40)
+        (effect-reset-clock office_performance_rank2)))
+
+    (react
+      :when (and (clock-filled? exploitation_unrest) (not exploitation_incident_active))
+      :then (list
+        (effect 'set exploitation_incident_active true)
+        (effect 'set exploitation_incident_checked_day day)
+        (effect-reset-clock exploitation_unrest)
+        (effect-reset-clock exploitation_incident_timer)
+        (effect-reset-clock exploitation_incident_resolution)
+        (effect 'start-quick-dialogue "# 民怨事端\n\n# speaker: 科尔\n钱从富人飞地流进我的口袋，怒气从老街和废弃区冒出来。现在它终于变成了一件必须处理的事。")))
+
+    (react
+      :when (and exploitation_incident_active (> day exploitation_incident_checked_day))
+      :then (list
+        (effect 'clock+ exploitation_incident_timer 1)
+        (effect 'set exploitation_incident_checked_day day)))
+
+    (react
+      :when (and exploitation_incident_active (clock-filled? exploitation_incident_resolution))
+      :then (list
+        (effect 'set exploitation_incident_active false)
+        (effect 'set exploitation_incident_location 'none)
+        (effect-reset-clock exploitation_incident_timer)
+        (effect-reset-clock exploitation_incident_resolution)
+        (effect 'start-quick-dialogue "# 事端平息\n\n# speaker: 科尔\n事情被压下去了。不是解决，只是这座城又一次学会了把声音吞回去。")))
+
+    (react
+      :when (and exploitation_incident_active (clock-filled? exploitation_incident_timer))
+      :then (list
+        (effect 'set exploitation_incident_active false)
+        (effect 'set exploitation_incident_location 'none)
+        (effect-reset-clock exploitation_incident_timer)
+        (effect-reset-clock exploitation_incident_resolution)
+        (effect 'add money -40)
+        (effect 'add finance_relation -1)
+        (effect 'start-quick-dialogue "# 事端失控\n\n# speaker: 科尔\n三天足够让一桩麻烦从街角长成传闻。钱赔出去了，富人飞地的人也开始怀疑我是不是不够干净。")))
 
     (react
       :when (and (clock-filled? logic_book) (not logic_book_done))
@@ -895,9 +1164,11 @@
       (书店)
       (警局)
       (仓库)
-      (when vera_thread_unlocked (酒吧))
+      (酒吧)
       (when vera_thread_unlocked (老街))
-      (when vera_thread_unlocked (废弃区))
+      (废弃区)
+      (大厦)
+      (富人飞地)
       (when frederick_real_lead_found (望月旅馆))
       (when vera_apartment_found (公寓))
       (when casino_unlocked (赌场))

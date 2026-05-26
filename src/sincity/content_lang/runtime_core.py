@@ -29,7 +29,21 @@ from sincity.encounters.defs import (
 )
 from sincity.encounters.lispy import Environment, Procedure, SpecialFormProcedure, evaluate, truthy
 from sincity.labels import lookup_input_label
-from sincity.model.defs import ActionDef, CheckDef, CheckFactorDef, Condition, Effect, InputRequirement, LocationNode, OutcomeDef
+from sincity.model.defs import (
+    ActionDef,
+    AddFieldPayload,
+    CheckDef,
+    CheckFactorDef,
+    Condition,
+    DynamicValue,
+    Effect,
+    FieldRef,
+    InputRequirement,
+    LocationNode,
+    OutcomeDef,
+    SetFieldPayload,
+    ShiftClockPayload,
+)
 from sincity.model.enums import Risk, ScreenName, Suit
 
 
@@ -272,8 +286,9 @@ def _rendered_scene_clocks(program: Any, items: tuple[Any, ...], scene_key: str)
             description = getattr(spec, "description", "")
             maximum = getattr(spec, "segments", item.spec.maximum)
             assert maximum is not None, f"Clock binding missing maximum: {item.name}"
+            raw_value = item.value.value if isinstance(item.value, RuntimeClockValue) else item.value
             clock_ids.append(item.name)
-            clocks.append(RenderedClock(id=item.name, title=title, description=description, value=int(item.value), maximum=int(maximum)))
+            clocks.append(RenderedClock(id=item.name, title=title, description=description, value=int(raw_value), maximum=int(maximum)))
         else:
             clock_ids.append(clock_id_for_show(item))
             spec = getattr(program, "clocks_by_id", {}).get(str(item))
@@ -309,7 +324,7 @@ def host_values(*, store_specs: dict[str, StoreFieldSpec], store: dict[str, Any]
         "check": lambda *args: builtin_check(args),
         "factor": lambda *args: builtin_check_factor(args),
         "outcome": lambda *args: builtin_outcome(args),
-        "effect": lambda *args: builtin_effect(args),
+        "effect": SpecialFormProcedure(builtin_effect),
         "effect-expr": SpecialFormProcedure(builtin_effect_expr),
         "item": builtin_item_input,
         "card": builtin_card_input,
@@ -478,8 +493,9 @@ def builtin_field_truthy_condition(key: Any, label: Any | None = None) -> Condit
 def builtin_react(args: list[Any], env: Environment) -> ReactTemplate:
     kwargs = keyword_args(list(args), allowed={":when", ":then"})
     condition = Procedure(params=(), body=normalize_react_condition_body(kwargs[":when"], env), env=env)
-    effects = eval_effect_list(kwargs[":then"], env)
-    return ReactTemplate(condition=condition, effects=effects)
+    effects_expr = kwargs[":then"]
+    effects = eval_effect_list(effects_expr, env)
+    return ReactTemplate(condition=condition, effects=effects, effects_expr=effects_expr)
 
 
 def builtin_reaction_table(args: tuple[Any, ...]) -> ReactionTable:
@@ -555,7 +571,11 @@ def builtin_set_bang(args: list[Any], env: Environment, *, store: dict[str, Any]
     assert len(args) == 2 and isinstance(args[0], str), "`set!` expects a state field and value expression."
     target = args[0]
     assert target in store_specs, f"`set!` target must be an encounter state field: {target}"
+    spec = store_specs[target]
     value = runtime_value(evaluate(args[1], env))
+    if spec.kind == "clock":
+        assert isinstance(value, RuntimeClockValue), f"`set!` clock field `{target}` expects a clock value, got: {value!r}"
+        value = value.value
     store[target] = value
     return value
 
@@ -610,43 +630,43 @@ def eval_react_condition(condition: Any, env: Environment) -> Any:
     return evaluate(condition.body, env)
 
 
-def builtin_effect(args: tuple[Any, ...]) -> Effect:
+def builtin_effect(args: list[Any], env: Environment) -> Effect:
     assert args, "`effect` requires a kind."
-    kind = unwrap(args[0])
+    kind = unwrap(evaluate(args[0], env))
     if kind == "start-dialogue":
-        return Effect(kind="start_dialogue", value=str(unwrap(args[1])))
+        return Effect(kind="start_dialogue", value=str(unwrap(evaluate(args[1], env))))
     if kind == "start-quick-dialogue":
-        return Effect(kind="start_quick_dialogue", value=str(unwrap(args[1])))
+        return Effect(kind="start_quick_dialogue", value=str(unwrap(evaluate(args[1], env))))
     if kind == "upgrade-spirit-value":
-        return Effect(kind="upgrade_spirit_value", value=f"{str(unwrap(args[1]))}:{int(unwrap(args[2]))}")
+        return Effect(kind="upgrade_spirit_value", value=f"{str(unwrap(evaluate(args[1], env)))}:{int(unwrap(evaluate(args[2], env)))}")
     if kind == "add-spirit-slot":
-        return Effect(kind="add_spirit_slot", value=str(unwrap(args[1])))
+        return Effect(kind="add_spirit_slot", value=str(unwrap(evaluate(args[1], env))))
     if kind in {"clock+", "clock-"}:
-        target = clock_id(args[1])
-        delta = int(unwrap(args[2]))
+        target = clock_id(evaluate(args[1], env))
+        delta = int(unwrap(evaluate(args[2], env)))
         if kind == "clock-":
             delta = -delta
-        return Effect(kind="shift_clock", value=f"{target}:{delta}")
+        return Effect(kind="shift_clock", value=ShiftClockPayload(target=target, amount=delta))
     if kind == "set":
-        target = binding_name(args[1])
-        return Effect(kind="set_field", value=f"{target}:{effect_token(args[2])}")
+        target = binding_name(evaluate(args[1], env))
+        return Effect(kind="set_field", value=SetFieldPayload(target=target, value=effect_value_expr(args[2], env)))
     if kind == "add":
-        target = binding_name(args[1])
-        return Effect(kind="add_field", value=f"{target}:{int(unwrap(args[2]))}")
+        target = binding_name(evaluate(args[1], env))
+        return Effect(kind="add_field", value=AddFieldPayload(target=target, amount=int(unwrap(evaluate(args[2], env)))))
     if kind == "copy":
-        target = binding_name(args[1])
-        source = binding_name(args[2])
-        return Effect(kind="copy_field", value=f"{target}:{source}")
+        target = binding_name(evaluate(args[1], env))
+        source = binding_name(evaluate(args[2], env))
+        return Effect(kind="set_field", value=SetFieldPayload(target=target, value=FieldRef(source)))
     if kind == "start-encounter":
-        return Effect(kind="start_encounter", value=str(unwrap(args[1])))
+        return Effect(kind="start_encounter", value=str(unwrap(evaluate(args[1], env))))
     if kind == "end-encounter":
-        return Effect(kind="end_encounter", value=str(unwrap(args[1])))
+        return Effect(kind="end_encounter", value=str(unwrap(evaluate(args[1], env))))
     if kind == "advance-day":
         return Effect(kind="advance_day", value=True)
     if kind == "end-game":
         assert len(args) in {1, 3}, "`end-game` takes zero parameters, or title and body."
         if len(args) == 3:
-            return Effect(kind="end_game", value=(str(unwrap(args[1])), str(unwrap(args[2]))))
+            return Effect(kind="end_game", value=(str(unwrap(evaluate(args[1], env))), str(unwrap(evaluate(args[2], env)))))
         return Effect(kind="end_game", value=True)
     if kind == "reset-hand":
         return Effect(kind="reset_hand", value=True)
@@ -701,6 +721,10 @@ def clock_metric(value: Any, field: str) -> int:
         return raw.maximum
     bound = binding(value)
     assert bound.spec.kind == "clock", f"Clock operation requires a clock binding: {bound.name}"
+    if isinstance(bound.value, RuntimeClockValue):
+        if field == "value":
+            return bound.value.value
+        return bound.value.maximum
     if field == "value":
         return int(bound.value)
     assert bound.spec.maximum is not None
@@ -743,6 +767,8 @@ def clock_id_for_show(value: Any) -> str:
 
 def effect_token(value: Any) -> str:
     raw = unwrap(value)
+    if isinstance(raw, RuntimeClockValue):
+        return str(raw.value)
     if raw is None:
         return "nil"
     if raw is True:
@@ -750,6 +776,46 @@ def effect_token(value: Any) -> str:
     if raw is False:
         return "false"
     return str(raw)
+
+
+def effect_value_expr(expr: Any, env: Environment) -> str | int | bool | None | FieldRef | DynamicValue:
+    if isinstance(expr, list) and expr and expr[0] != "quote":
+        return DynamicValue(resolve_runtime_value_expr(expr, env))
+    return effect_value(evaluate(expr, env))
+
+
+def effect_value(value: Any) -> str | int | bool | None | FieldRef:
+    if isinstance(value, StateBindingValue):
+        return FieldRef(value.name)
+    raw = unwrap(value)
+    if isinstance(raw, RuntimeClockValue):
+        return raw.value
+    if raw is None:
+        return None
+    assert isinstance(raw, (str, int, bool)), f"Unsupported effect value: {raw!r}"
+    return raw
+
+
+def resolve_runtime_value_expr(expr: Any, env: Environment) -> Any:
+    if isinstance(expr, list):
+        if not expr:
+            return []
+        if expr[0] == "quote":
+            return expr
+        return [resolve_runtime_value_expr(item, env) for item in expr]
+    if not isinstance(expr, str):
+        return expr
+    try:
+        value = env.lookup(expr)
+    except EncounterSchemeError:
+        return expr
+    if isinstance(value, StateBindingValue):
+        return expr
+    if isinstance(value, (bool, int)):
+        return value
+    if isinstance(value, str):
+        return ["quote", value]
+    return expr
 
 
 def builtin_clock_shift(value: Any, amount: Any) -> RuntimeClockValue:

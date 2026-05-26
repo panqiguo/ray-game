@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pyray import *  # type: ignore
 
+from sincity.model.defs import AddFieldPayload, DynamicValue, FieldRef, SetFieldPayload, ShiftClockPayload
 from sincity.model.state import GameState
 from sincity.rendering import draw_text
 from sincity.rules import close_modal, current_action, current_encounter_reaction_table, dismiss_pending_resolution, fast_forward_dialogue, get_clock_spec_for_state, location_is_visible
@@ -151,17 +152,38 @@ def _reaction_effect_summary(state: GameState, effects) -> str:
     parts: list[str] = []
     for effect in effects:
         value = effect.value
-        if effect.kind == "shift_clock" and isinstance(value, str):
-            key, raw = value.split(":", 1)
+        if effect.kind == "shift_clock":
+            if isinstance(value, ShiftClockPayload):
+                key, amount = value.target, value.amount
+            elif isinstance(value, str):
+                key, raw = value.split(":", 1)
+                amount = int(raw)
+            else:
+                continue
             spec = get_clock_spec_for_state(state, key)
-            amount = int(raw)
             parts.append(f"{spec.title}{'+' if amount >= 0 else ''}{amount}")
-        elif effect.kind == "add_field" and isinstance(value, str):
-            key, raw = value.split(":", 1)
-            amount = int(raw)
+        elif effect.kind == "add_field":
+            if isinstance(value, AddFieldPayload):
+                key, amount = value.target, value.amount
+            elif isinstance(value, str):
+                key, raw = value.split(":", 1)
+                amount = int(raw)
+            else:
+                continue
             parts.append(f"{_field_label(key)}{'+' if amount >= 0 else ''}{amount}")
-        elif effect.kind == "set_field" and isinstance(value, str):
-            key, raw = value.split(":", 1)
+        elif effect.kind == "set_field":
+            if isinstance(value, SetFieldPayload):
+                key = value.target
+                if isinstance(value.value, FieldRef):
+                    raw = value.value.name
+                elif isinstance(value.value, DynamicValue):
+                    raw = "表达式"
+                else:
+                    raw = value.value
+            elif isinstance(value, str):
+                key, raw = value.split(":", 1)
+            else:
+                continue
             if raw == "0":
                 parts.append(f"{_field_label(key)}=0")
             else:

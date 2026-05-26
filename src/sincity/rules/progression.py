@@ -7,12 +7,12 @@ from sincity.constants import HAND_SIZE, MAX_LOG_LINES
 from sincity.content import DEBUG_COMPANION_ORDER, GROWTH_DEFS, PLAYER_ACTOR_ID, SCENARIO, build_initial_party
 from sincity.content.runtime import next_react_rule as next_world_react_rule
 from sincity.content.runtime import react_rule_matches as world_react_rule_matches
-from sincity.content.runtime import render_tasks, render_world
+from sincity.content.runtime import evaluate_world_expr, evaluate_world_react_effects, render_tasks, render_world
 from sincity.dialogues import choose_dialogue_option as choose_runtime_dialogue_option
 from sincity.dialogues import continue_dialogue_session, create_dialogue_session, create_quick_dialogue_session, get_dialogue
 from sincity.encounters import MAX_REACT_STEPS, evaluate_cycle_effects, evaluate_effect_expr, evaluate_fail_effects, evaluate_react_rules, evaluate_reaction_die, evaluate_success_effects, get_encounter, initial_store, next_react_rule, react_rule_matches, render_encounter
 from sincity.encounters.defs import CompiledEncounterProgram
-from sincity.model.defs import ActionDef, Effect, InputRequirement, ProgressClockSpec
+from sincity.model.defs import ActionDef, AddFieldPayload, DynamicValue, Effect, FieldRef, InputRequirement, ProgressClockSpec, SetFieldPayload, ShiftClockPayload
 from sincity.model.enums import ResultType, ScreenName
 from sincity.model.state import (
     ActiveEncounterState,
@@ -221,6 +221,8 @@ def get_clock_spec_for_state(state: GameState, clock_id: str):
 
 
 def _field_value(state: GameState, key: str) -> int | bool | str:
+    if key == "day":
+        return state.day
     if state.active_encounter is not None and key in state.active_encounter.store:
         spec = _encounter(state).store_specs[key]
         if spec.persist == "encounter":
@@ -1234,29 +1236,87 @@ def _apply_effects(
     return tuple(derived)
 
 
+def _parse_legacy_scalar(raw: str) -> int | bool | str:
+    if raw == "true":
+        return True
+    if raw == "false":
+        return False
+    if raw == "nil":
+        return ""
+    try:
+        return int(raw)
+    except ValueError:
+        return raw
+
+
+def _resolve_set_field_payload(value: object, state: GameState) -> tuple[str, int | bool | str]:
+    if isinstance(value, SetFieldPayload):
+        raw = value.value
+        if isinstance(raw, FieldRef):
+            return value.target, _field_value(state, raw.name)
+        if isinstance(raw, DynamicValue):
+            evaluated = _evaluate_dynamic_value(state, raw)
+            if isinstance(evaluated, FieldRef):
+                return value.target, _field_value(state, evaluated.name)
+            if evaluated is None:
+                return value.target, ""
+            assert isinstance(evaluated, (int, bool, str)), f"Unsupported dynamic set_field value: {evaluated!r}"
+            return value.target, evaluated
+        if raw is None:
+            return value.target, ""
+        assert isinstance(raw, (int, bool, str)), f"Unsupported set_field value: {raw!r}"
+        return value.target, raw
+    assert isinstance(value, str), f"Invalid set_field payload: {value!r}"
+    key, raw = value.split(":", 1)
+    return key, _parse_legacy_scalar(raw)
+
+
+def _resolve_add_field_payload(value: object) -> tuple[str, int]:
+    if isinstance(value, AddFieldPayload):
+        return value.target, value.amount
+    assert isinstance(value, str), f"Invalid add_field payload: {value!r}"
+    key, raw = value.split(":", 1)
+    return key, int(raw)
+
+
+def _resolve_shift_clock_payload(value: object) -> tuple[str, int]:
+    if isinstance(value, ShiftClockPayload):
+        return value.target, value.amount
+    assert isinstance(value, str), f"Invalid shift_clock payload: {value!r}"
+    key, raw = value.split(":", 1)
+    return key, int(raw)
+
+
+def _describe_set_field_payload(value: object, state: GameState) -> tuple[str, str]:
+    if isinstance(value, SetFieldPayload):
+        raw = value.value
+        if isinstance(raw, FieldRef):
+            return value.target, str(_field_value(state, raw.name))
+        if isinstance(raw, DynamicValue):
+            return value.target, str(_evaluate_dynamic_value(state, raw))
+        if raw is None:
+            return value.target, "nil"
+        return value.target, str(raw)
+    assert isinstance(value, str), f"Invalid set_field payload: {value!r}"
+    key, raw = value.split(":", 1)
+    return key, raw
+
+
+def _evaluate_dynamic_value(state: GameState, value: DynamicValue) -> object:
+    if state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None:
+        return evaluate_effect_expr(_encounter(state), state.active_encounter.store, value.body)
+    return evaluate_world_expr(SCENARIO, state, value.body)
+
+
 def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines: list[str]) -> None:
     value = item.value
     if item.kind == "set_field":
-        assert isinstance(value, str)
-        key, raw = value.split(":", 1)
-        parsed: int | bool | str
-        if raw == "true":
-            parsed = True
-        elif raw == "false":
-            parsed = False
-        elif raw == "nil":
-            parsed = ""
-        else:
-            try:
-                parsed = int(raw)
-            except ValueError:
-                parsed = raw
+        key, parsed = _resolve_set_field_payload(value, state)
         _set_field(state, key, parsed, extra_lines)
         return
     if item.kind == "add_field":
-        assert isinstance(value, str)
-        key, raw = value.split(":", 1)
-        _add_field(state, key, int(raw), extra_lines)
+        key, amount = _resolve_add_field_payload(value)
+        _add_field(state, key, amount, extra_lines)
         return
     if item.kind == "copy_field":
         assert isinstance(value, str)
@@ -1264,9 +1324,8 @@ def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines
         _set_field(state, target, _field_value(state, source), extra_lines)
         return
     if item.kind == "shift_clock":
-        assert isinstance(value, str)
-        key, raw = value.split(":", 1)
-        shift_clock(state, key, int(raw), extra_lines)
+        key, amount = _resolve_shift_clock_payload(value)
+        shift_clock(state, key, amount, extra_lines)
         return
     if item.kind == "change_health":
         change_health(state, int(value), extra_lines)
@@ -1417,7 +1476,8 @@ def _resolve_world_reacts(state: GameState, rng: RandomSource, extra_lines: list
             return
         steps += 1
         assert steps <= MAX_REACT_STEPS, f"World react did not converge: {SCENARIO.id}"
-        _apply_effects(rule.effects, state, rng, extra_lines, resolve_encounter_reacts=False)
+        effects = evaluate_world_react_effects(SCENARIO, state, rule)
+        _apply_effects(effects, state, rng, extra_lines, resolve_encounter_reacts=False)
         if world_react_rule_matches(SCENARIO, state, rule):
             blocked_sources.add(rule.source)
         else:
@@ -1695,13 +1755,10 @@ def _describe_effects(effects: tuple[Effect, ...], action_id: str, state: GameSt
     for item in effects:
         value = item.value
         if item.kind == "set_field":
-            assert isinstance(value, str)
-            key, raw = value.split(":", 1)
+            key, raw = _describe_set_field_payload(value, state)
             lines.append(f"{_field_label(key)} = {raw}")
         elif item.kind == "add_field":
-            assert isinstance(value, str)
-            key, raw = value.split(":", 1)
-            amount = int(raw)
+            key, amount = _resolve_add_field_payload(value)
             if key == "stress":
                 energy_amount = -amount
                 lines.append(f"精力 {'+' if energy_amount >= 0 else ''}{energy_amount}")
@@ -1712,10 +1769,8 @@ def _describe_effects(effects: tuple[Effect, ...], action_id: str, state: GameSt
             target, source = value.split(":", 1)
             lines.append(f"{_field_label(target)} = {_field_label(source)}")
         elif item.kind == "shift_clock":
-            assert isinstance(value, str)
-            key, raw = value.split(":", 1)
+            key, amount = _resolve_shift_clock_payload(value)
             title = encounter.clocks_by_id[key].title if encounter is not None and key in encounter.clocks_by_id else SCENARIO.clocks_by_id.get(key, None).title if key in SCENARIO.clocks_by_id else key
-            amount = int(raw)
             lines.append(f"{title} {'+' if amount >= 0 else ''}{amount}")
         elif item.kind == "change_health":
             amount = int(value)

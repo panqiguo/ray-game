@@ -6,7 +6,7 @@ from sincity.encounters import ENCOUNTERS_BY_ID, initial_store, render_encounter
 from sincity.content.cards import CARD_DEFS
 from sincity.content.growth import GROWTH_DEFS
 from sincity.content.city_1 import SCENARIO
-from sincity.model.defs import ActionDef, Condition, Effect, InputRequirement, LocationNode, ProgressClockSpec
+from sincity.model.defs import ActionDef, AddFieldPayload, Condition, Effect, InputRequirement, LocationNode, ProgressClockSpec, SetFieldPayload, ShiftClockPayload
 
 
 VALID_CONDITIONS = {
@@ -96,6 +96,12 @@ def _validate_effect(item: Effect, *, context: str) -> None:
         assert isinstance(item.value, str) and item.value.strip(), "Quick dialogue text cannot be empty"
     if item.kind == "start_encounter":
         assert isinstance(item.value, str) and item.value in ENCOUNTERS_BY_ID, f"Unknown encounter id: {item.value}"
+    if item.kind == "set_field":
+        assert isinstance(item.value, (str, SetFieldPayload)), f"Invalid set effect payload: {item.value!r}"
+    if item.kind == "add_field":
+        assert isinstance(item.value, (str, AddFieldPayload)), f"Invalid add effect payload: {item.value!r}"
+    if item.kind == "shift_clock":
+        assert isinstance(item.value, (str, ShiftClockPayload)), f"Invalid clock effect payload: {item.value!r}"
     if item.kind == "copy_field":
         assert isinstance(item.value, str) and ":" in item.value, f"Invalid copy effect payload: {item.value!r}"
     if item.kind == "end_game":

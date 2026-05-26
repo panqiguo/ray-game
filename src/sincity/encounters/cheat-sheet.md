@@ -182,7 +182,8 @@ Encounter / World SCM 速查
 
 - `(effect 'reset-hand)` 现在的语义是“按健康状态抽取新的行动卡”
 - `(effect 'advance-day)` 会推进一天，并使精力 -1
-- `(effect 'set field value)` 只设置字面值；复制当前字段值使用 `(effect 'copy target source)`。
+- `(effect 'set field value)` 支持字面值、字段引用和表达式。比如 `(effect 'set checked_day day)` 会在效果执行时读取当前 `day`，`(effect 'set due_day (+ day 6))` 会在效果执行时计算当前日期 +6。
+- `(effect 'copy target source)` 仍可用，但新内容优先直接写 `(effect 'set target source)`，语义更接近 Scheme。
 - 已废弃短名效果：不要写 `(effect 'health -1)` / `(effect 'stress 1)`
 - 推荐写法：先在 `:state` 导入，再写 `(effect 'add health -1)`、`(effect 'add energy -1)`、`(effect 'add money 20)`
 
@@ -191,7 +192,13 @@ Encounter / World SCM 速查
 ```scheme
 (clock-value clock-field)
 (clock-max clock-field)
+(clock-shift clock-field amount)
+(clock-reset clock-field)
 ```
+
+- 在 `effect-expr` 里，顶层 state clock 和 object 内嵌 clock 都按 clock value 处理。
+- 因此可以写 `(set! alert (clock-shift alert 1))`，也可以写 `(update enemy (attack (clock-shift (enemy-attack enemy) 1)))`。
+- 写回顶层 clock 时，`set!` 会自动把 clock value 存回当前数值，并限制在 `0..max`。
 
 `common_clock_macros.scm`：
 

@@ -479,6 +479,11 @@ def _apply_builtin(proc: Any, values: Any) -> Any:
 
 def _scalar(value: Any) -> Any:
     if hasattr(value, "value") and hasattr(value, "name"):
+        raw = getattr(value, "value")
+        if hasattr(raw, "maximum") and hasattr(raw, "value"):
+            return getattr(raw, "value")
+        return raw
+    if hasattr(value, "maximum") and hasattr(value, "value"):
         return getattr(value, "value")
     return value
 

@@ -7,6 +7,7 @@ from typing import Any
 from sincity.content_lang.runtime_core import (
     flatten_scene as _flatten_scene,
     eval_react_condition as _eval_react_condition,
+    eval_effect_list as _eval_effect_list,
     host_values as _host_values,
     keyword_args as _keyword_args,
     render_scene as _render_scene,
@@ -200,6 +201,16 @@ def render_tasks(program: CompiledWorldProgram, state: GameState) -> tuple[Rende
     return tuple(rendered)
 
 
+def evaluate_world_expr(program: CompiledWorldProgram, state: GameState, expr: Any) -> Any:
+    return evaluate(expr, _world_env(program, state))
+
+
+def evaluate_world_react_effects(program: CompiledWorldProgram, state: GameState, rule: ReactRule) -> tuple[Effect, ...]:
+    if rule.effects_expr is None:
+        return rule.effects
+    return _eval_effect_list(rule.effects_expr, _world_env(program, state))
+
+
 def _render_task_steps(steps: tuple[TaskStepTemplate, ...], env: Environment) -> tuple[RenderedTaskStep, ...]:
     rendered: list[RenderedTaskStep] = []
     first_open_seen = False
@@ -376,7 +387,7 @@ def _resolve_reacts(expr: Any, env: Environment) -> list[ReactRule]:
         if item is None:
             continue
         _validate_react_template(item)
-        rules.append(ReactRule(condition=item.condition, effects=item.effects, source=f"react[{index}]"))
+        rules.append(ReactRule(condition=item.condition, effects=item.effects, source=f"react[{index}]", effects_expr=item.effects_expr))
     return rules
 
 
@@ -450,11 +461,19 @@ def _world_schema_resolver(
 
 
 def _world_env(program: CompiledWorldProgram, state: GameState) -> Environment:
-    return Environment(
+    env = Environment(
         parent=base_environment(),
-        values={**_host_values(store_specs={}, store={}), **program.definitions},
+        values={**_host_values(store_specs={}, store={})},
         resolver=lambda name: _world_resolver(name, program, state),
     )
+    env.values.update({name: _bind_world_definition(value, env) for name, value in program.definitions.items()})
+    return env
+
+
+def _bind_world_definition(value: Any, env: Environment) -> Any:
+    if isinstance(value, Procedure):
+        return Procedure(params=value.params, body=value.body, env=env)
+    return value
 
 
 def _world_resolver(name: str, program: CompiledWorldProgram, state: GameState) -> Any:

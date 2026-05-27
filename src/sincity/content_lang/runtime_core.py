@@ -301,7 +301,10 @@ def host_values(*, store_specs: dict[str, StoreFieldSpec], store: dict[str, Any]
     return {
         "clock": builtin_clock,
         "clocks": lambda *args: [item for item in args if item is not None],
-        "state": SpecialFormProcedure(lambda args, env: ["state", *args]),
+        "state": SpecialFormProcedure(builtin_state),
+        "state-fragment": SpecialFormProcedure(builtin_state_fragment),
+        "state+": SpecialFormProcedure(builtin_state_plus),
+        "append-state": SpecialFormProcedure(builtin_state_plus),
         "meta": lambda *args: builtin_meta(args),
         "condition": builtin_condition,
         "has-item": builtin_has_item_condition,
@@ -348,6 +351,25 @@ def builtin_meta(args: tuple[Any, ...]) -> EncounterMeta:
     title = keyword_string(kwargs, ":title")
     description = keyword_string(kwargs, ":desc", default="")
     return EncounterMeta(key=key, title=title, description=description)
+
+
+def builtin_state(args: list[Any], env: Environment) -> list[Any]:
+    return ["state", *args]
+
+
+def builtin_state_fragment(args: list[Any], env: Environment) -> list[Any]:
+    return ["state-fragment", *args]
+
+
+def builtin_state_plus(args: list[Any], env: Environment) -> list[Any]:
+    bindings: list[Any] = []
+    for arg in args:
+        value = evaluate(arg, env)
+        assert isinstance(value, list) and value and value[0] in {"state", "state-fragment"}, (
+            f"`state+` expects state fragments, got: {value!r}"
+        )
+        bindings.extend(value[1:])
+    return ["state", *bindings]
 
 
 def builtin_clock(*args: Any) -> ClockTemplate:

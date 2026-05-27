@@ -334,9 +334,9 @@ def _dynamic_template_proc(name: str, constructor: str, body: Any) -> SpecialFor
 def _resolve_state_specs(expr: Any, definitions: dict[str, Any]) -> tuple[dict[str, ProgressClockSpec], dict[str, int | bool | str]]:
     if expr is None:
         return {}, {}
-    expr = _resolve_expr(expr, definitions)
-    assert isinstance(expr, list) and expr and expr[0] == "state", "World :state must be a `(state ...)` form."
     env = Environment(parent=base_environment(), values={**_host_values(store_specs={}, store={}), **_schema_definition_values(definitions)})
+    expr = evaluate(expr, env)
+    assert isinstance(expr, list) and expr and expr[0] == "state", "World :state must be a `(state ...)` or `(state+ ...)` form."
     clocks_by_id: dict[str, ProgressClockSpec] = {}
     initial_values: dict[str, int | bool | str] = {}
     for binding in expr[1:]:
@@ -374,7 +374,7 @@ def _is_schema_definition_expr(expr: Any) -> bool:
         return True
     if not isinstance(expr, list) or not expr:
         return False
-    return expr[0] in {"quote", "lambda"}
+    return expr[0] in {"quote", "lambda", "state", "state-fragment", "state+", "append-state"}
 
 
 def _resolve_reacts(expr: Any, env: Environment) -> list[ReactRule]:

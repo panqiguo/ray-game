@@ -81,7 +81,7 @@
   :on-success (list (effect 'set 'test_archive_done true))
   :on-fail (list (effect 'set 'test_archive_failed true) (effect 'add energy -1))
   ;; :on-cycle (list (effect 'clock+ alert 1))
-  :reacts (reacts
+  :reacts (list
     (react :when (and (clock-filled? clue_a) (not clue_a_done)) :then (list (effect 'set clue_a_done true) (effect 'start-quick-dialogue "病历柜里有一张被换过的登记页。")))
     (react :when (and (clock-filled? clue_b) (not clue_b_done)) :then (list (effect 'set clue_b_done true) (effect 'start-quick-dialogue "财务夹里有一笔不该由诊所支付的车费。")))
     (react :when (and (clock-filled? clue_c) (not clue_c_done)) :then (list (effect 'set clue_c_done true) (effect 'start-quick-dialogue "人事盒里的夜班名单少了一个人。")))
@@ -89,14 +89,14 @@
       :when (clock-filled? analysis)
       :then (list (effect 'end-encounter 'success)))
     (react :when (clock-filled? alert) :then (list (effect 'end-encounter 'fail))))
-  :state (state
+  :state (list
     (use-world-basics)
-    (alert (clock :title "被发现" :initial 0 :max 5))
-    (analysis (clock :title "分析" :initial 0 :max 16))
-    (clue_a (clock :title "病历线索" :initial 0 :max 3))
-    (clue_b (clock :title "财务线索" :initial 0 :max 3))
-    (clue_c (clock :title "人事线索" :initial 0 :max 3))
-    (clue_a_done false)
-    (clue_b_done false)
-    (clue_c_done false))
+    (var 'alert (clock :title "被发现" :initial 0 :max 5))
+    (var 'analysis (clock :title "分析" :initial 0 :max 16))
+    (var 'clue_a (clock :title "病历线索" :initial 0 :max 3))
+    (var 'clue_b (clock :title "财务线索" :initial 0 :max 3))
+    (var 'clue_c (clock :title "人事线索" :initial 0 :max 3))
+    (var 'clue_a_done false)
+    (var 'clue_b_done false)
+    (var 'clue_c_done false))
   :root (archive-root))

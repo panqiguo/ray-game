@@ -29,10 +29,10 @@
     (effect 'set 'blonde_customer_chased true))
   :on-fail (list
     (effect 'add 'energy -1))
-  :reacts (reacts
+  :reacts (list
     (react :when (clock-filled? pressure) :then (list (effect 'end-encounter 'success))))
-  :state (state
-    (pressure (clock :title "施压" :initial 0 :max 3)))
+  :state (list
+    (var 'pressure (clock :title "施压" :initial 0 :max 3)))
   :root
   (scene
     :title "吧台边的麻烦"

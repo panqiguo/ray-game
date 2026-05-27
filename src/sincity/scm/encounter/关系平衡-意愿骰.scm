@@ -143,7 +143,7 @@
         (face 4 "B：看法" (effect 'set topic 'view))
         (face 5 "C：情报" (effect 'set topic 'clue))
         (face 6 "C：情报" (effect 'set topic 'clue))))
-  :reacts (reacts
+  :reacts (list
     (react :when (clock-filled? intel) :then (list
       (effect 'start-quick-dialogue "你没有硬撬她的嘴，而是在她愿意靠近的时候拿到了关键情报。")
       (effect 'end-encounter 'success)))
@@ -153,10 +153,10 @@
     (react :when (and (clock-filled? time) (not (clock-filled? intel))) :then (list
       (effect 'start-quick-dialogue "时间到了。她把最后一点话咽回去，今晚的门关上了。")
       (effect 'end-encounter 'fail))))
-  :state (state
+  :state (list
     (use-world-basics)
-    (topic 'past)
-    (intel (clock :title "情报" :desc "填满即拿到关键情报。" :initial 0 :max 8))
-    (relation (clock :title "关系" :desc "把话题引向情报会消耗关系；归零失败。" :initial 3 :max 6))
-    (time (clock :title "时间" :desc "每次休整 +1，填满前没完成即失败。" :initial 0 :max 5)))
+    (var 'topic 'past)
+    (var 'intel (clock :title "情报" :desc "填满即拿到关键情报。" :initial 0 :max 8))
+    (var 'relation (clock :title "关系" :desc "把话题引向情报会消耗关系；归零失败。" :initial 3 :max 6))
+    (var 'time (clock :title "时间" :desc "每次休整 +1，填满前没完成即失败。" :initial 0 :max 5)))
   :root (will-root))

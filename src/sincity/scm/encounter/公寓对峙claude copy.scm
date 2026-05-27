@@ -151,7 +151,7 @@
             (face 6 "走火" (effect 'add health -1) (effect 'set danger 6))))
         (else nil)))
 
-  :reacts (reacts
+  :reacts (list
     ; 语言路径胜利：calm 填满
     (react
       :when (clock-filled? calm)
@@ -163,21 +163,21 @@
         (effect 'add health -2)
         (effect 'set danger 6))))
 
-  :state (state
+  :state (list
     (use-world-basics)
-    (calm
+    (var 'calm
       (clock
         :title "缓和"
         :desc "填满后薇拉主动放下枪。"
         :initial 0
         :max 8))
-    (danger
+    (var 'danger
       (clock
         :title "危险"
         :desc "她的恐慌程度。超过 7 时无法靠近；满格时走火。"
         :initial 3
         :max 12))
-    (distance
+    (var 'distance
       (clock
         :title "距离"
         :desc "物理距离。达到 3 解锁压制，达到 5 解锁夺枪。"

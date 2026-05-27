@@ -126,7 +126,7 @@
             (face 6 "走火" (effect 'add health -1) (effect 'set hostility 8))))
         (else
           nil)))
-  :reacts (reacts
+  :reacts (list
     (react
       :when (clock-filled? disarm)
       :then (list
@@ -137,9 +137,9 @@
         (effect 'add health -2)
         (effect 'set hostility 8)
         (effect 'start-quick-dialogue "# 枪声\n\n# speaker: 科尔\n枪声在小房间里炸开。子弹擦过肋侧，疼痛让我短暂失去声音。\n\n# speaker: 薇拉\n她也被那一枪吓住了。枪还在她手里，敌意却像被后坐力打回了原点。"))))
-  :state (state
+  :state (list
     (use-world-basics)
-    (hostility (clock :title "敌意" :desc "只会上升的压力。高位时休整可能走火，满格时薇拉会开枪。" :initial 0 :max 12))
-    (approach (clock :title "靠近" :desc "填满代表你已经进入夺枪距离。" :initial 0 :max 8))
-    (disarm (clock :title "缴械" :desc "填满后科尔夺回主动权。" :initial 0 :max 1)))
+    (var 'hostility (clock :title "敌意" :desc "只会上升的压力。高位时休整可能走火，满格时薇拉会开枪。" :initial 0 :max 12))
+    (var 'approach (clock :title "靠近" :desc "填满代表你已经进入夺枪距离。" :initial 0 :max 8))
+    (var 'disarm (clock :title "缴械" :desc "填满后科尔夺回主动权。" :initial 0 :max 1)))
   :root (standoff))

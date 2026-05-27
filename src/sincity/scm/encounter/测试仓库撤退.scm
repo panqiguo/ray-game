@@ -151,7 +151,7 @@
     (effect 'clock+ spawn 1)
     (effect-expr
       (set! enemies (map enemies enemy-tick))))
-  :reacts (reacts
+  :reacts (list
     (react
       :when (clock-filled? exit)
       :then (list (effect 'end-encounter 'success)))
@@ -190,9 +190,9 @@
           (begin
             (action-log! "敌人行动：枪手开火，健康 -2。")
             (set! enemies (map enemies reset-ready-gun)))))))
-  :state (state
+  :state (list
     (use-world-basics)
-    (spawn (clock :title "敌人涌入" :desc "每 3 cycle 随机生成一名敌人，最多四名。" :initial 0 :max 3))
-    (exit (clock :title "出口" :initial 0 :max 12))
-    (enemies (list (make-enemy 'knife) (make-enemy 'gun))))
+    (var 'spawn (clock :title "敌人涌入" :desc "每 3 cycle 随机生成一名敌人，最多四名。" :initial 0 :max 3))
+    (var 'exit (clock :title "出口" :initial 0 :max 12))
+    (var 'enemies (list (make-enemy 'knife) (make-enemy 'gun))))
   :root (warehouse-root))

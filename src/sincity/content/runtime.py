@@ -264,7 +264,7 @@ def validate_world_program(program: CompiledWorldProgram) -> None:
 
 
 def _validate_world_schema_forms(expr: Any, env: Environment, *, context: str) -> None:
-    _validate_schema_forms_generic(expr, env, context=context, skip_heads=frozenset({"state"}), allow_nil_templates=True)
+    _validate_schema_forms_generic(expr, env, context=context, allow_nil_templates=True)
 
 
 def react_rule_matches(program: CompiledWorldProgram, state: GameState, rule: ReactRule) -> bool:
@@ -313,12 +313,11 @@ def _resolve_state_specs(expr: Any, definitions: dict[str, Any]) -> tuple[dict[s
     if expr is None:
         return {}, {}
     env = Environment(parent=base_environment(), values={**_host_values(store_specs={}, store={}), **_schema_definition_values(definitions)})
-    expr = evaluate(expr, env)
-    assert isinstance(expr, list) and expr and expr[0] == "state", "World :state must be a `(state ...)` or `(state+ ...)` form."
+    value = evaluate(expr, env)
+    bindings = _flatten_state_bindings(value)
     clocks_by_id: dict[str, ProgressClockSpec] = {}
     initial_values: dict[str, int | bool | str] = {}
-    for binding in expr[1:]:
-        assert isinstance(binding, list) and len(binding) == 2 and isinstance(binding[0], str), "Each world state binding must be `(name value)`."
+    for binding in bindings:
         name = binding[0]
         value = evaluate(binding[1], env)
         if isinstance(value, ClockTemplate):
@@ -327,6 +326,23 @@ def _resolve_state_specs(expr: Any, definitions: dict[str, Any]) -> tuple[dict[s
             assert isinstance(value, (bool, int, str)), f"Unsupported world state value for {name}: {value!r}"
             initial_values[name] = value
     return clocks_by_id, initial_values
+
+
+def _flatten_state_bindings(value: Any) -> list[list[Any]]:
+    if value is None:
+        return []
+    assert isinstance(value, list), f"World :state must evaluate to a list of var bindings, got: {value!r}"
+    if len(value) == 2 and isinstance(value[0], str):
+        return [value]
+    result: list[list[Any]] = []
+    for item in value:
+        result.extend(_flatten_state_bindings(item))
+    names: set[str] = set()
+    for binding in result:
+        assert len(binding) == 2 and isinstance(binding[0], str), f"Each world state binding must be `(var 'name value)`, got: {binding!r}"
+        assert binding[0] not in names, f"Duplicate state binding: {binding[0]}"
+        names.add(binding[0])
+    return result
 
 
 def _resolve_expr(expr: Any, definitions: dict[str, Any]) -> Any:
@@ -339,7 +355,7 @@ def _schema_definition_values(definitions: dict[str, Any]) -> dict[str, Any]:
     values: dict[str, Any] = {}
     env = Environment(parent=base_environment(), values={**_host_values(store_specs={}, store={}), **values})
     for name, expr in definitions.items():
-        if not _is_schema_definition_expr(expr):
+        if not _is_schema_definition_expr(name, expr):
             continue
         value = evaluate(expr, env)
         env.values[name] = value
@@ -347,21 +363,23 @@ def _schema_definition_values(definitions: dict[str, Any]) -> dict[str, Any]:
     return values
 
 
-def _is_schema_definition_expr(expr: Any) -> bool:
+def _is_schema_definition_expr(name: str, expr: Any) -> bool:
     if isinstance(expr, (bool, int, StringAtom)):
         return True
     if not isinstance(expr, list) or not expr:
         return False
-    return expr[0] in {"quote", "lambda", "state", "state-fragment", "state+", "append-state"}
+    if expr[0] in {"quote", "lambda", "var"}:
+        return True
+    return expr[0] in {"list", "append"} and (name.endswith("-vars") or name.endswith("_vars") or name.endswith("-state") or name.endswith("_state"))
 
 
 def _resolve_reacts(expr: Any, env: Environment) -> list[ReactRule]:
     if expr is None:
         return []
     value = evaluate(expr, env)
-    items = value if isinstance(value, list) else [value]
+    assert isinstance(value, list), f":reacts must evaluate to a list of react forms, got: {value!r}"
     rules: list[ReactRule] = []
-    for index, item in enumerate(items):
+    for index, item in enumerate(value):
         if item is None:
             continue
         _validate_react_template(item)
@@ -373,10 +391,10 @@ def _resolve_tasks(expr: Any, env: Environment) -> tuple[TaskTemplate, ...]:
     if expr is None:
         return ()
     value = evaluate(expr, env)
-    items = value if isinstance(value, list) else [value]
+    assert isinstance(value, list), f":tasks must evaluate to a list of task forms, got: {value!r}"
     tasks: list[TaskTemplate] = []
     seen_titles: set[str] = set()
-    for item in items:
+    for item in value:
         if item is None:
             continue
         assert isinstance(item, TaskTemplate), f"tasks expects task forms, got: {item!r}"

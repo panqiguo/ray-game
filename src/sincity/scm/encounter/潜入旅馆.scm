@@ -324,7 +324,7 @@
   :on-cycle (list
     (effect 'clock+ wife_patrol_tick 1)
     (effect 'clock+ husband_patrol_tick 1))
-  :reacts (reacts
+  :reacts (list
     (react
       :when (and (>= (clock-value alert) 3) (not wife_patrol_triggered))
       :then (list
@@ -378,22 +378,22 @@
       :when (>= (clock-value alert) 9)
       :then (list
         (effect 'end-encounter 'fail))))
-  :state (state
+  :state (list
     (use-world-basics)
-    (alert (clock :title "警觉" :desc "填满则潜入失败。" :initial 0 :max 9))
-    (wife_patrol (clock :title "老板娘巡查" :desc "填满后老板娘离开。" :initial 0 :max 4))
-    (husband_patrol (clock :title "老板巡查" :desc "填满后老板离开。" :initial 0 :max 4))
-    (wife_patrol_tick (clock :title "老板娘巡查节拍" :initial 0 :max 1))
-    (husband_patrol_tick (clock :title "老板巡查节拍" :initial 0 :max 1))
-    (hallway_investigation (clock :title "房间调查" :desc "找出真正的目标房间。" :initial 0 :max 4))
-    (resource_loot (clock :title "资源搜寻" :desc "最多搜寻 4 次。" :initial 0 :max 4))
-    (target_search (clock :title "寻找样品" :desc "把样品从目标房间里翻出来。" :initial 0 :max 3))
-    (resource_room_known false)
-    (resource_room_entered false)
-    (target_room_known false)
-    (target_room_entered false)
-    (wife_patrol_triggered false)
-    (wife_patrol_active false)
-    (husband_patrol_triggered false)
-    (husband_patrol_active false))
+    (var 'alert (clock :title "警觉" :desc "填满则潜入失败。" :initial 0 :max 9))
+    (var 'wife_patrol (clock :title "老板娘巡查" :desc "填满后老板娘离开。" :initial 0 :max 4))
+    (var 'husband_patrol (clock :title "老板巡查" :desc "填满后老板离开。" :initial 0 :max 4))
+    (var 'wife_patrol_tick (clock :title "老板娘巡查节拍" :initial 0 :max 1))
+    (var 'husband_patrol_tick (clock :title "老板巡查节拍" :initial 0 :max 1))
+    (var 'hallway_investigation (clock :title "房间调查" :desc "找出真正的目标房间。" :initial 0 :max 4))
+    (var 'resource_loot (clock :title "资源搜寻" :desc "最多搜寻 4 次。" :initial 0 :max 4))
+    (var 'target_search (clock :title "寻找样品" :desc "把样品从目标房间里翻出来。" :initial 0 :max 3))
+    (var 'resource_room_known false)
+    (var 'resource_room_entered false)
+    (var 'target_room_known false)
+    (var 'target_room_entered false)
+    (var 'wife_patrol_triggered false)
+    (var 'wife_patrol_active false)
+    (var 'husband_patrol_triggered false)
+    (var 'husband_patrol_active false))
   :root (infiltration))

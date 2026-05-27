@@ -210,7 +210,7 @@
             (face 5 "空")
             (face 6 "走火" (effect 'add health -1) (effect 'clock+ pressure 1))))
         (else nil)))
-  :reacts (reacts
+  :reacts (list
     (react
       :when (clock-filled? calm)
       :then (list
@@ -221,11 +221,11 @@
       :then (list
         (effect 'add health -2)
         (effect 'end-encounter 'fail))))
-  :state (state
+  :state (list
     (use-world-basics)
-    (armed true)
-    (disarm_failed false)
-    (pressure (clock :title "压力" :desc "只会上升的危险条。3/6 后休整可能走火，填满则场景失败。" :initial 0 :max 9))
-    (calm (clock :title "冷静" :desc "她重新获得判断力的程度。3/6 后行动风险降低，填满则语言路径胜利。" :initial 0 :max 9))
-    (approach (clock :title "距离" :desc "你接近枪口的程度。填满后可以尝试夺下枪支。" :initial 0 :max 6)))
+    (var 'armed true)
+    (var 'disarm_failed false)
+    (var 'pressure (clock :title "压力" :desc "只会上升的危险条。3/6 后休整可能走火，填满则场景失败。" :initial 0 :max 9))
+    (var 'calm (clock :title "冷静" :desc "她重新获得判断力的程度。3/6 后行动风险降低，填满则语言路径胜利。" :initial 0 :max 9))
+    (var 'approach (clock :title "距离" :desc "你接近枪口的程度。填满后可以尝试夺下枪支。" :initial 0 :max 6)))
   :root (standoff))

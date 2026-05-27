@@ -29,10 +29,10 @@
     (effect 'set 'gambler_met true))
   :on-fail (list
     (effect 'add 'energy -1))
-  :reacts (reacts
+  :reacts (list
     (react :when (clock-filled? advantage) :then (list (effect 'end-encounter 'success))))
-  :state (state
-    (advantage (clock :title "局势" :initial 0 :max 3)))
+  :state (list
+    (var 'advantage (clock :title "局势" :initial 0 :max 3)))
   :root
   (scene
     :title "巷口碰撞"

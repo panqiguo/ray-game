@@ -1,5 +1,5 @@
 ;; Scene: 废弃区.
-;; Exports: waste-state, waste-reacts, 废弃区
+;; Exports: waste-vars, waste-reacts, 废弃区
 ;;
 ;; Dependency note:
 ;; - Uses `exploitation-incident-action` from 富人飞地 scene when an incident
@@ -25,14 +25,14 @@
         :partial (outcome (list (effect 'clock+ piecework_part 1) (effect 'add piecework_bad_halves 1) (effect 'add energy -1)) "这一半勉强装上了，但已经算残次。")
         :fail (outcome (list (effect 'clock+ piecework_part 1) (effect 'add piecework_bad_halves 1) (effect 'add energy -1)) "这一半坏了。工头没说话，只把账记在你这件零件上。")))))
 
-(define waste-state
-  (state-fragment
-    (piecework_part (clock :title "组装零件" :desc "每格代表零件的一半。两半都完成后按品质结算。" :initial 0 :max 2))
-    (piecework_bad_halves 0)
-    (gambling_debt (clock :title "赌债" :desc "酒吧小赌欠下的账。满格后会伤到健康。" :initial 0 :max 4))))
+(define waste-vars
+  (list
+    (var 'piecework_part (clock :title "组装零件" :desc "每格代表零件的一半。两半都完成后按品质结算。" :initial 0 :max 2))
+    (var 'piecework_bad_halves 0)
+    (var 'gambling_debt (clock :title "赌债" :desc "酒吧小赌欠下的账。满格后会伤到健康。" :initial 0 :max 4))))
 
 (define waste-reacts
-  (reacts
+  (list
     (react
       :when (clock-filled? piecework_part)
       :then (list

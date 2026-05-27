@@ -246,33 +246,33 @@
 
 
 (define all-state
-  (state
+  (list
    (use-world-health)
    (use-world-money)
    ;; 流程控制标志
-   (intro-has-played false)
-   (escaped false) ;; 是否已挣脱
-   (path_a_revealed false) ;; 走廊A是否揭晓
-   (path_b_revealed false) ;; 走廊B是否揭晓
-   (path_c_revealed false) ;; 楼梯间是否揭晓
-   (boss_defeated false) ;; 桑德堡医生是否被打晕
+   (var 'intro-has-played false)
+   (var 'escaped false) ;; 是否已挣脱
+   (var 'path_a_revealed false) ;; 走廊A是否揭晓
+   (var 'path_b_revealed false) ;; 走廊B是否揭晓
+   (var 'path_c_revealed false) ;; 楼梯间是否揭晓
+   (var 'boss_defeated false) ;; 桑德堡医生是否被打晕
    
    ;; 全局时钟
-  (alert_clock (clock 
+  (var 'alert_clock (clock 
                 :title "守卫警觉" 
                 :initial 0 
                 :max 9))
    ;; 场景时钟
-   (挣脱束缚钟 (clock :title "挣脱皮带" :initial 0 :max 4))
-   (左侧探索进度 (clock :title "探查左侧" :initial 0 :max 3))
-   (右侧探索进度 (clock :title "探查右侧" :initial 0 :max 3))
-   (前方探索进度 (clock :title "探查正前方" :initial 0 :max 3))))
+   (var '挣脱束缚钟 (clock :title "挣脱皮带" :initial 0 :max 4))
+   (var '左侧探索进度 (clock :title "探查左侧" :initial 0 :max 3))
+   (var '右侧探索进度 (clock :title "探查右侧" :initial 0 :max 3))
+   (var '前方探索进度 (clock :title "探查正前方" :initial 0 :max 3))))
 
 ;; ==========================================
 ;; 全局响应 (Reacts)
 ;; ==========================================
 (define all-reacts
-  (reacts
+  (list
    (react-once-until intro-has-played (effect 'start-quick-dialogue "# 宿醉与麻醉剂\n\n黑暗一点点褪去，但我宁愿它别走。我嘴里的味道像是一个修车工的旧手套。脑袋里有个小人在用大锤猛砸我的视神经。\n\n我花了好几分钟才意识到自己身处何地。这是一间病房，墙壁白得令人作呕。空气里弥漫着廉价消毒水和海洛因的混合气味。我低头，发现自己被几条粗壮的皮带死死绑在一张沉重的铁椅上，手腕已经勒出了血痕。\n\n桑德堡医生——那个专门给道上的人提供黑心庇护的家伙，正把我关在他的秘密疗养院里。门外隐约传来打手粗重的脚步声。如果我不赶紧弄断这些皮带，下一针足以让我变成白痴的毒品很快就会打进我的静脉。"))
    ;; 警戒拉满，直接失败
    (react

@@ -1,5 +1,5 @@
 ;; Scene: 大厦.
-;; Exports: building-state, building-reacts, 大厦
+;; Exports: building-vars, building-reacts, 大厦
 
 (define office-salary
   (lambda ()
@@ -46,19 +46,19 @@
         (else
           "玻璃门、打卡机和永远亮着的走廊灯。这里给你稳定工资；第二天出勤未满 3 会直接降职。当前职级日薪 34 元，绩效奖金需要 16 点绩效。")))))
 
-(define building-state
-  (state-fragment
-    (office_checked_day 1)
-    (office_paid_day 0)
-    (office_demoted_notice false)
-    (office_attendance (clock :title "今日出勤" :desc "每天填满 3 格即全勤，工资会在满勤时立刻结算。" :initial 0 :max 3))
-    (office_performance_rank0 (clock :title "绩效" :desc "职级 0 时，填满 8 格后升职。" :initial 0 :max 4))
-    (office_performance_rank1 (clock :title "绩效" :desc "职级 1 时，填满 12 格后升职。" :initial 0 :max 6))
-    (office_performance_rank2 (clock :title "绩效" :desc "职级 2 时，填满 16 格后发绩效奖金。" :initial 0 :max 8))
-    (office_rank (clock :title "职级" :desc "职级越高，每日全勤工资越高。最多 2 级。" :initial 0 :max 2))))
+(define building-vars
+  (list
+    (var 'office_checked_day 1)
+    (var 'office_paid_day 0)
+    (var 'office_demoted_notice false)
+    (var 'office_attendance (clock :title "今日出勤" :desc "每天填满 3 格即全勤，工资会在满勤时立刻结算。" :initial 0 :max 3))
+    (var 'office_performance_rank0 (clock :title "绩效" :desc "职级 0 时，填满 8 格后升职。" :initial 0 :max 4))
+    (var 'office_performance_rank1 (clock :title "绩效" :desc "职级 1 时，填满 12 格后升职。" :initial 0 :max 6))
+    (var 'office_performance_rank2 (clock :title "绩效" :desc "职级 2 时，填满 16 格后发绩效奖金。" :initial 0 :max 8))
+    (var 'office_rank (clock :title "职级" :desc "职级越高，每日全勤工资越高。最多 2 级。" :initial 0 :max 2))))
 
 (define building-reacts
-  (reacts
+  (list
     (react
       :when (and (= office_checked_day day) (clock-filled? office_attendance) (< office_paid_day day))
       :then (list

@@ -151,7 +151,7 @@
     (effect 'add 'police_relation -1)
     (effect 'add 'health -1))
   :on-cycle (list)
-  :reacts (reacts
+  :reacts (list
     (react
       :when (and police_knows_true_info (not police_alert_applied))
       :then (list
@@ -182,18 +182,18 @@
     (react
       :when (>= (clock-value alert) 6)
       :then (list (effect 'end-encounter 'fail))))
-  :state (state
+  :state (list
     (use-world-health)
     (use-world-energy)
-    (alert (clock :title "警觉" :initial 0 :max 6))
-    (awning_progress (clock :title "雨棚堆箱" :initial 0 :max 6))
-    (office_progress (clock :title "账房" :initial 0 :max 6))
-    (truck_progress (clock :title "巷尾车厢" :initial 0 :max 6))
-    (awning_revealed false)
-    (office_revealed false)
-    (truck_revealed false)
-    (truck_eliminated false)
-    (wounded_man_lead (world-item 'wounded_man_lead 0))
-    (police_knows_true_info (world-value 'police_knows_true_info false))
-    (police_alert_applied false))
+    (var 'alert (clock :title "警觉" :initial 0 :max 6))
+    (var 'awning_progress (clock :title "雨棚堆箱" :initial 0 :max 6))
+    (var 'office_progress (clock :title "账房" :initial 0 :max 6))
+    (var 'truck_progress (clock :title "巷尾车厢" :initial 0 :max 6))
+    (var 'awning_revealed false)
+    (var 'office_revealed false)
+    (var 'truck_revealed false)
+    (var 'truck_eliminated false)
+    (var 'wounded_man_lead (world-item 'wounded_man_lead 0))
+    (var 'police_knows_true_info (world-value 'police_knows_true_info false))
+    (var 'police_alert_applied false))
   :root (recovery))

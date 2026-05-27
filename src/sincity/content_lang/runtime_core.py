@@ -301,10 +301,7 @@ def host_values(*, store_specs: dict[str, StoreFieldSpec], store: dict[str, Any]
     return {
         "clock": builtin_clock,
         "clocks": lambda *args: [item for item in args if item is not None],
-        "state": SpecialFormProcedure(builtin_state),
-        "state-fragment": SpecialFormProcedure(builtin_state_fragment),
-        "state+": SpecialFormProcedure(builtin_state_plus),
-        "append-state": SpecialFormProcedure(builtin_state_plus),
+        "var": SpecialFormProcedure(builtin_var),
         "meta": lambda *args: builtin_meta(args),
         "condition": builtin_condition,
         "has-item": builtin_has_item_condition,
@@ -312,7 +309,6 @@ def host_values(*, store_specs: dict[str, StoreFieldSpec], store: dict[str, Any]
         "field-below": builtin_field_below_condition,
         "field-equals": builtin_field_equals_condition,
         "field-truthy": builtin_field_truthy_condition,
-        "reacts": lambda *args: [item for item in args if item is not None],
         "react": SpecialFormProcedure(builtin_react),
         "reaction-table": lambda *args: builtin_reaction_table(args),
         "face": lambda *args: builtin_reaction_face(args),
@@ -353,23 +349,11 @@ def builtin_meta(args: tuple[Any, ...]) -> EncounterMeta:
     return EncounterMeta(key=key, title=title, description=description)
 
 
-def builtin_state(args: list[Any], env: Environment) -> list[Any]:
-    return ["state", *args]
-
-
-def builtin_state_fragment(args: list[Any], env: Environment) -> list[Any]:
-    return ["state-fragment", *args]
-
-
-def builtin_state_plus(args: list[Any], env: Environment) -> list[Any]:
-    bindings: list[Any] = []
-    for arg in args:
-        value = evaluate(arg, env)
-        assert isinstance(value, list) and value and value[0] in {"state", "state-fragment"}, (
-            f"`state+` expects state fragments, got: {value!r}"
-        )
-        bindings.extend(value[1:])
-    return ["state", *bindings]
+def builtin_var(args: list[Any], env: Environment) -> list[Any]:
+    assert len(args) == 2, "`var` expects name and value."
+    key = unwrap(evaluate(args[0], env))
+    assert isinstance(key, str), f"`var` name must be a symbol/string, got: {key!r}"
+    return [key, args[1]]
 
 
 def builtin_clock(*args: Any) -> ClockTemplate:

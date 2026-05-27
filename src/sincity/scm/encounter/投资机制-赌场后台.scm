@@ -98,17 +98,17 @@
   :on-success (list (effect 'set 'test_casino_done true) (effect 'add money 20))
   :on-fail (list (effect 'set 'test_casino_failed true) (effect 'add money -8))
   :on-cycle (list (effect 'clock+ presence 1))
-  :reacts (reacts
+  :reacts (list
     (react :when (and (clock-filled? backstage) (not backstage_claimed)) :then (list (effect 'clock+ tokens 1) (effect 'set backstage_claimed true)))
     (react :when (clock-filled? tokens) :then (list (effect 'end-encounter 'success)))
     (react :when (clock-empty? tokens) :then (list (effect 'end-encounter 'fail)))
     (react :when (clock-filled? presence) :then (list (effect 'end-encounter 'fail))))
-  :state (state
+  :state (list
     (use-world-basics)
-    (tokens (clock :title "代币" :desc "初始 4，赢到 8 成功，归零失败。" :initial 4 :max 8))
-    (presence (clock :title "目标在场" :desc "目标人物离场前的时间。" :initial 0 :max 3))
-    (bartender (clock :title "酒保" :initial 0 :max 3))
-    (backstage (clock :title "后台" :initial 0 :max 3))
-    (rule (clock :title "赌局规则" :initial 0 :max 3))
-    (backstage_claimed false))
+    (var 'tokens (clock :title "代币" :desc "初始 4，赢到 8 成功，归零失败。" :initial 4 :max 8))
+    (var 'presence (clock :title "目标在场" :desc "目标人物离场前的时间。" :initial 0 :max 3))
+    (var 'bartender (clock :title "酒保" :initial 0 :max 3))
+    (var 'backstage (clock :title "后台" :initial 0 :max 3))
+    (var 'rule (clock :title "赌局规则" :initial 0 :max 3))
+    (var 'backstage_claimed false))
   :root (casino-root))

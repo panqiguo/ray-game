@@ -180,7 +180,7 @@
      (face 6 "加剧" (effect 'clock+ crisis 1))))
    (else nil)))
 
- :reacts (reacts
+ :reacts (list
 
           ;; 语言路径胜利：emotion 到达 3
           (react
@@ -207,21 +207,21 @@
            :then (list
                   (effect 'set crisis 0))))
 
- :state (state
+ :state (list
          (use-world-basics)
-         (emotion
+         (var 'emotion
           (clock
            :title "情绪"
            :desc "0=极度恐慌, 3=防御警惕, 6=愿意听, 9=放下枪。填满触发语言路径胜利。"
            :initial 0
            :max 9))
-         (distance
+         (var 'distance
           (clock
            :title "距离"
            :desc "0=远, 3=中距, 6=近, 9=夺枪距离。填满解锁夺枪行动。"
            :initial 0
            :max 9))
-         (crisis
+         (var 'crisis
           (clock
            :title "崩溃阈值"
            :desc "全局压力。满格时根据情绪阶段触发开枪（emotion=0）或逃跑（emotion=3）。"

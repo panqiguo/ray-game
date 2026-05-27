@@ -303,9 +303,10 @@ def _validate_schema_forms(expr: Any, env: Environment, *, context: str) -> None
 def _load_state_expr(expr: Any, definitions: dict[str, Any], module: ModuleState) -> None:
     if expr is None:
         return
-    assert _is_call(expr, "state"), "Encounter state must be a `(state ...)` form."
     env = _schema_env(definitions=definitions)
-    for binding in _expand_state_bindings(expr[1:], env):
+    value = evaluate(expr, env)
+    assert isinstance(value, list), f"Encounter :state must evaluate to a list of var bindings, got: {value!r}"
+    for binding in _expand_state_bindings(value, env):
         name, raw_value = binding
         value = raw_value if isinstance(raw_value, (ClockTemplate, StateBindingValue)) else evaluate(raw_value, env)
         if isinstance(value, ClockTemplate):
@@ -327,6 +328,9 @@ def _expand_state_bindings(items: list[Any], env: Environment) -> list[tuple[str
     for item in items:
         if isinstance(item, list) and len(item) == 2 and isinstance(item[0], str):
             result.append((item[0], item[1]))
+            continue
+        if isinstance(item, list) and item and all(isinstance(binding, list) and len(binding) == 2 and isinstance(binding[0], str) for binding in item):
+            result.extend(_expand_state_bindings(item, env))
             continue
         expanded = evaluate(item, env)
         if expanded is None:
@@ -350,11 +354,11 @@ def _eval_meta_expr(expr: Any, env: Environment) -> EncounterMeta:
 
 def _eval_reacts_expr(expr: Any, env: Environment, module: ModuleState) -> None:
     value = evaluate(expr, env)
-    items = value if isinstance(value, list) else [value]
-    for index, item in enumerate(items):
+    assert isinstance(value, list), f"Encounter :reacts must evaluate to a list of react forms, got: {value!r}"
+    for index, item in enumerate(value):
         if item is None:
             continue
-        assert isinstance(item, ReactTemplate), f"reacts expects react or nil, got: {item!r}"
+        assert isinstance(item, ReactTemplate), f":reacts expects react or nil, got: {item!r}"
         _validate_react_template(item)
         module.react_rules.append(ReactRule(condition=item.condition, effects=item.effects, source=f"react[{index}]", effects_expr=item.effects_expr))
 
@@ -430,7 +434,7 @@ def _schema_definition_values(definitions: dict[str, Any]) -> dict[str, Any]:
     values: dict[str, Any] = {}
     env = Environment(parent=base_environment(), values={**_host_values(store_specs={}, store={}), **values})
     for name, expr in definitions.items():
-        if not _is_schema_definition_expr(expr):
+        if not _is_schema_definition_expr(name, expr):
             continue
         value = evaluate(expr, env)
         env.values[name] = value
@@ -438,12 +442,14 @@ def _schema_definition_values(definitions: dict[str, Any]) -> dict[str, Any]:
     return values
 
 
-def _is_schema_definition_expr(expr: Any) -> bool:
+def _is_schema_definition_expr(name: str, expr: Any) -> bool:
     if isinstance(expr, (bool, int, StringAtom)):
         return True
     if not isinstance(expr, list) or not expr:
         return False
-    return expr[0] in {"quote", "lambda"}
+    if expr[0] in {"quote", "lambda", "var"}:
+        return True
+    return expr[0] in {"list", "append"} and (name.endswith("-state") or name.endswith("_state") or name.endswith("-vars") or name.endswith("_vars"))
 
 
 def _state_resolver(name: str, *, store: dict[str, int | bool | str], store_specs: dict[str, StoreFieldSpec]) -> Any:

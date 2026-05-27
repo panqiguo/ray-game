@@ -1,5 +1,5 @@
 ;; Scene: 富人飞地.
-;; Exports: rich-enclave-state, rich-enclave-reacts, exploitation-incident-action, 富人飞地
+;; Exports: rich-enclave-vars, rich-enclave-reacts, exploitation-incident-action, 富人飞地
 ;;
 ;; Dependency note:
 ;; - 富人飞地 creates `exploitation_incident_location` values that 老街 and
@@ -32,17 +32,17 @@
           :partial (outcome (list (effect 'clock+ exploitation_incident_resolution 1) (effect 'add energy -1)) "你暂时压住了事，但火还在下面烧。")
           :fail (outcome (list (effect 'add health -1) (effect 'add energy -1)) (exploitation-incident-fail-text location)))))))
 
-(define rich-enclave-state
-  (state-fragment
-    (exploitation_unrest (clock :title "民怨" :desc "压榨型工作会增加民怨，满格后生成事端。" :initial 0 :max 6))
-    (exploitation_incident_active false)
-    (exploitation_incident_location 'none)
-    (exploitation_incident_checked_day 1)
-    (exploitation_incident_timer (clock :title "事端倒计时" :desc "事端出现后每天推进；满 3 后造成关系和金钱损失。" :initial 0 :max 3))
-    (exploitation_incident_resolution (clock :title "平息事端" :desc "填满后摆平当前民怨事端。" :initial 0 :max 3))))
+(define rich-enclave-vars
+  (list
+    (var 'exploitation_unrest (clock :title "民怨" :desc "压榨型工作会增加民怨，满格后生成事端。" :initial 0 :max 6))
+    (var 'exploitation_incident_active false)
+    (var 'exploitation_incident_location 'none)
+    (var 'exploitation_incident_checked_day 1)
+    (var 'exploitation_incident_timer (clock :title "事端倒计时" :desc "事端出现后每天推进；满 3 后造成关系和金钱损失。" :initial 0 :max 3))
+    (var 'exploitation_incident_resolution (clock :title "平息事端" :desc "填满后摆平当前民怨事端。" :initial 0 :max 3))))
 
 (define rich-enclave-reacts
-  (reacts
+  (list
     (react
       :when (and (clock-filled? exploitation_unrest) (not exploitation_incident_active))
       :then (list

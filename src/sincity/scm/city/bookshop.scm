@@ -1,5 +1,5 @@
 ;; Bookshop growth slice.
-;; Exports: bookshop-state, bookshop-reacts, 书店
+;; Exports: bookshop-vars, bookshop-reacts, 书店
 ;; Depends on: helper.scm, common_clock_macros.scm
 
 (define book-logic-text
@@ -22,18 +22,18 @@
       :partial (outcome (list (effect 'clock+ clock 1) (effect 'add energy -1)))
       :fail (outcome (list (effect 'add energy -1))))))
 
-(define bookshop-state
-  (state-fragment
-    (logic_book (clock :title "《县城账簿与谎言》" :desc "读完后逻辑 +1。" :initial 0 :max 3))
-    (perception_book (clock :title "《街口观察法》" :desc "读完后感知 +1。" :initial 0 :max 3))
-    (willpower_book (clock :title "《疼痛之后》" :desc "读完后意志 +1。" :initial 0 :max 3))
-    (logic_book_done false)
-    (perception_book_done false)
-    (willpower_book_done false)
-    (bookshop_entered_today false)))
+(define bookshop-vars
+  (list
+    (var 'logic_book (clock :title "《县城账簿与谎言》" :desc "读完后逻辑 +1。" :initial 0 :max 3))
+    (var 'perception_book (clock :title "《街口观察法》" :desc "读完后感知 +1。" :initial 0 :max 3))
+    (var 'willpower_book (clock :title "《疼痛之后》" :desc "读完后意志 +1。" :initial 0 :max 3))
+    (var 'logic_book_done false)
+    (var 'perception_book_done false)
+    (var 'willpower_book_done false)
+    (var 'bookshop_entered_today false)))
 
 (define bookshop-reacts
-  (reacts
+  (list
     (react
       :when (and (clock-filled? logic_book) (not logic_book_done))
       :then (list

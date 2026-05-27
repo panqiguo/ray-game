@@ -77,7 +77,7 @@
           (face 4 "伤害" (effect 'add health -1))
           (face 5 "伤害" (effect 'add health -1))
           (face 6 "伤害" (effect 'add health -1)))))
-  :reacts (reacts
+  :reacts (list
     (react :when (clock-filled? duel_progress) :then (list (effect 'end-encounter 'success)))
     (react
       :when (clock-filled? stance_timer)
@@ -86,9 +86,9 @@
           (effect 'set stance 'attack)
           (effect 'set stance 'guard))
         (effect-reset-clock stance_timer))))
-  :state (state
+  :state (list
     (use-world-basics)
-    (stance 'guard)
-    (stance_timer (clock :title "姿态持续" :initial 0 :max 3))
-    (duel_progress (clock :title "压制进度" :initial 0 :max 8)))
+    (var 'stance 'guard)
+    (var 'stance_timer (clock :title "姿态持续" :initial 0 :max 3))
+    (var 'duel_progress (clock :title "压制进度" :initial 0 :max 8)))
   :root (stance-scene))

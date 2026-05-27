@@ -177,8 +177,9 @@
     (react :when (clock-filled? completion) :then (list
       (effect 'start-quick-dialogue "三个目标都搜刮完了。茶楼重新安静下来之前，你已经把该拿的东西都拿走。")
       (effect 'end-encounter 'success))))
-  :state (list
-    (use-world-basics)
+  :vars (append
+    world-basics-vars
+    (list
     (var 'hall_guards (clock :title "大厅守卫" :initial 2 :max 6))
     (var 'warehouse_guards (clock :title "仓库守卫" :initial 2 :max 6))
     (var 'yard_guards (clock :title "后院守卫" :initial 2 :max 6))
@@ -196,4 +197,5 @@
     (var 'hall_done false)
     (var 'warehouse_done false)
     (var 'yard_done false))
+    )
   :root (teahouse-root))

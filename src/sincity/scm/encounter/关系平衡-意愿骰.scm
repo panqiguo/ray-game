@@ -153,10 +153,12 @@
     (react :when (and (clock-filled? time) (not (clock-filled? intel))) :then (list
       (effect 'start-quick-dialogue "时间到了。她把最后一点话咽回去，今晚的门关上了。")
       (effect 'end-encounter 'fail))))
-  :state (list
-    (use-world-basics)
+  :vars (append
+    world-basics-vars
+    (list
     (var 'topic 'past)
     (var 'intel (clock :title "情报" :desc "填满即拿到关键情报。" :initial 0 :max 8))
     (var 'relation (clock :title "关系" :desc "把话题引向情报会消耗关系；归零失败。" :initial 3 :max 6))
     (var 'time (clock :title "时间" :desc "每次休整 +1，填满前没完成即失败。" :initial 0 :max 5)))
+    )
   :root (will-root))

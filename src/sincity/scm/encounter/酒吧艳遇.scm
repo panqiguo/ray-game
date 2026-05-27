@@ -245,8 +245,9 @@
 (content
   :meta (meta :key '酒吧艳遇 :title "酒吧艳遇" :desc "深夜的酒吧里，玩家要在目标关上心门之前钻进去，把情报带出来。")
   :on-success (list)
-  :state (list
-    (use-world-health)
+  :vars (append
+    world-health-vars
+    (list
     (var 'rapport (clock :title "好感" :initial 0 :max 9))
     (var 'tension (clock :title "警觉度" :initial 0 :max 3))
     (var 'attitude 'cold)
@@ -264,6 +265,7 @@
     (var 'soft_tempt_used false)
     (var 'soft_pull_thread_used false)
     (var 'soft_answer_probe_used false))
+    )
   :reacts (list
     (react :when (>= (clock-value tension) (clock-max tension)) :then (list (effect 'end-encounter 'fail)))
     (react :when (>= (clock-value rapport) 3) :then (list (effect 'set attitude 'chatty)))

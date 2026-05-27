@@ -89,8 +89,9 @@
       :when (clock-filled? analysis)
       :then (list (effect 'end-encounter 'success)))
     (react :when (clock-filled? alert) :then (list (effect 'end-encounter 'fail))))
-  :state (list
-    (use-world-basics)
+  :vars (append
+    world-basics-vars
+    (list
     (var 'alert (clock :title "被发现" :initial 0 :max 5))
     (var 'analysis (clock :title "分析" :initial 0 :max 16))
     (var 'clue_a (clock :title "病历线索" :initial 0 :max 3))
@@ -99,4 +100,5 @@
     (var 'clue_a_done false)
     (var 'clue_b_done false)
     (var 'clue_c_done false))
+    )
   :root (archive-root))

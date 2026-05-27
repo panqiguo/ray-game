@@ -31,7 +31,7 @@
     (effect 'add 'energy -1))
   :reacts (list
     (react :when (clock-filled? pressure) :then (list (effect 'end-encounter 'success))))
-  :state (list
+  :vars (list
     (var 'pressure (clock :title "施压" :initial 0 :max 3)))
   :root
   (scene

@@ -31,7 +31,7 @@
     (effect 'add 'energy -1))
   :reacts (list
     (react :when (clock-filled? advantage) :then (list (effect 'end-encounter 'success))))
-  :state (list
+  :vars (list
     (var 'advantage (clock :title "局势" :initial 0 :max 3)))
   :root
   (scene

@@ -307,8 +307,9 @@
 (content
   :meta (meta :key '潜入别墅 :title "潜入别墅" :desc "深夜潜入戒备森严的宅邸，只为听到一个真相。")
   :on-fail (list (effect 'add 'stress 2))
-  :state (list
-    (use-world-health)
+  :vars (append
+    world-health-vars
+    (list
     (var 'alert (clock :title "全局警觉度" :initial 0 :max 6))
     (var 'patrol (clock :title "保安巡逻" :initial 0 :max 3))
     (var 'traverse (clock :title "穿越进度" :initial 0 :max 2))
@@ -317,6 +318,7 @@
     (var 'route none)
     (var 'dog_state 'calm)
     (var 'entry_method none))
+    )
   :reacts (list
     (react :when (clock-filled? alert) :then (list (effect 'end-encounter 'fail)))
     (react :when (clock-filled? truth) :then (list (effect 'end-encounter 'success)))

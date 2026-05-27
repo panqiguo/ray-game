@@ -33,8 +33,10 @@
     (effect 'add 'fake_id 1))
   :on-fail (list
     (effect 'set 'fake_id_job_failed true))
-  :state (list
-    (use-world-health)
-    (use-world-energy)
+  :vars (append
+    world-health-vars
+    world-energy-vars
+    (list
     (var 'phase 'favor))
+    )
   :root (favor))

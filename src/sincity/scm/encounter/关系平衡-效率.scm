@@ -90,9 +90,11 @@
     (react :when (and (clock-filled? time) (not (clock-filled? intel))) :then (list
       (effect 'start-quick-dialogue "时间到了。你还差一点，但这个话题已经没有继续的机会。")
       (effect 'end-encounter 'fail))))
-  :state (list
-    (use-world-basics)
+  :vars (append
+    world-basics-vars
+    (list
     (var 'intel (clock :title "情报进度" :desc "填满即拿到关键情报。" :initial 0 :max 12))
     (var 'relation (clock :title "关系" :desc "0 冷掉；1-2 情报 -1；3-5 正常；6-7 情报 +1；8 越界。" :initial 2 :max 8))
     (var 'time (clock :title "时间" :desc "每次休整 +1，填满前没有完成即失败。" :initial 0 :max 4)))
+    )
   :root (relation-efficiency-root))

@@ -1,27 +1,17 @@
-(define use-world-health
-  (lambda ()
-    (list
-      (var 'health (world-attr 'health)))))
+(define world-health-vars
+  (list (var 'health (world-attr 'health))))
 
-(define use-world-energy
-  (lambda ()
-    (list
-      (var 'energy (world-attr 'energy)))))
+(define world-energy-vars
+  (list (var 'energy (world-attr 'energy))))
 
-(define use-world-money
-  (lambda ()
-    (list
-      (var 'money (world-item 'money 0)))))
+(define world-money-vars
+  (list (var 'money (world-item 'money 0))))
 
-(define use-world-food
-  (lambda ()
-    (list
-      (var 'food (world-item 'food 0)))))
+(define world-food-vars
+  (list (var 'food (world-item 'food 0))))
 
-(define use-world-basics
-  (lambda ()
-    (append
-      (use-world-health)
-      (use-world-energy)
-      (use-world-money)
-      (use-world-food))))
+(define world-basics-vars
+  (append world-health-vars
+          world-energy-vars
+          world-money-vars
+          world-food-vars))

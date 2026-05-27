@@ -207,8 +207,9 @@
            :then (list
                   (effect 'set crisis 0))))
 
- :state (list
-         (use-world-basics)
+ :vars (append
+         world-basics-vars
+         (list
          (var 'emotion
           (clock
            :title "情绪"
@@ -228,4 +229,5 @@
            :initial 0
            :max 9)))
 
+)
  :root (standoff))

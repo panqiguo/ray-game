@@ -87,11 +87,11 @@ def compile_encounter_program(source: str, *, source_path: str | Path | None = N
             content_form = form
             continue
     assert content_form is not None, "Encounter module must contain a `(content ...)` form."
-    kwargs = _keyword_args(content_form[1:], allowed={":meta", ":state", ":reacts", ":reaction-die", ":on-success", ":on-fail", ":on-cycle", ":root"})
+    kwargs = _keyword_args(content_form[1:], allowed={":meta", ":vars", ":reacts", ":reaction-die", ":on-success", ":on-fail", ":on-cycle", ":root"})
     root_expr = kwargs.get(":root")
     assert root_expr is not None, "Encounter content is missing required field: :root"
     module = ModuleState(root_expr=root_expr)
-    _load_state_expr(_resolve_expr(kwargs.get(":state"), raw_definitions), raw_definitions, module)
+    _load_state_expr(_resolve_expr(kwargs.get(":vars"), raw_definitions), raw_definitions, module)
     definitions = _top_level_definition_exprs(forms)
     validation_env = _runtime_env(definitions=definitions, store=initial_store_from_specs(module.store_specs), store_specs=module.store_specs)
     meta_expr = kwargs.get(":meta")
@@ -305,7 +305,7 @@ def _load_state_expr(expr: Any, definitions: dict[str, Any], module: ModuleState
         return
     env = _schema_env(definitions=definitions)
     value = evaluate(expr, env)
-    assert isinstance(value, list), f"Encounter :state must evaluate to a list of var bindings, got: {value!r}"
+    assert isinstance(value, list), f"Encounter :vars must evaluate to a list of var bindings, got: {value!r}"
     for binding in _expand_state_bindings(value, env):
         name, raw_value = binding
         value = raw_value if isinstance(raw_value, (ClockTemplate, StateBindingValue)) else evaluate(raw_value, env)
@@ -326,19 +326,9 @@ def _load_state_expr(expr: Any, definitions: dict[str, Any], module: ModuleState
 def _expand_state_bindings(items: list[Any], env: Environment) -> list[tuple[str, Any]]:
     result: list[tuple[str, Any]] = []
     for item in items:
-        if isinstance(item, list) and len(item) == 2 and isinstance(item[0], str):
-            result.append((item[0], item[1]))
-            continue
-        if isinstance(item, list) and item and all(isinstance(binding, list) and len(binding) == 2 and isinstance(binding[0], str) for binding in item):
-            result.extend(_expand_state_bindings(item, env))
-            continue
-        expanded = evaluate(item, env)
-        if expanded is None:
-            continue
-        assert isinstance(expanded, list), f"State helper must produce a list of bindings, got: {expanded!r}"
-        for binding in expanded:
-            assert isinstance(binding, list) and len(binding) == 2 and isinstance(binding[0], str), f"State helper produced invalid binding: {binding!r}"
-            result.append((binding[0], binding[1]))
+        assert isinstance(item, list) and len(item) == 2 and isinstance(item[0], str), \
+            f":vars must be a list of var bindings, got: {item!r}"
+        result.append((item[0], item[1]))
     names: set[str] = set()
     for name, _value in result:
         assert name not in names, f"Duplicate state binding: {name}"

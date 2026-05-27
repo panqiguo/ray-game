@@ -182,9 +182,10 @@
     (react
       :when (>= (clock-value alert) 6)
       :then (list (effect 'end-encounter 'fail))))
-  :state (list
-    (use-world-health)
-    (use-world-energy)
+  :vars (append
+    world-health-vars
+    world-energy-vars
+    (list
     (var 'alert (clock :title "警觉" :initial 0 :max 6))
     (var 'awning_progress (clock :title "雨棚堆箱" :initial 0 :max 6))
     (var 'office_progress (clock :title "账房" :initial 0 :max 6))
@@ -196,4 +197,5 @@
     (var 'wounded_man_lead (world-item 'wounded_man_lead 0))
     (var 'police_knows_true_info (world-value 'police_knows_true_info false))
     (var 'police_alert_applied false))
+    )
   :root (recovery))

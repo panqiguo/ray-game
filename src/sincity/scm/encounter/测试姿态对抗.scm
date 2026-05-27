@@ -86,9 +86,11 @@
           (effect 'set stance 'attack)
           (effect 'set stance 'guard))
         (effect-reset-clock stance_timer))))
-  :state (list
-    (use-world-basics)
+  :vars (append
+    world-basics-vars
+    (list
     (var 'stance 'guard)
     (var 'stance_timer (clock :title "姿态持续" :initial 0 :max 3))
     (var 'duel_progress (clock :title "压制进度" :initial 0 :max 8)))
+    )
   :root (stance-scene))

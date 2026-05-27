@@ -378,8 +378,9 @@
       :when (>= (clock-value alert) 9)
       :then (list
         (effect 'end-encounter 'fail))))
-  :state (list
-    (use-world-basics)
+  :vars (append
+    world-basics-vars
+    (list
     (var 'alert (clock :title "警觉" :desc "填满则潜入失败。" :initial 0 :max 9))
     (var 'wife_patrol (clock :title "老板娘巡查" :desc "填满后老板娘离开。" :initial 0 :max 4))
     (var 'husband_patrol (clock :title "老板巡查" :desc "填满后老板离开。" :initial 0 :max 4))
@@ -396,4 +397,5 @@
     (var 'wife_patrol_active false)
     (var 'husband_patrol_triggered false)
     (var 'husband_patrol_active false))
+    )
   :root (infiltration))

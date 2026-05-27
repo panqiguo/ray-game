@@ -80,11 +80,13 @@
       (effect 'set guard_state "watching")
       (effect-reset-clock guard_check)
       (effect 'start-quick-dialogue "守门人检查完回来了。目光重新落在房间方向。"))))
-  :state (list
-    (use-world-basics)
+  :vars (append
+    world-basics-vars
+    (list
     (var 'guard_state "watching")
     (var 'guard_check (clock :title "守门人查看混乱" :desc "填满后守门人回到门口。" :initial 0 :max 2))
     (var 'exposure (clock :title "被发现" :initial 0 :max 5))
     (var 'ledger (clock :title "账本进度" :initial 0 :max 3))
     (var 'disturbance (clock :title "制造混乱" :desc "填满后引开守门人。" :initial 0 :max 3)))
+    )
   :root (law-root))

@@ -21,6 +21,6 @@
     (effect 'set 'mb_knows true)
     (effect 'set 'corridor_man_seen true)
     (effect 'set 'hotel_search_done true))
-  :state (list
+  :vars (list
     (var 'phase 'search))
   :root (room_search))

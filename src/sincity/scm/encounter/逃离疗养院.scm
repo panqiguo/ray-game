@@ -246,9 +246,10 @@
 
 
 (define all-state
-  (list
-   (use-world-health)
-   (use-world-money)
+  (append
+   world-health-vars
+   world-money-vars
+   (list
    ;; 流程控制标志
    (var 'intro-has-played false)
    (var 'escaped false) ;; 是否已挣脱
@@ -266,7 +267,7 @@
    (var '挣脱束缚钟 (clock :title "挣脱皮带" :initial 0 :max 4))
    (var '左侧探索进度 (clock :title "探查左侧" :initial 0 :max 3))
    (var '右侧探索进度 (clock :title "探查右侧" :initial 0 :max 3))
-   (var '前方探索进度 (clock :title "探查正前方" :initial 0 :max 3))))
+   (var '前方探索进度 (clock :title "探查正前方" :initial 0 :max 3)))))
 
 ;; ==========================================
 ;; 全局响应 (Reacts)
@@ -312,7 +313,7 @@
            (effect 'start-quick-dialogue
                    "# 重回深渊\n\n你离出口只差最后几步，几乎能闻到外面潮湿的沥青味。\n但走廊拐角处的阴影里突然伸出一把枪管，接着是某个壮汉粗暴的闷棍。你的后脑勺一阵剧痛，地板迎面砸向你的鼻子。\n你听见有人冷笑：“马洛先生，你的疗程还没结束呢。”\n接着，黑暗像一块巨大的湿毛巾，再次死死捂住了你的脸。")
            (effect 'end-game))
- :state all-state
+ :vars all-state
  :reacts all-reacts
  :root (cond
         ((not escaped) (scene1))

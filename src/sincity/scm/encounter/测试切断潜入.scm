@@ -181,8 +181,9 @@
       (effect 'start-quick-dialogue "你把两件真正有用的工具塞进口袋。它们可以稳定推进破坏或盗取行动。")))
     (react :when (clock-filled? safe) :then (list (effect 'end-encounter 'success)))
     (react :when (clock-filled? alert) :then (list (effect 'end-encounter 'fail))))
-  :state (list
-    (use-world-basics)
+  :vars (append
+    world-basics-vars
+    (list
     (var 'security_online true)
     (var 'power_cut false)
     (var 'backup_power_active false)
@@ -198,4 +199,5 @@
     (var 'tool_progress (clock :title "取得道具" :initial 0 :max 2))
     (var 'money_search (clock :title "翻找零钱" :desc "每填 1 格代表已经翻找过一次，最多 4 次。" :initial 0 :max 4))
     (var 'safe (clock :title "保险箱" :initial 0 :max 8)))
+    )
   :root (infiltration-root))

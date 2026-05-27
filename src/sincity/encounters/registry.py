@@ -18,32 +18,7 @@ def _load_program(filename: str) -> CompiledEncounterProgram:
         raise EncounterCompileError(f"{filename}: {exc}") from exc
 
 
-ENCOUNTER_FILES = (
-    "测试切断潜入.scm",
-    "测试关系平衡.scm",
-    "关系平衡-效率.scm",
-    "关系平衡-意愿骰.scm",
-    "测试茶楼三处搜刮.scm",
-    "潜入别墅.scm",
-    "测试仓库撤退.scm",
-    "教训小混混.scm",
-    "酒吧艳遇.scm",
-    "逃离疗养院.scm",
-    "望月旅馆搜寻.scm",
-    "黑市证件人情.scm",
-    "取回神秘物品.scm",
-    "酒吧赶客人.scm",
-    "巷口赌徒.scm",
-    "潜入旅馆.scm",
-    "公寓枪对峙.scm",
-    "公寓枪对峙2.scm",
-    "公寓对峙claude.scm",
-    "公寓对峙3关系版.scm",
-    "投资机制-赌场后台.scm",
-    "测试档案室拼图.scm",
-    "投资降低风险-翻看账本.scm",
-    "测试姿态对抗.scm",
-)
+ENCOUNTER_FILES = tuple(sorted(f.name for f in ENCOUNTER_DIR.iterdir() if f.suffix == ".scm"))
 
 
 def load_encounters() -> dict[str, CompiledEncounterProgram]:

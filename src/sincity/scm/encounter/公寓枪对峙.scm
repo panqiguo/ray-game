@@ -129,9 +129,11 @@
         (effect-reset-clock distance)
         (effect-reset-clock disarm)
         (effect 'start-quick-dialogue "# 枪声\n\n# speaker: 科尔\n枪声在小房间里炸开。子弹擦过肋侧，疼痛让我短暂失去声音。\n\n# speaker: 薇拉\n她也被那一枪吓住了。枪还在她手里，敌意却像被后坐力打回了原点。"))))
-  :state (list
-    (use-world-basics)
+  :vars (append
+    world-basics-vars
+    (list
     (var 'hostility (clock :title "敌意" :desc "降到 3 后可以尝试拉近距离；满格时薇拉会开枪。" :initial 5 :max 12))
     (var 'distance (clock :title "距离" :desc "足够近时才能夺枪。" :initial 0 :max 4))
     (var 'disarm (clock :title "缴械" :desc "填满后科尔夺回主动权。" :initial 0 :max 1)))
+    )
   :root (standoff))

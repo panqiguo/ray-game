@@ -78,9 +78,11 @@
     (react :when (and (clock-filled? time) (not (clock-filled? intel))) :then (list
       (effect 'start-quick-dialogue "机会结束了。对方看了看时间，把剩下的话咽了回去。")
       (effect 'end-encounter 'fail))))
-  :state (list
-    (use-world-basics)
+  :vars (append
+    world-basics-vars
+    (list
     (var 'intel (clock :title "情报进度" :initial 0 :max 12))
     (var 'tension (clock :title "关系" :desc "3-5 安全区；0 冷掉，8 越界。" :initial 2 :max 8))
     (var 'time (clock :title "时间" :desc "每休整一次 +1，填满前没完成即失败。" :initial 0 :max 4)))
+    )
   :root (tension-root))

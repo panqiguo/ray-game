@@ -118,12 +118,14 @@
   ;; These quoted keys are world facts written back to the city after success.
   :on-success (list
     (effect 'set 'gang_pressure_result_pending true))
-  :state (list
-    (use-world-health)
+  :vars (append
+    world-health-vars
+    (list
     (var 'initiative (clock :title "主动权" :initial 0 :max 4))
     (var 'knife (clock :title "夺刀" :initial 0 :max 2))
     (var 'enemy_hp (clock :title "敌人血量" :initial 4 :max 4))
     (var 'opening (clock :title "破绽" :initial 0 :max 2)))
+    )
   :reacts (list
     (react :when (<= (clock-value enemy_hp) 0) :then (list (effect 'end-encounter 'success))))
   :root

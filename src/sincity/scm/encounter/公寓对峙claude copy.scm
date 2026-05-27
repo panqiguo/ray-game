@@ -163,8 +163,9 @@
         (effect 'add health -2)
         (effect 'set danger 6))))
 
-  :state (list
-    (use-world-basics)
+  :vars (append
+    world-basics-vars
+    (list
     (var 'calm
       (clock
         :title "缓和"
@@ -184,4 +185,5 @@
         :initial 0
         :max 6)))
 
+)
   :root (standoff))

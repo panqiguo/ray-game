@@ -104,8 +104,8 @@ def compile_world_program(
             content_form = form
             continue
     assert isinstance(content_form, list) and content_form and content_form[0] == "content", "World module must end with a `(content ...)` form."
-    kwargs = _keyword_args(content_form[1:], allowed={":meta", ":state", ":reacts", ":tasks", ":root"})
-    clocks, state_values = _resolve_state_specs(kwargs.get(":state"), raw_definitions)
+    kwargs = _keyword_args(content_form[1:], allowed={":meta", ":vars", ":reacts", ":tasks", ":root"})
+    clocks, state_values = _resolve_state_specs(kwargs.get(":vars"), raw_definitions)
     env = _world_schema_env(definitions={}, clocks_by_id=clocks, initial_values=state_values, initial_inventory=dict(initial_inventory or {}))
     definitions = _eval_top_level_definitions(forms, env)
     metadata = _resolve_meta(kwargs.get(":meta"), env, path)
@@ -331,15 +331,14 @@ def _resolve_state_specs(expr: Any, definitions: dict[str, Any]) -> tuple[dict[s
 def _flatten_state_bindings(value: Any) -> list[list[Any]]:
     if value is None:
         return []
-    assert isinstance(value, list), f"World :state must evaluate to a list of var bindings, got: {value!r}"
-    if len(value) == 2 and isinstance(value[0], str):
-        return [value]
+    assert isinstance(value, list), f"World :vars must evaluate to a list of var bindings, got: {value!r}"
     result: list[list[Any]] = []
     for item in value:
-        result.extend(_flatten_state_bindings(item))
+        assert isinstance(item, list) and len(item) == 2 and isinstance(item[0], str), \
+            f"Each world state binding must be `(var 'name value)`, got: {item!r}"
+        result.append(item)
     names: set[str] = set()
     for binding in result:
-        assert len(binding) == 2 and isinstance(binding[0], str), f"Each world state binding must be `(var 'name value)`, got: {binding!r}"
         assert binding[0] not in names, f"Duplicate state binding: {binding[0]}"
         names.add(binding[0])
     return result

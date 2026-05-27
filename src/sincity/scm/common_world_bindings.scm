@@ -1,22 +1,22 @@
 (define use-world-health
   (lambda ()
     (list
-      (list 'health (world-attr 'health)))))
+      (var 'health (world-attr 'health)))))
 
 (define use-world-energy
   (lambda ()
     (list
-      (list 'energy (world-attr 'energy)))))
+      (var 'energy (world-attr 'energy)))))
 
 (define use-world-money
   (lambda ()
     (list
-      (list 'money (world-item 'money 0)))))
+      (var 'money (world-item 'money 0)))))
 
 (define use-world-food
   (lambda ()
     (list
-      (list 'food (world-item 'food 0)))))
+      (var 'food (world-item 'food 0)))))
 
 (define use-world-basics
   (lambda ()

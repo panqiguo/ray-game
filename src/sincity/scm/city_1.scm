@@ -514,7 +514,7 @@
         :effects (list (effect 'start-encounter '投资机制-赌场后台)))
       )))
 
-(define world-state
+(define world-vars
   (append
     bookshop-vars
     building-vars
@@ -778,7 +778,7 @@
 
 (content
   :meta (meta :key 'city_1 :title "贝城县" :desc "雨夜闯入者、警方笔录、薇拉委托，以及被一点点揭开的城市。")
-  :state world-state
+  :state world-vars
   :reacts world-reacts
   :tasks world-tasks
   :root

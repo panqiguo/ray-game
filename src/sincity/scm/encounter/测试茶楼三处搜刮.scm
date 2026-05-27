@@ -26,7 +26,7 @@
       (factor -1 :when (>= (clock-value yard_guards) 3) :label "3名守卫")
       (factor -1 :when (>= (clock-value yard_guards) 4) :label "4名守卫"))))
 
-(define-scene hall-scene
+(define (hall-scene)
   (scene
     :title "大厅"
     :desc "桌账、茶资和客人落下的钱都在这里。搜刮完成后会推进总完成进度。"
@@ -57,7 +57,7 @@
           :partial (outcome (list (effect 'clock+ hall_target 1)) "你拿到一点钱，但不能多停。")
           :fail (outcome (list (effect 'clock+ alert 1)) "有人抬头看了你一眼，你只好把手收回来。"))))))
 
-(define-scene warehouse-scene
+(define (warehouse-scene)
   (scene
     :title "仓库"
     :desc "破茶箱、旧铜管和能卖钱的废料堆在角落。搜刮完成后会推进总完成进度。"
@@ -88,7 +88,7 @@
           :partial (outcome (list (effect 'clock+ warehouse_target 1)) "你拿到一小捆废料。")
           :fail (outcome (list (effect 'clock+ alert 1)) "铁片在箱底刮响，外面有人咳了一声。"))))))
 
-(define-scene yard-scene
+(define (yard-scene)
   (scene
     :title "后院"
     :desc "目标物藏在后院杂物和晾衣绳之间。搜刮完成后会推进总完成进度。"
@@ -119,7 +119,7 @@
           :partial (outcome (list (effect 'clock+ yard_target 1)) "你排除了一片杂物，搜索范围缩小。")
           :fail (outcome (list (effect 'clock+ alert 1)) "后门轴响了一下，你不得不停住。"))))))
 
-(define-scene teahouse-root
+(define (teahouse-root)
   (scene
     :title "茶楼三处搜刮"
     :desc "每区 2 名守卫。制造干扰可吸引其他区域的守卫，降低目标区域搜刮难度。"

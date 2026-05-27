@@ -35,7 +35,7 @@
 ;;    B. 物理路径：emotion>=3 → 推 distance 至 9 → 夺枪
 ;; ══════════════════════════════════════════════════════════════
 
-(define-scene standoff
+(define (standoff)
   (scene
    :title "无门牌公寓 · 枪口"
    :desc

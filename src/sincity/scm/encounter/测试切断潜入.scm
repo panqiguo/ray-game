@@ -14,7 +14,7 @@
       (list
         (factor -1 :when (and guard_at_safe (not power_cut)) :label "守卫")))))
 
-(define-scene power-room
+(define (power-room)
   (scene
     :title "配电房"
     :desc
@@ -47,7 +47,7 @@
         :effects (list
           (effect 'clock+ power_progress 1))))))
 
-(define-scene camera-room
+(define (camera-room)
   (scene
     :title "监控室"
     :desc
@@ -76,7 +76,7 @@
         :effects (list
           (effect 'clock+ camera_progress 1))))))
 
-(define-scene storage-room
+(define (storage-room)
   (scene
     :title "道具储藏间"
     :desc "一排工具箱和几个零钱抽屉。这里没有守卫，但每次行动仍会消耗你的夜晚。"
@@ -105,7 +105,7 @@
           :partial (outcome (list (effect 'clock+ money_search 1) (effect 'add money 2)) "你翻出一点零钱。")
           :fail (outcome (list (effect 'clock+ money_search 1) (effect 'clock+ alert 1)) "抽屉卡住，响声有点刺耳。"))))))
 
-(define-scene hall
+(define (hall)
   (scene
     :title "大厅"
     :desc
@@ -129,7 +129,7 @@
         :effects (list
           (effect 'clock+ safe 1))))))
 
-(define-scene infiltration-root
+(define (infiltration-root)
   (scene
     :title "切断与潜入"
     :desc "你不是在打一场仗，而是在和一栋精密运转的建筑博弈。"

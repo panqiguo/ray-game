@@ -58,6 +58,22 @@ class Environment:
 _MISSING = object()
 
 
+def desugar_define_form(form: Any) -> tuple[str, Any] | None:
+    if not isinstance(form, list) or not form or form[0] != "define":
+        return None
+    assert len(form) >= 3, "`define` expects name and expr, or a function signature and body."
+    target = form[1]
+    if isinstance(target, str):
+        assert len(form) == 3, "`define` with a symbol expects exactly one expression."
+        return target, form[2]
+    assert isinstance(target, list) and target and isinstance(target[0], str), "`define` function signature must start with a name."
+    name = target[0]
+    params = target[1:]
+    assert all(isinstance(param, str) for param in params), "`define` function parameters must be symbols."
+    body = form[2] if len(form) == 3 else ["begin", *form[2:]]
+    return name, ["lambda", params, body]
+
+
 def parse_program(text: str, *, source_path: Path | None = None) -> list[SexpNode]:
     tokens = _tokenize(text, source_path=source_path)
     index = 0

@@ -116,7 +116,7 @@
             :partial (outcome (list (hit-this-enemy enemy 1) (effect 'add energy -1)) "你打中了，也被他拖住。")
             :fail (outcome (list (effect 'add energy -1)) "你扑空了，他的反击立刻追上来。")))))))
 
-(define-scene exit-scene
+(define (exit-scene)
   (scene
     :title "被堵塞的出口"
     :desc (if (some enemies (lambda (enemy) (= (enemy-kind enemy) 'gun)))
@@ -134,7 +134,7 @@
           :partial (outcome (list (effect 'clock+ exit 1) (effect 'add energy -1)) "你推进了，但枪声和碎片一起追上来。")
           :fail (outcome (list (effect 'add energy -1)) "你被压回仓库深处。"))))))
 
-(define-scene warehouse-root
+(define (warehouse-root)
   (scene
     :title "仓库撤退"
     :desc "敌人会一波波涌进来。你不可能把所有人都处理干净，关键是判断什么时候该忍伤推进。"

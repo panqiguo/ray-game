@@ -80,7 +80,7 @@
         :fail (outcome "你退得太刻意，时间被白白耗掉。"
           (list (effect 'clock+ time 1)))))))
 
-(define-scene topic-a-scene
+(define (topic-a-scene)
   (scene
     :title "话题A：她的过去"
     :desc (topic-status 'past)
@@ -94,7 +94,7 @@
         "你碰到了不该碰的地方，她的声音淡了。")
       (ease-action))))
 
-(define-scene topic-b-scene
+(define (topic-b-scene)
   (scene
     :title "话题B：她的看法"
     :desc (topic-status 'view)
@@ -108,7 +108,7 @@
         "你的附和显得太快，她没有接这句话。")
       (ease-action))))
 
-(define-scene topic-c-scene
+(define (topic-c-scene)
   (scene
     :title "话题C：关键情报"
     :desc (if (topic-current? 'clue)
@@ -119,7 +119,7 @@
       (clue-action)
       (ease-action))))
 
-(define-scene will-root
+(define (will-root)
   (scene
     :title "关系平衡-意愿骰"
     :desc (relation-desc)

@@ -17,7 +17,7 @@ from sincity.content_lang.runtime_core import (
     validate_scene_template as _validate_scene_template,
 )
 from sincity.encounters.defs import ActionTemplate, ClockTemplate, EncounterMeta, EncounterSchemaError, EncounterSchemeError, ReactRule, ReactTemplate, SceneTemplate, StateBindingValue, StoreFieldSpec, TaskStepTemplate, TaskTemplate
-from sincity.encounters.lispy import Environment, Procedure, SpecialFormProcedure, StringAtom, _MISSING, base_environment, evaluate, expand_includes, truthy
+from sincity.encounters.lispy import Environment, Procedure, StringAtom, _MISSING, base_environment, desugar_define_form, evaluate, expand_includes, truthy
 from sincity.model.defs import CompiledScenario, Effect, LocationNode, ProgressClockSpec
 from sincity.model.enums import ScreenName
 from sincity.model.state import GameState, ProgressClockState
@@ -94,9 +94,10 @@ def compile_world_program(
     raw_definitions: dict[str, Any] = {}
     content_form: Any | None = None
     for form in forms:
-        if isinstance(form, list) and form and form[0] in {"define", "define-node", "define-scene"}:
-            assert len(form) == 3 and isinstance(form[1], str), "`define` expects name and expr."
-            raw_definitions[form[1]] = form[2]
+        define_form = desugar_define_form(form)
+        if define_form is not None:
+            name, expr = define_form
+            raw_definitions[name] = expr
             continue
         if isinstance(form, list) and form and form[0] == "content":
             assert content_form is None, "World module can contain only one top-level `(content ...)` form."
@@ -288,17 +289,12 @@ def _eval_top_level_definitions(forms: list[Any], env: Environment) -> dict[str,
         head = form[0]
         if head == "content":
             continue
-        if head == "define":
-            assert len(form) == 3 and isinstance(form[1], str), "`define` expects name and expr."
-            value = evaluate(form[2], env)
-            env.values[form[1]] = value
-            definitions[form[1]] = value
-            continue
-        if head in {"define-node", "define-scene"}:
-            assert len(form) == 3 and isinstance(form[1], str), f"`{head}` expects name and expr."
-            value = _dynamic_template_proc(form[1], "node" if head == "define-node" else "scene", form[2])
-            env.values[form[1]] = value
-            definitions[form[1]] = value
+        define_form = desugar_define_form(form)
+        if define_form is not None:
+            name, expr = define_form
+            value = evaluate(expr, env)
+            env.values[name] = value
+            definitions[name] = value
             continue
         evaluate(form, env)
     return definitions
@@ -311,24 +307,6 @@ def _resolve_meta(expr: Any, env: Environment, path: Path | None) -> EncounterMe
     value = evaluate(expr, env)
     assert isinstance(value, EncounterMeta), f"meta form did not produce meta: {value!r}"
     return value
-
-
-def _default_titled_body(name: str, constructor: str, body: Any) -> Any:
-    if not isinstance(body, list) or not body or body[0] != constructor:
-        return body
-    if ":title" in body[1:]:
-        return body
-    return [constructor, ":title", StringAtom(name), *body[1:]]
-
-
-def _dynamic_template_proc(name: str, constructor: str, body: Any) -> SpecialFormProcedure:
-    titled_body = _default_titled_body(name, constructor, body)
-
-    def _call(args: list[Any], call_env: Environment) -> Any:
-        assert not args, f"`{name}` expects no arguments."
-        return evaluate(titled_body, call_env)
-
-    return SpecialFormProcedure(_call)
 
 
 def _resolve_state_specs(expr: Any, definitions: dict[str, Any]) -> tuple[dict[str, ProgressClockSpec], dict[str, int | bool | str]]:

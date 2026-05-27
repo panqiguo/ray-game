@@ -6,8 +6,9 @@
 ;;   lands in old street. This is a scene-level cross dependency until the DSL
 ;;   grows explicit provide/require.
 
-(define-node 老街
+(define (老街)
   (node
+    :title "老街"
     :desc "旧铺面、窄楼梯、晾衣绳和熟人的眼神。老街没有明确入口，但你总能从这里找到一点活路。"
     :position '(450 520)
     :show-clocks (list

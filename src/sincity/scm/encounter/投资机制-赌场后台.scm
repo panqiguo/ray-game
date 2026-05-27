@@ -2,7 +2,7 @@
 (include "../common_clock_macros.scm")
 (include "../common_world_bindings.scm")
 
-(define-scene bartender-scene
+(define (bartender-scene)
   (scene
     :title "酒保"
     :desc "酒保知道后台谁在抽水，也知道什么话不能在牌桌边说。"
@@ -20,7 +20,7 @@
             :partial (outcome (list (effect 'clock+ bartender 1)) "他没明说，但眼神已经指向了后台门。")
             :fail (outcome (list (effect 'clock+ presence 1)) "你问得太直，目标人物抬头看了一眼。")))))))
 
-(define-scene backstage-scene
+(define (backstage-scene)
   (scene
     :title "后台"
     :desc "有人把输掉的公道藏在账本背面，也有人把筹码藏在袖口里。"
@@ -38,7 +38,7 @@
             :partial (outcome (list (effect 'clock+ backstage 1) (effect 'clock+ presence 1)) "账袋被你翻开了一半，也留下了一点痕迹。")
             :fail (outcome (list (effect 'clock+ presence 2)) "后台有人咳了一声，你只能先把手收回来。")))))))
 
-(define-scene rule-scene
+(define (rule-scene)
   (scene
     :title "赌局规则"
     :desc "这张桌子不是公平的，但不公平也有规则。看懂规则，才能反过来用它。"
@@ -56,7 +56,7 @@
             :partial (outcome (list (effect 'clock+ rule 1) (effect 'clock+ presence 1)) "你看懂一半，也被人看见你在看。")
             :fail (outcome (list (effect 'clock+ presence 1)) "庄家的手势换了，你刚建立的判断又散掉。")))))))
 
-(define-scene table-scene
+(define (table-scene)
   (scene
     :title "赌桌"
     :desc "目标人物还在场。你有多少准备，就能把多少运气从桌上抢回来。"
@@ -82,7 +82,7 @@
             :partial (outcome (list (effect 'clock+ tokens 1)) "你稳稳吃下一点，不贪。")
             :fail (outcome (list (effect 'clock- tokens 1)) "你判断错了暗号，但至少知道错在哪里。")))))))
 
-(define-scene casino-root
+(define (casino-root)
   (scene
     :title "赌场后台 · 替人讨回公道"
     :desc "有人在这张桌上被做掉了最后一笔救命钱。你要把代币赢回 8 枚，在目标人物离场前。"

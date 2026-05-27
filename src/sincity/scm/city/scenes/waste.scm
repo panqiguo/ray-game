@@ -53,8 +53,9 @@
         (effect 'add health -1)
         (effect 'start-quick-dialogue "# 酒吧赌债\n\n# speaker: 科尔\n酒吧里欠下的小账不会永远小下去。今晚有人在后巷提醒了我这一点。")))))
 
-(define-node 废弃区
+(define (废弃区)
   (node
+    :title "废弃区"
     :desc "倒塌的围墙、被水泡坏的广告牌，还有那些不愿意白天提起的交易。"
     :position '(655 520)
     :show-clocks (list

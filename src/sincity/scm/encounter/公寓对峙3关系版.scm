@@ -104,7 +104,7 @@
             :partial (outcome (list (effect 'clock+ pressure 2)) "你刚动，她就把枪口顶回来了。")
             :fail (outcome (list (effect 'clock+ pressure 3)) "她差点扣下扳机。你知道下一次可能不会只是差点。")))))))
 
-(define-scene gun-scene
+(define (gun-scene)
   (scene
     :title "枪"
     :desc
@@ -137,7 +137,7 @@
                 :partial (outcome (list (effect 'set disarm_failed true) (effect 'add health -1) (effect 'clock+ pressure 3)) "你抓到枪，又被她抢回去。子弹没有打中要害，但这条路关上了。")
                 :fail (outcome (list (effect 'set disarm_failed true) (effect 'clock+ pressure 4)) "她预判了你的动作，枪口重新抵住你。你没有第二次机会。")))))))))
 
-(define-scene emotion-scene
+(define (emotion-scene)
   (scene
     :title "情绪"
     :desc
@@ -150,7 +150,7 @@
       (explain-action)
       (soothe-action))))
 
-(define-scene distance-scene
+(define (distance-scene)
   (scene
     :title "距离"
     :desc
@@ -162,7 +162,7 @@
       (when (not (clock-filled? approach))
         (approach-action)))))
 
-(define-scene standoff
+(define (standoff)
   (scene
     :title "无门牌公寓 · 关系版"
     :desc

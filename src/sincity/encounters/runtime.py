@@ -41,11 +41,10 @@ from .defs import (
     StateBindingValue,
     StoreFieldSpec,
 )
-from .lispy import Environment, Procedure, SpecialFormProcedure, StringAtom, _MISSING, base_environment, evaluate, expand_includes, truthy
+from .lispy import Environment, Procedure, StringAtom, _MISSING, base_environment, desugar_define_form, evaluate, expand_includes, truthy
 
 
 MAX_REACT_STEPS = 64
-_TEMPLATE_DEFINITION = "__template_definition__"
 ENCOUNTER_ACTION_EFFECTS = frozenset({
     "set_field",
     "add_field",
@@ -78,9 +77,10 @@ def compile_encounter_program(source: str, *, source_path: str | Path | None = N
     raw_definitions: dict[str, Any] = {}
     content_form: Any | None = None
     for form in forms:
-        if _is_call(form, "define") or _is_call(form, "define-node") or _is_call(form, "define-scene"):
-            assert len(form) == 3 and isinstance(form[1], str), "`define` expects name and expr."
-            raw_definitions[form[1]] = form[2]
+        define_form = desugar_define_form(form)
+        if define_form is not None:
+            name, expr = define_form
+            raw_definitions[name] = expr
             continue
         if _is_call(form, "content"):
             assert content_form is None, "Encounter module can contain only one top-level `(content ...)` form."
@@ -375,13 +375,10 @@ def _top_level_definition_exprs(forms: list[Any]) -> dict[str, Any]:
         head = form[0]
         if head == "content":
             continue
-        if head == "define":
-            assert len(form) == 3 and isinstance(form[1], str), "`define` expects name and expr."
-            definitions[form[1]] = form[2]
-            continue
-        if head in {"define-node", "define-scene"}:
-            assert len(form) == 3 and isinstance(form[1], str), f"`{head}` expects name and expr."
-            definitions[form[1]] = [_TEMPLATE_DEFINITION, "node" if head == "define-node" else "scene", form[2]]
+        define_form = desugar_define_form(form)
+        if define_form is not None:
+            name, expr = define_form
+            definitions[name] = expr
             continue
     return definitions
 
@@ -399,24 +396,6 @@ def _resolve_expr(expr: Any, definitions: dict[str, Any]) -> Any:
     if isinstance(expr, str) and expr in definitions:
         return definitions[expr]
     return expr
-
-
-def _default_titled_body(name: str, constructor: str, body: Any) -> Any:
-    if not isinstance(body, list) or not body or body[0] != constructor:
-        return body
-    if ":title" in body[1:]:
-        return body
-    return [constructor, ":title", StringAtom(name), *body[1:]]
-
-
-def _dynamic_template_proc(name: str, constructor: str, body: Any) -> SpecialFormProcedure:
-    titled_body = _default_titled_body(name, constructor, body)
-
-    def _call(args: list[Any], call_env: Environment) -> Any:
-        assert not args, f"`{name}` expects no arguments."
-        return evaluate(titled_body, call_env)
-
-    return SpecialFormProcedure(_call)
 
 
 def _runtime_env(
@@ -440,13 +419,7 @@ def _runtime_env(
 
 
 def _eval_definition_expr(name: str, expr: Any, env: Environment) -> Any:
-    if _is_template_definition_expr(expr):
-        return _dynamic_template_proc(name, expr[1], expr[2])
     return evaluate(expr, env)
-
-
-def _is_template_definition_expr(expr: Any) -> bool:
-    return isinstance(expr, list) and len(expr) == 3 and expr[0] == _TEMPLATE_DEFINITION
 
 
 def _schema_env(*, definitions: dict[str, Any]) -> Environment:

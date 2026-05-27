@@ -76,8 +76,9 @@
         (effect 'add finance_relation -1)
         (effect 'start-quick-dialogue "# 事端失控\n\n# speaker: 科尔\n三天足够让一桩麻烦从街角长成传闻。钱赔出去了，富人飞地的人也开始怀疑我是不是不够干净。")))))
 
-(define-node 富人飞地
+(define (富人飞地)
   (node
+    :title "富人飞地"
     :desc "铁门、花墙和不需要解释来源的钱。这里的工作很轻，代价常常先落在别人身上。"
     :position '(1475 280)
     :show-clocks (list exploitation_unrest)

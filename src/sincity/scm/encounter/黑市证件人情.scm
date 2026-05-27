@@ -1,7 +1,7 @@
 (include "../enum-symbols.scm")
 (include "../common_world_bindings.scm")
 
-(define-scene favor
+(define (favor)
   (scene
     :title "黑市 · 证件人情"
     :desc "假证件不是从柜台上买来的。接头人把你带到一条潮湿后巷，要你替他拿回一本账册。账册在一个胆子很小、手里却有刀的人那里。"

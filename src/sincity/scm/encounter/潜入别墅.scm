@@ -239,7 +239,7 @@
   )
   ))
 
-(define-scene exposed_scene
+(define (exposed_scene)
   (scene
     :title "暴露撤退"
     :desc "宅子里已经乱起来了。你没能把话听完，只能先退开。"
@@ -247,7 +247,7 @@
     :actions (list )
   ))
 
-(define-scene yard_act
+(define (yard_act)
   (scene
     :title "院墙缺口"
     :desc "深夜。你站在宅邸外墙的阴影里。第一幕的目标很简单：穿过外部警戒，摸到屋外。左边是保安巡逻的走廊，右边是看门犬守着的小径。"
@@ -266,7 +266,7 @@
   ))
   ))
 
-(define-scene entry_act
+(define (entry_act)
   (scene
     :title "房屋外墙"
     :desc "第二幕里，你已经摸到屋外。现在的问题不是还能不能潜过去，而是你要以什么姿态进屋。正门稳一点，窗户快一点，也险一点。"
@@ -285,7 +285,7 @@
   ))
   ))
 
-(define-scene bedroom_front_scene
+(define (bedroom_front_scene)
   (scene
     :title "卧室"
     :desc "第三幕开始了。你从正门进来，老大抬头时明显愣了一下。现在你的目标不是再潜，而是逼他说出真相。"
@@ -293,7 +293,7 @@
     :actions (list front_direct_inquiry bedroom_circle_probe front_present_evidence front_silent_pressure bedroom_leave)
   ))
 
-(define-scene bedroom_window_scene
+(define (bedroom_window_scene)
   (scene
     :title "卧室"
     :desc "第三幕开始了。你从窗户翻进来，他看你的眼神更冷，也更警觉。你得在更高压的气氛里把真相逼出来。"

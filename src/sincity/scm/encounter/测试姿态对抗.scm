@@ -2,7 +2,7 @@
 (include "../common_clock_macros.scm")
 (include "../common_world_bindings.scm")
 
-(define-scene stance-scene
+(define (stance-scene)
   (scene
     :title (if (= stance 'guard) "防守" "进攻")
     :desc

@@ -92,7 +92,7 @@
         truck_progress
         "麻袋砸在铁板上的声音太响了。"))))
 
-(define-scene awning-scene
+(define (awning-scene)
   (scene
     :title "雨棚堆箱"
     :desc (if awning_revealed
@@ -101,7 +101,7 @@
     :show-clocks (list alert awning_progress)
     :actions (if awning_revealed (list) (awning-search-actions))))
 
-(define-scene office-scene
+(define (office-scene)
   (scene
     :title "账房"
     :desc (if office_revealed
@@ -110,7 +110,7 @@
     :show-clocks (list alert office_progress)
     :actions (if office_revealed (list) (office-search-actions))))
 
-(define-scene truck-scene
+(define (truck-scene)
   (scene
     :title "巷尾车厢"
     :desc
@@ -122,7 +122,7 @@
     :show-clocks (list alert truck_progress)
     :actions (if (or truck_eliminated truck_revealed) (list) (truck-search-actions))))
 
-(define-scene recovery
+(define (recovery)
   (scene
     :title "仓库后巷 · 取回神秘物品"
     :desc

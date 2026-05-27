@@ -97,8 +97,9 @@
         (effect 'add money 40)
         (effect-reset-clock office_performance_rank2)))))
 
-(define-node 大厦
+(define (大厦)
   (node
+    :title "大厦"
     :desc (office-desc)
     :position '(1270 280)
     :show-clocks (list office_attendance (office-performance-clock) office_rank)

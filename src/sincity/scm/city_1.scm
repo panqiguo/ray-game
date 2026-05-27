@@ -87,20 +87,20 @@
 (define rehab-done-text
   "# 康复训练完成\n\n# speaker: 科尔\n最后一组动作做完，身体终于不再像一台生锈的机器。虽然离痊愈还远，但至少能喘一口顺畅的气了。\n\n恢复了 3 点健康。")
 
-(define make-investigate-action
-  (lambda (title desc clock suit)
-    (action
-      :title title
-      :desc desc
-      :check (check
-        :suits (list suit)
-        :risk 'mid
-        :ok (outcome (list (effect 'clock+ clock 2)) "线索露出了一小截。你把它按在纸上。")
-            :partial (outcome (list (effect 'clock+ clock 1) (effect 'add energy -1)) "你得到了一点碎片，足够继续往下问。")
-            :fail (outcome (list (effect 'add energy -1)) "你问得太快，周围的人开始闭嘴。")))))
+(define (make-investigate-action title desc clock suit)
+  (action
+    :title title
+    :desc desc
+    :check (check
+      :suits (list suit)
+      :risk 'mid
+      :ok (outcome (list (effect 'clock+ clock 2)) "线索露出了一小截。你把它按在纸上。")
+      :partial (outcome (list (effect 'clock+ clock 1) (effect 'add energy -1)) "你得到了一点碎片，足够继续往下问。")
+      :fail (outcome (list (effect 'add energy -1)) "你问得太快，周围的人开始闭嘴。"))))
 
-(define-node 办公室
+(define (办公室)
   (node
+    :title "办公室"
     :desc "办公桌、沙发、电话和一块还没完全褪色的地板。这里既是工作地点，也是你暂时能睡下的地方。"
     :position '(40 280)
     :show-clocks (list (when (not blood_cleaned) blood_clean_progress) (when (and item_recovered item_auth_sent (not auth_done)) auth_wait_progress))
@@ -149,8 +149,9 @@
             (effect 'set leo_report_collected true)
             (effect 'start-quick-dialogue leo-preliminary-text)))))))
 
-(define-node 街边摊贩
+(define (街边摊贩)
   (node
+    :title "街边摊贩"
     :desc "铁锅、热汤、油烟和零钱。这里不问你从哪里来，只问你要不要加辣。"
     :position '(245 280)
     :show-clocks (list (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress))
@@ -177,8 +178,9 @@
             :partial (outcome "碎片不多，但足够让你继续往前走。" (list (effect 'clock+ investigation_progress 1) (effect 'set stall_investigated true) (effect 'add energy -1)))
             :fail (outcome "他今天不想提中枪的事，你的出现反而让他闭了嘴。" (list (effect 'add energy -1)))))))))
 
-(define-node 黑市
+(define (黑市)
   (node
+    :title "黑市"
     :desc "修表铺后门、药味、假章和压低的声音。这里什么都能办，只是从不保证干净。"
     :position '(450 280)
     :show-clocks (list (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress))
@@ -204,8 +206,9 @@
             :partial (outcome "他半遮半掩地说了几个细节，够你接着查。" (list (effect 'clock+ investigation_progress 1) (effect 'set market_investigated true) (effect 'add energy -1)))
             :fail (outcome "黑市的人嘴很严，你用错方式了。" (list (effect 'add energy -1)))))))))
 
-(define-node 正规诊所
+(define (正规诊所)
   (node
+    :title "正规诊所"
     :desc "白墙、玻璃柜、登记表。正规两个字的意思是：他们会救你，也会记住你。"
     :position '(655 280)
     :show-clocks (list (when (and rehab_started (not rehab_done)) rehab_progress) (when (and rehab2_started (not rehab2_done)) rehab2_progress) (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress))
@@ -275,8 +278,9 @@
             :partial (outcome "你翻到了一些记录，不全，但有用。" (list (effect 'clock+ investigation_progress 1) (effect 'set clinic_investigated true) (effect 'add energy -1)))
             :fail (outcome "护士警惕地看了你一眼，你没敢继续问。" (list (effect 'add energy -1)))))))))
 
-(define-node 警局
+(define (警局)
   (node
+    :title "警局"
     :desc "铁柜、烟味和一排不愿回答问题的人。警察想要报告，不一定想要真相。"
     :position '(1065 280)
     :actions (list
@@ -289,8 +293,9 @@
             (effect 'set police_choice_ready true)
             (effect 'start-dialogue 'police_interview)))))))
 
-(define-node 仓库
+(define (仓库)
   (node
+    :title "仓库"
     :desc "仓库按小时结钱，也按小时消耗人。白天搬货，夜里有人谈不该谈的路线。"
     :position '(40 520)
     :show-clocks (list (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress))
@@ -314,8 +319,9 @@
             (effect 'set item_recovery_started true)
             (effect 'start-encounter '取回神秘物品)))))))
 
-(define-node 酒吧
+(define (酒吧)
   (node
+    :title "酒吧"
     :desc "酒吧白天像咖啡馆，晚上像供词室。这里没有秘密，只有还没轮到你听见的消息。"
     :position '(245 520)
     :show-clocks (list gambling_debt (when (and blonde_intro_seen (not blonde_drinks_done)) blonde_drink_progress))
@@ -390,8 +396,9 @@
             (effect 'set blonde_mary_shared true)
             (effect 'start-quick-dialogue blonde-mary-text)))))))
 
-(define-node 望月旅馆
+(define (望月旅馆)
   (node
+    :title "望月旅馆"
     :desc "招牌灯一半亮着，一半像从来没亮过。老板记性很差，收费时除外。"
     :position '(860 520)
     :actions (list
@@ -408,8 +415,9 @@
           :desc "老板不让你进去。那只说明需要换一个入口。"
           :effects (list (effect 'start-encounter '潜入旅馆)))))))
 
-(define-node 公寓
+(define (公寓)
   (node
+    :title "公寓"
     :desc "没有门牌的公寓楼，走廊闻起来像潮墙、廉价香水和旧火药。"
     :position '(1065 520)
     :actions (list
@@ -442,15 +450,17 @@
             (effect 'set standoff_started true)
             (effect 'start-encounter '公寓对峙3关系版)))))))
 
-(define-node 赌场
+(define (赌场)
   (node
+    :title "赌场"
     :desc "地下室、绿绒桌、假笑和真债。这里能赢钱，也能把明天提前输掉。"
     :position '(1270 520)
     :actions (list
       (make-work-action "替赌场看一晚场子" "不问问题，只看住门口。" 意志 'high 18 12 6 1))))
 
-(define-node 情景测试C
+(define (情景测试C)
   (node
+    :title "情景测试C"
     :desc "临时测试入口。这里不接主线，只用来快速比较几个情景模型的手感。"
     :position '(1460 520)
     :actions (list

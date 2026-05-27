@@ -2,7 +2,7 @@
 (include "../common_clock_macros.scm")
 (include "../common_world_bindings.scm")
 
-(define-scene chaos-scene
+(define (chaos-scene)
   (scene
     :title "混乱"
     :desc
@@ -22,7 +22,7 @@
           :partial (outcome (list (effect 'clock+ disturbance 1)) "动静太小，律师只是抬头看了一眼。")
           :fail (outcome (list) "你没找到机会。再等等。"))))))
 
-(define-scene ledger-scene
+(define (ledger-scene)
   (scene
     :title "账本"
     :desc
@@ -53,7 +53,7 @@
           :partial (outcome (list (effect 'clock+ ledger 1) (effect 'clock+ exposure 1) (effect 'add energy -1)) "你看到了，但翻页慢了一点。")
           :fail (outcome (list (effect 'clock+ exposure 1)) "你刚翻开账本，就听见有人往回走。"))))))
 
-(define-scene law-root
+(define (law-root)
   (scene
     :title "律师事务所 · 混乱与暴露"
     :desc "守门人的注意力就是你的资源。制造混乱引开他，趁窗口期翻账本。"

@@ -11,17 +11,16 @@
 (define book-willpower-text
   "# 读完：《疼痛之后》\n\n# speaker: 科尔\n有些书不教你赢，只教你不要太快倒下。")
 
-(define make-book-action
-  (lambda (title desc clock suit)
-    (action
-      :title title
-      :desc desc
-      :check (check
-        :suits (list suit)
-        :risk 'low
-        :ok (outcome (list (effect 'clock+ clock 2)))
-        :partial (outcome (list (effect 'clock+ clock 1) (effect 'add energy -1)))
-        :fail (outcome (list (effect 'add energy -1)))))))
+(define (make-book-action title desc clock suit)
+  (action
+    :title title
+    :desc desc
+    :check (check
+      :suits (list suit)
+      :risk 'low
+      :ok (outcome (list (effect 'clock+ clock 2)))
+      :partial (outcome (list (effect 'clock+ clock 1) (effect 'add energy -1)))
+      :fail (outcome (list (effect 'add energy -1))))))
 
 (define bookshop-state
   (state-fragment
@@ -54,8 +53,9 @@
         (effect 'upgrade-spirit-value 'willpower 1)
         (effect 'start-quick-dialogue book-willpower-text)))))
 
-(define-node 书店
+(define (书店)
   (node
+    :title "书店"
     :desc "书店很小，座位更少。老板不喜欢闲逛的人，但喜欢付过钱后安静的人。"
     :position '(860 280)
     :show-clocks (list logic_book perception_book willpower_book)

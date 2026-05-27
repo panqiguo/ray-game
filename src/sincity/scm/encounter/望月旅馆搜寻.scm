@@ -1,6 +1,6 @@
 (include "../enum-symbols.scm")
 
-(define-scene room_search
+(define (room_search)
   (scene
     :title "望月旅馆 · 302 房间"
     :desc "房间里有旧肥皂、潮湿地毯和长时间没人开窗的味道。薇拉已经离开，但这里没有被清空。有人付了钱，让老板把房间保留下来。"

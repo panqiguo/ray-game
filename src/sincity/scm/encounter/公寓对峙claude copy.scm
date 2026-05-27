@@ -23,7 +23,7 @@
 ;   danger 同时是「危险压力」和「靠近行动的门」
 ;   玩家不能只推一条轴——必须交替管理情绪和距离
 
-(define-scene standoff
+(define (standoff)
   (scene
     :title "无门牌公寓 · 枪口"
     :desc

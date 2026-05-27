@@ -20,7 +20,7 @@
   (lambda (base)
     (+ base (relation-efficiency))))
 
-(define-scene relation-efficiency-root
+(define (relation-efficiency-root)
   (scene
     :title "关系平衡-效率"
     :desc "关系不是硬性约束，而是情报开采效率。1-2 惩罚，3-5 正常，6-7 奖励；0 冷掉，8 越界。"

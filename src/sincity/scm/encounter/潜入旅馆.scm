@@ -210,7 +210,7 @@
         :partial (outcome (list (effect 'clock+ husband_patrol 1) (effect 'add energy -1)) partial-text)
         :fail (outcome (list (effect 'clock+ alert 1)) fail-text)))))
 
-(define-scene wife-patrol-scene
+(define (wife-patrol-scene)
   (scene
     :title "旅馆老板娘巡查"
     :desc "楼下传来拖鞋踩过木阶的声音。老板娘没喊人，只是把每扇门外的影子都看了一遍。她在场时，每次休整都会让警觉继续上升。"
@@ -231,7 +231,7 @@
         "你的咳声有点刻意，但也算拖住了她。"
         "你咳得太干净，像一个正在撒谎的人。"))))
 
-(define-scene husband-patrol-scene
+(define (husband-patrol-scene)
   (scene
     :title "旅馆老板巡查"
     :desc "老板的脚步比老板娘重。他不是来确认有没有声音，他是来确认有没有人敢不付代价。老板在场时，每次休整都会让警觉继续上升。"
@@ -259,7 +259,7 @@
       (wife_patrol_active "老板娘已经上楼巡查。她不一定看见了你，但她听见了这层的不对劲。")
       (else "二楼还没完全惊动，但每一声小动静都会留下回音。"))))
 
-(define-scene hallway-scene
+(define (hallway-scene)
   (scene
     :title "二楼走廊"
     :desc
@@ -271,7 +271,7 @@
     :show-clocks (list (when (not target_room_known) hallway_investigation))
     :actions (hallway-actions)))
 
-(define-scene resource-room-scene
+(define (resource-room-scene)
   (scene
     :title "资源房"
     :desc
@@ -288,7 +288,7 @@
           (resource-entry-actions)
           (resource-search-actions)))))
 
-(define-scene target-room-scene
+(define (target-room-scene)
   (scene
     :title "目标房间"
     :desc
@@ -303,7 +303,7 @@
           (target-entry-actions)
           (target-search-actions)))))
 
-(define-scene infiltration
+(define (infiltration)
   (scene
     :title "望月旅馆 · 潜入"
     :desc (patrol-status-text)

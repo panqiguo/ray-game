@@ -210,7 +210,7 @@
   )
   ))
 
-(define-scene stage_cold
+(define (stage_cold)
   (scene
     :title "冷淡"
     :desc "目标把自己裹在沉默里。你得先让他愿意继续说话。"
@@ -218,7 +218,7 @@
     :actions (list breathe (when (and (< (clock-value rapport) 3) (= cold_direct_talk_used false)) cold_direct_talk) (when (and (< (clock-value rapport) 3) (= cold_ask_help_used false)) cold_ask_help) (when (and (< (clock-value rapport) 3) (= cold_use_room_used false)) cold_use_room) (when (and (< (clock-value rapport) 3) (= cold_leave_hook_used false)) cold_leave_hook))
   ))
 
-(define-scene stage_warm
+(define (stage_warm)
   (scene
     :title "熟络"
     :desc "话题已经打开了。你要让他意识到，这次偶遇有点不一样。"
@@ -226,7 +226,7 @@
     :actions (list breathe (when (and (>= (clock-value rapport) 3) (< (clock-value rapport) 6) (= warm_interest_used false)) warm_interest) (when (and (>= (clock-value rapport) 3) (< (clock-value rapport) 6) (= warm_flirt_used false)) warm_flirt) (when (and (>= (clock-value rapport) 3) (< (clock-value rapport) 6) (= warm_read_him_used false)) warm_read_him) (when (and (>= (clock-value rapport) 3) (< (clock-value rapport) 6) (= warm_keep_distance_used false)) warm_keep_distance))
   ))
 
-(define-scene stage_soft
+(define (stage_soft)
   (scene
     :title "松动"
     :desc "他的防备已经松了。现在只差最后一层，情报就在那后面。"
@@ -234,7 +234,7 @@
     :actions (list breathe (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_follow_lead_used false)) soft_follow_lead) (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_make_promise_used false)) soft_make_promise) (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_tempt_used false)) soft_tempt) (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_pull_thread_used false)) soft_pull_thread) (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_answer_probe_used false)) soft_answer_probe))
   ))
 
-(define-scene stage_exit
+(define (stage_exit)
   (scene
     :title "离场"
     :desc "情报已经到手。你只剩下决定今晚怎么收尾。"

@@ -61,10 +61,10 @@ def start_new_run(seed: int) -> tuple[GameState, RandomSource]:
     world = WorldState(
         progress_clocks={
             clock_id: ProgressClockState(
-                value=0,
+                value=spec.initial,
                 visible=True,
             )
-            for clock_id in SCENARIO.clocks_by_id
+            for clock_id, spec in SCENARIO.clocks_by_id.items()
         },
         inventory={
             **dict(SCENARIO.initial_inventory),
@@ -204,8 +204,8 @@ def get_clock_value(state: GameState, clock_id: str) -> int:
 
 
 def sync_world_progress_clocks(state: GameState) -> None:
-    for clock_id in SCENARIO.clocks_by_id:
-        state.world.progress_clocks.setdefault(clock_id, ProgressClockState(value=0, visible=True))
+    for clock_id, spec in SCENARIO.clocks_by_id.items():
+        state.world.progress_clocks.setdefault(clock_id, ProgressClockState(value=spec.initial, visible=True))
 
 
 def get_clock_spec_for_state(state: GameState, clock_id: str):

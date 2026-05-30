@@ -50,6 +50,12 @@
 (define nightingale-first-letter-done-text
   "# 第一封信的方向\n\n# speaker: 科尔\n纸、灰、递送方式都把线头往旧码头推，可那份对后台节奏的熟悉又不像外人能随手编出来的。\n\n# speaker: 科尔\n威胁不是凭空写出来的。它长了两张脸：一张朝着旧码头，一张看着剧院里面。")
 
+(define nightingale-trust-loss-text
+  "# 夜莺的信任\n\n# speaker: 科尔\n时间拖得太久，剧院那边开始怀疑我是不是还能控制局面。夜莺没有催促，但沉默本身已经是一种回答。")
+
+(define nightingale-trust-fail-text
+  "# 委托失败\n\n# speaker: 科尔\n夜莺不再等我。剧院把材料交给警方，把门也一并关上。\n\n# speaker: 科尔\n这座城市里，失去信任有时候比失去线索更快。")
+
 (define nightingale-lore-text
   "# 莱恩这个名字\n\n# speaker: 科尔\n经理怕丑闻，宣传怕掉版面，后台工人怕出人命。三种怕拼在一起，只留下同一个名字：莱恩。\n\n# speaker: 科尔\n到目前为止，他更像个被推到台前的嫌疑人，而不是全部答案。")
 
@@ -87,6 +93,10 @@
     (var 'nightingale_first_letter_progress (clock :title "威胁信调查" :desc "顺着纸张、递送链和口风，查清第一封信背后的方向。" :initial 0 :max 4))
     (var 'nightingale_first_letter_done false)
     (var 'nightingale_first_letter_due_day 0)
+    (var 'nightingale_trust (clock :title "夜莺的信任" :desc "拖得越久，夜莺和剧院越会怀疑你是否还能保护她。降到 0 时委托失败。" :initial 8 :max 8))
+    (var 'nightingale_trust_initialized false)
+    (var 'nightingale_trust_checked_day 0)
+    (var 'nightingale_trust_failed false)
     (var 'nightingale_lore_progress (clock :title "夜莺的传说" :desc "经理、宣传、工人——每个人都记得一部分关于夜莺的传闻。拼起来就是一个完整的故事。" :initial 0 :max 3))
     (var 'nightingale_lore_known false)
     (var 'nightingale_docks_direction_known false)
@@ -137,12 +147,38 @@
     (react
       :when (and nightingale_commission_taken (= nightingale_first_letter_due_day 0))
       :then (list
-        (effect 'set nightingale_first_letter_due_day (+ day 3))))
+        (effect 'set nightingale_first_letter_due_day (+ day 3))
+        (effect 'set nightingale_trust_checked_day day)))
+    (react
+      :when (and nightingale_city_day_started (not nightingale_trust_initialized))
+      :then (list
+        (effect 'set nightingale_trust_initialized true)
+        (effect 'clock+ nightingale_trust 8)))
+    (react
+      :when (and nightingale_city_day_started
+                 (not nightingale_first_letter_done)
+                 (> nightingale_first_letter_due_day 0)
+                 (> day nightingale_first_letter_due_day)
+                 (> day nightingale_trust_checked_day)
+                 (> (clock-value nightingale_trust) 0))
+      :then (list
+        (effect 'clock- nightingale_trust 1)
+        (effect 'set nightingale_trust_checked_day day)
+        (effect 'start-quick-dialogue nightingale-trust-loss-text)))
+    (react
+      :when (and nightingale_city_day_started
+                 (not nightingale_first_letter_done)
+                 (clock-empty? nightingale_trust)
+                 (not nightingale_trust_failed))
+      :then (list
+        (effect 'set nightingale_trust_failed true)
+        (effect 'end-game "委托失败" "夜莺不再信任你，剧院把威胁信交给警方。保护夜莺的委托到此结束。")))
     (react
       :when (and nightingale_stall_checked nightingale_market_checked nightingale_restaurant_done (not nightingale_first_letter_done))
       :then (list
         (effect 'set nightingale_first_letter_done true)
         (effect 'set nightingale_docks_direction_known true)
+        (effect 'clock+ nightingale_trust 3)
         (effect 'start-quick-dialogue nightingale-first-letter-done-text)))
     (react
       :when (and (clock-filled? nightingale_lore_progress) (not nightingale_lore_known))
@@ -194,7 +230,7 @@
       :desc "你被打昏后醒来，身体状态很差。先找医生和食物撑住，再顺着城市里的线索追查下一次送信。"
       :active (and nightingale_city_day_started (not nightingale_second_letter_ready))
       :completed nightingale_first_letter_done
-      :failed false
+      :failed nightingale_trust_failed
       :steps (list
         (step :title "去诊所处理伤势" :completed nightingale_clinic_unlocked)
         (step :title "从摊贩处打听街头跑腿" :completed nightingale_stall_checked)

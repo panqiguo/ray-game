@@ -115,8 +115,8 @@ class ScmHotReloader:
 
 def _sync_state_to_content(state: GameState) -> None:
     scenario = SCENARIO.get_program()
-    for clock_id in scenario.clocks_by_id:
-        state.world.progress_clocks.setdefault(clock_id, ProgressClockState(value=0, visible=True))
+    for clock_id, spec in scenario.clocks_by_id.items():
+        state.world.progress_clocks.setdefault(clock_id, ProgressClockState(value=spec.initial, visible=True))
     for key, value in scenario.initial_values.items():
         state.world.values.setdefault(key, value)
     for key, value in scenario.initial_inventory.items():

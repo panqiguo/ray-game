@@ -312,7 +312,7 @@ def _load_state_expr(expr: Any, definitions: dict[str, Any], module: ModuleState
         if isinstance(value, ClockTemplate):
             spec = StoreFieldSpec(id=name, kind="clock", initial=value.initial, title=value.title, maximum=value.maximum, persist="encounter")
             module.store_specs[name] = spec
-            module.clocks_by_id[name] = ProgressClockSpec(id=name, title=value.title, description=value.description, segments=value.maximum)
+            module.clocks_by_id[name] = ProgressClockSpec(id=name, title=value.title, description=value.description, segments=value.maximum, initial=value.initial)
         elif isinstance(value, StateBindingValue):
             assert value.name == name, f"Imported state binding `{name}` must use the same source key."
             assert value.spec.persist in {"world_attr", "world_value", "world_inventory"}, f"Unsupported imported state binding for {name}: {value.spec.persist}"

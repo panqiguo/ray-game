@@ -841,6 +841,7 @@
       "贝城县不大。你从剧院醒来后，城市才重新露出那些能救命、能买消息、也能把人推向旧码头的地方。"
       "首演前的剧院把整座城暂时挡在外面。今晚先处理夜莺收到的第二封威胁信。")
     :show-clocks (list
+      (when (and nightingale_city_day_started (not nightingale_first_letter_done) (not nightingale_trust_failed)) nightingale_trust)
       (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress))
     :children (list
       (办公室)

@@ -190,7 +190,7 @@ def _validation_state():
         deck=DeckState(),
         attributes=AttributeState(health=SCENARIO.initial_health, stress=SCENARIO.initial_stress),
         world=WorldState(
-            progress_clocks={clock_id: ProgressClockState(value=0, visible=True) for clock_id in SCENARIO.clocks_by_id},
+            progress_clocks={clock_id: ProgressClockState(value=spec.initial, visible=True) for clock_id, spec in SCENARIO.clocks_by_id.items()},
             inventory={
                 **dict(SCENARIO.initial_inventory),
                 "money": SCENARIO.initial_money,

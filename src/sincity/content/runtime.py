@@ -321,7 +321,7 @@ def _resolve_state_specs(expr: Any, definitions: dict[str, Any]) -> tuple[dict[s
         name = binding[0]
         value = evaluate(binding[1], env)
         if isinstance(value, ClockTemplate):
-            clocks_by_id[name] = ProgressClockSpec(id=name, title=value.title, description=value.description, segments=value.maximum)
+            clocks_by_id[name] = ProgressClockSpec(id=name, title=value.title, description=value.description, segments=value.maximum, initial=value.initial)
         else:
             assert isinstance(value, (bool, int, str)), f"Unsupported world state value for {name}: {value!r}"
             initial_values[name] = value
@@ -501,7 +501,7 @@ def _dummy_state(program: CompiledWorldProgram) -> GameState:
         deck=DeckState(),
         attributes=AttributeState(health=program.initial_health, stress=program.initial_stress),
         world=WorldState(
-            progress_clocks={clock_id: ProgressClockState(value=0, visible=True) for clock_id in program.clocks_by_id},
+            progress_clocks={clock_id: ProgressClockState(value=spec.initial, visible=True) for clock_id, spec in program.clocks_by_id.items()},
             inventory={
                 **dict(program.initial_inventory),
                 "money": program.initial_money,

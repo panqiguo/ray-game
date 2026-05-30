@@ -139,6 +139,7 @@ class ProgressClockSpec:
     title: str
     segments: int
     description: str = ""
+    initial: int = 0
     thresholds: tuple[ClockThreshold, ...] = ()
     tags: tuple[str, ...] = ()
     hidden: bool = False

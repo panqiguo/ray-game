@@ -26,6 +26,13 @@
 - Scheme 参考: `encounters/cheat-sheet.md`
 - `:suits` 只写一个最适属性，环境修正用 modifier 表达
 
+## 内容术语
+- 地点：城市地图上的可进入空间，对应 SCM 里的 `node` / `scene`。
+- 动作：地图或地点内可点击执行的行为，对应 SCM 里的 `action`；动作可以是纯对话，也可以需要投入行动手牌判定。
+- 交锋场景：进入特殊片段后的独立情境，对应工程里的 `encounter`；它可以有自己的地点、动作、压力条/进度条和结算。
+- 压力条/进度条：对应 SCM 里的 `clock`。
+- 设计讨论中优先使用上述中文术语；工程代码暂时保留 `node`、`action`、`encounter`、`clock` 等英文名。
+
 ## 验证流程（按顺序，uv run 前缀）
 1. **语法检查** — `python -m sincity.scm_lint <file.scm>`
 2. **括号平衡**（lint 报括号错误时精确定位）— `python scripts/check_parens.py <file.scm>`

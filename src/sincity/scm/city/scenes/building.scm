@@ -119,7 +119,7 @@
             (else
               "日薪 34 元，三段出勤是底线。攒满 16 点绩效有奖金，别想太远，先把今天的打完。")))
         :check (check
-          :suits (list 逻辑)
+          :suits (list 知识)
           :risk 'mid
           :ok (if (clock-filled? office_attendance)
             (outcome (list (effect 'add money (office-overtime-pay)) (office-performance-effect 1)) "你留下来把别人推掉的活收尾。加班费当场塞进信封，数额不大，但不用等。")

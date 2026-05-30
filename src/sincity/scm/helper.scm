@@ -7,6 +7,7 @@
             (effect 'set var true)
             effect-ir))))
 
-(define 逻辑 'logic)
-(define 感知 'perception)
-(define 意志 'willpower)
+(define 暴力 'force)
+(define 魅力 'charm)
+(define 知识 'knowledge)
+(define 敏锐 'sense)

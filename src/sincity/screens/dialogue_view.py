@@ -12,7 +12,7 @@ from .ui_text import ui_text_size, ui_text_style
 
 
 def draw_dialogue_overlay(font: Font | None, state: GameState) -> None:
-    if state.modal.kind != "dialogue" or state.active_dialogue is None:
+    if state.active_dialogue is None:
         return
     begin_layer("dialogue_modal", z=Z_DIALOGUE_MODAL)
     stage = layout().stage

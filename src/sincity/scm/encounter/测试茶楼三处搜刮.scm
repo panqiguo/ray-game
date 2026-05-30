@@ -39,7 +39,7 @@
         :conditions (list
           (field-equals 'hall_distracted false "大厅已制造过干扰"))
         :check (check
-          :suits (list 意志)
+          :suits (list 魅力)
           :risk 'low
           :ok (outcome (list (effect 'clock+ hall_distract 2)) "你弄出的响动足够大，其他区域的守卫闻声赶来。")
           :partial (outcome (list (effect 'clock+ hall_distract 1)) "动静不够，只有少数人回头。")
@@ -50,7 +50,7 @@
         :conditions (list
           (field-equals 'hall_done false "大厅目标已经完成"))
         :check (check
-          :suits (list 感知)
+          :suits (list 敏锐)
           :risk 'mid
           :factors (hall-guard-factors)
           :ok (outcome (list (effect 'clock+ hall_target 2)) "你顺着桌边摸过去，几张钞票无声滑进袖口。")
@@ -70,7 +70,7 @@
         :conditions (list
           (field-equals 'warehouse_distracted false "仓库已制造过干扰"))
         :check (check
-          :suits (list 意志)
+          :suits (list 魅力)
           :risk 'low
           :ok (outcome (list (effect 'clock+ warehouse_distract 2)) "你在仓库门口弄出响动，其他区域的守卫循声走来。")
           :partial (outcome (list (effect 'clock+ warehouse_distract 1)) "守卫朝仓库方向看了看，没完全过来。")
@@ -81,7 +81,7 @@
         :conditions (list
           (field-equals 'warehouse_done false "仓库目标已经完成"))
         :check (check
-          :suits (list 逻辑)
+          :suits (list 知识)
           :risk 'mid
           :factors (warehouse-guard-factors)
           :ok (outcome (list (effect 'clock+ warehouse_target 2)) "你挑出几件值钱废料，顺手压住了会响的铁片。")
@@ -101,7 +101,7 @@
         :conditions (list
           (field-equals 'yard_distracted false "后院已制造过干扰"))
         :check (check
-          :suits (list 意志)
+          :suits (list 魅力)
           :risk 'low
           :ok (outcome (list (effect 'clock+ yard_distract 2)) "后门传来一声响动，其他区域的守卫转身去查看。")
           :partial (outcome (list (effect 'clock+ yard_distract 1)) "守卫朝后院方向望了望，脚步没动。")
@@ -112,7 +112,7 @@
         :conditions (list
           (field-equals 'yard_done false "后院目标已经完成"))
         :check (check
-          :suits (list 感知)
+          :suits (list 敏锐)
           :risk 'mid
           :factors (yard-guard-factors)
           :ok (outcome (list (effect 'clock+ yard_target 2)) "你在晾衣竹竿后面摸到一处松动，目标物近了。")

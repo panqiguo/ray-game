@@ -50,17 +50,17 @@
         (low-risk-search
           "观察走廊服务痕迹"
           "门外水壶、拖把印和烟灰，比房牌号码更诚实。"
-          感知
-          hallway_investigation
-          1
-          "你顺着送水车停留的位置，缩小了一圈范围。"
-          "你还是摸到了一点门道，只是站得太久了。"
-          "你什么也没看清，只好先换个角度。"))
+          敏锐
+           hallway_investigation
+           1
+           "你顺着送水车停留的位置，缩小了一圈范围。"
+           "你还是摸到了一点门道，只是站得太久了。"
+           "你什么也没看清，只好先换个角度。"))
       (when (not target_room_known)
         (mid-risk-search
           "偷听几间门缝"
           "有些房间装睡，有些房间真的有人。你得分清哪一扇门后面藏着你要找的东西。"
-          逻辑
+          知识
           hallway_investigation
           2
           "你听出了不该出现在普通住客房里的说话方式。"
@@ -74,7 +74,7 @@
         :title "等清洁工离开再进"
         :desc "这间房门没关严。你只需要等一个不会被撞见的空档。"
         :check (check
-          :suits (list 感知)
+          :suits (list 敏锐)
           :risk 'low
           :ok (outcome (list (effect 'set resource_room_entered true)) "你从门缝里滑了进去。")
           :partial (outcome (list (effect 'set resource_room_entered true) (effect 'add energy -1)) "你进去了，只是多等了太久。")
@@ -83,7 +83,7 @@
         :title "撬开资源房门锁"
         :desc "旧锁比人可靠，但也比人更会出声。"
         :check (check
-          :suits (list 逻辑)
+          :suits (list 知识)
           :risk 'mid
           :ok (outcome (list (effect 'set resource_room_entered true)) "锁芯松开了。")
           :partial (outcome (append (list (effect 'set resource_room_entered true)) (trigger-watchman 1)) "门是开了，但动静也传出去了。")
@@ -95,7 +95,7 @@
       :title title
       :desc desc
       :check (check
-        :suits (list 感知)
+        :suits (list 敏锐)
         :risk 'low
         :ok (outcome effects ok-text)
         :partial (outcome (append effects (list (effect 'add energy -1))) partial-text)
@@ -149,7 +149,7 @@
         :title "等走廊空档再进"
         :desc "你盯着楼梯和转角，等所有能看见这扇门的人都移开视线。"
         :check (check
-          :suits (list 感知)
+          :suits (list 敏锐)
           :risk 'low
           :ok (outcome (list (effect 'set target_room_entered true)) "你顺着空档溜进了门。")
           :partial (outcome (list (effect 'set target_room_entered true) (effect 'add energy -1)) "你是进去了，只是绷得太久。")
@@ -158,7 +158,7 @@
         :title "撬开目标房门"
         :desc "门锁不复杂，难的是别让它替你打招呼。"
         :check (check
-          :suits (list 逻辑)
+          :suits (list 知识)
           :risk 'mid
           :ok (outcome (list (effect 'set target_room_entered true)) "门锁给了你面子。")
           :partial (outcome (append (list (effect 'set target_room_entered true)) (trigger-watchman 1)) "门开了，但这一层也更紧张了。")
@@ -170,7 +170,7 @@
       (mid-risk-search
         "检查行李与账本"
         "真正重要的东西不会只躺在床上，它会藏在需要你动脑子的地方。"
-        逻辑
+        知识
         target_search
         1
         "你理出了一层不属于普通住客的记录。"
@@ -179,7 +179,7 @@
       (high-risk-search
         "拆床板和地毯夹层"
         "最值钱的东西，通常也藏在最粗暴的夹层里。"
-        意志
+        暴力
         target_search
         2
         "你狠狠干开木板，摸到了藏在下面的小样品盒。"
@@ -219,14 +219,14 @@
       (soften-wife-patrol
         "把动静引到窗外的猫"
         "窗台下面确实有野猫。你只需要让它看起来像罪魁祸首。"
-        感知
+        魅力
         "她听见猫叫，脚步停了一会儿。"
         "她半信半疑，但暂时没往你这边来。"
         "猫没配合，楼梯声反而更近了。")
       (soften-wife-patrol
         "伪装成隔壁住客咳嗽"
         "这种旅馆里，夜里有人咳两声不算稀奇。"
-        逻辑
+        魅力
         "她在门外停了一下，最后把这动静归到隔壁房。"
         "你的咳声有点刻意，但也算拖住了她。"
         "你咳得太干净，像一个正在撒谎的人。"))))
@@ -240,14 +240,14 @@
       (soften-husband-patrol
         "把门缝下的光压灭"
         "先让他相信这层没人醒着，至少没人敢醒着。"
-        感知
+        敏锐
         "门缝暗下去，他的脚步慢了一拍。"
         "你压住了光，也压住了自己的呼吸。"
         "光影晃了一下，他看见了不该有的轮廓。")
       (soften-husband-patrol
         "丢一枚硬币到走廊另一头"
         "不是让他相信没人，而是让他先去看别处。"
-        逻辑
+        魅力
         "硬币滚到远处，他骂了一声，转身过去看。"
         "他被引开一点，但没有完全离开。"
         "硬币撞得太响，像有人故意为之。"))))

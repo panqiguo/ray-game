@@ -15,7 +15,7 @@
         :title "佯攻"
         :desc "不追求伤害，只试探他的重心。防守姿态下成功可以逼他提前切换。"
         :check (check
-          :suits (list 感知)
+          :suits (list 敏锐)
           :risk 'mid
           :ok (outcome
                 (if (= stance 'guard)
@@ -28,7 +28,7 @@
         :title "普通攻击"
         :desc "稳扎稳打。防守姿态下推进减半，进攻姿态下效果更好。"
         :check (check
-          :suits (list 意志)
+          :suits (list 暴力)
           :risk 'low
           :ok (outcome
                 (if (= stance 'guard)
@@ -41,7 +41,7 @@
         :title "防守反击"
         :desc "架住他的攻势再回敬。进攻姿态下效果好但风险更高。"
         :check (check
-          :suits (list 逻辑)
+          :suits (list 知识)
           :risk (if (= stance 'attack) 'high 'mid)
           :ok (outcome
                 (if (= stance 'attack)

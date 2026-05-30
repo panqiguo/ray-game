@@ -30,7 +30,7 @@
         :title "铺垫（投资关系）"
         :desc "提高关系，争取进入奖励区。好：关系 +3；中：关系 +2；坏：关系 +1。奖励区继续铺垫可能越界。"
         :check (check
-          :suits (list 感知)
+          :suits (list 魅力)
           :risk 'low
           :ok (outcome (list (effect 'clock+ relation 3)) "你把话题垫得很顺，对方愿意多留在这个氛围里。")
           :partial (outcome (list (effect 'clock+ relation 2)) "气氛暖了一些，但还没有完全松开。")
@@ -39,7 +39,7 @@
         :title "试探（稳定情报）"
         :desc "基础情报 +2，受关系区间修正；关系 -1。惩罚区只适合保守推进，奖励区收益更高。"
         :check (check
-          :suits (list 感知)
+          :suits (list 魅力)
           :risk 'low
           :ok (outcome (list (effect 'clock+ intel (intel-gain 2)) (effect 'clock- relation 1)) "你问得轻，信息从闲谈里自然漏出来。")
           :partial (outcome (list (effect 'clock+ intel (intel-gain 1)) (effect 'clock- relation 1)) "你拿到一点边角，但她也察觉你在听重点。")
@@ -48,7 +48,7 @@
         :title "追问（高效开采）"
         :desc "基础情报 +3，受关系区间修正；关系 -2。奖励区很赚，但会快速消耗关系余量。"
         :check (check
-          :suits (list 逻辑)
+          :suits (list 知识)
           :risk 'mid
           :ok (outcome (list (effect 'clock+ intel (intel-gain 3)) (effect 'clock- relation 2)) "你抓住缝隙追下去，她说出了真正有用的细节。")
           :partial (outcome (list (effect 'clock+ intel (intel-gain 2)) (effect 'clock- relation 2)) "她回答了，但话尾已经明显收紧。")
@@ -57,7 +57,7 @@
         :title "后撤（控制边界）"
         :desc "用于从奖励区退回正常区，避免越界。好：关系 -2；中：关系 -1；坏：关系不变。"
         :check (check
-          :suits (list 意志)
+          :suits (list 魅力)
           :risk 'low
           :ok (outcome (list (effect 'clock- relation 2)) "你收住攻势，把关系拉回一个舒服的位置。")
           :partial (outcome (list (effect 'clock- relation 1)) "你让话题稍微冷下来，没有伤到气氛。")
@@ -66,7 +66,7 @@
         :title "摊牌（最后赌博）"
         :desc "基础情报 +4，受关系区间修正；关系 -3。失败会直接越界，适合剩余时间少或情报缺口大时冒险。"
         :check (check
-          :suits (list 意志)
+          :suits (list 魅力)
           :risk 'high
           :ok (outcome (list (effect 'clock+ intel (intel-gain 4)) (effect 'clock- relation 3)) "你把真正的问题压到桌面上，她沉默片刻，说出了核心。")
           :partial (outcome (list (effect 'clock+ intel (intel-gain 3)) (effect 'clock- relation 3)) "你赌对了一半，情报到手，但关系几乎被抽空。")

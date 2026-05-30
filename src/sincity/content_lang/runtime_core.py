@@ -49,13 +49,15 @@ from sincity.model.enums import Risk, ScreenName, Suit
 
 RISK_BY_NAME = {"low": Risk.LOW, "mid": Risk.MID, "high": Risk.HIGH}
 SUIT_BY_NAME = {
-    "logic": Suit.LOGIC,
-    "reason": Suit.LOGIC,
-    "perception": Suit.PERCEPTION,
-    "empathy": Suit.PERCEPTION,
-    "instinct": Suit.PERCEPTION,
-    "willpower": Suit.WILLPOWER,
-    "force": Suit.WILLPOWER,
+    "force": Suit.FORCE,
+    "violence": Suit.FORCE,
+    "charm": Suit.CHARM,
+    "charisma": Suit.CHARM,
+    "knowledge": Suit.KNOWLEDGE,
+    "reason": Suit.KNOWLEDGE,
+    "sense": Suit.SENSE,
+    "empathy": Suit.SENSE,
+    "instinct": Suit.SENSE,
 }
 
 
@@ -389,7 +391,7 @@ def builtin_world_value(key: Any, initial: Any = False) -> StateBindingValue:
 
 def builtin_world_attr(key: Any) -> StateBindingValue:
     name = binding_name(key)
-    assert name in {"health", "energy", "stress", "logic", "perception", "willpower"}, f"Unsupported world attr: {name}"
+    assert name in {"health", "energy", "stress", "force", "charm", "knowledge", "sense"}, f"Unsupported world attr: {name}"
     return StateBindingValue(
         name=name,
         spec=StoreFieldSpec(id=name, kind="value", initial=0, persist="world_attr"),

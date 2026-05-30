@@ -31,10 +31,10 @@
     :show-clocks (list hostility approach disarm)
     :actions (list
       (make-standoff-action
-        "举起双手"
-        "你把自己变得没有攻击性。它不会让压力下降，但能让你少付一点代价。"
-        意志
-        'low
+         "举起双手"
+         "你把自己变得没有攻击性。它不会让压力下降，但能让你少付一点代价。"
+         魅力
+         'low
         (list)
         (list (effect 'clock+ hostility 1))
         (list (effect 'clock+ hostility 2))
@@ -42,10 +42,10 @@
         "她盯着你的手，枪口仍然稳着，压力又往上顶了一点。"
         "你停得慢了半拍，她把那半拍理解成准备扑过去。")
       (make-standoff-action
-        "用语言安抚她"
-        "你不急着解释案子，只把语速放低，让她跟着你的节奏呼吸。"
-        意志
-        'low
+         "用语言安抚她"
+         "你不急着解释案子，只把语速放低，让她跟着你的节奏呼吸。"
+         魅力
+         'low
         (list)
         (list (effect 'clock+ hostility 1))
         (list (effect 'clock+ hostility 2))
@@ -53,10 +53,10 @@
         "她听进去了半句，手指仍然扣着扳机，压力慢慢积起来。"
         "她把你的安抚听成了哄骗，枪口又稳了一点。")
       (make-standoff-action
-        "靠近"
-        "你把移动藏在呼吸和桌角之间。每一步都更接近枪，也更接近枪声。"
-        感知
-        'mid
+         "靠近"
+         "你把移动藏在呼吸和桌角之间。每一步都更接近枪，也更接近枪声。"
+         敏锐
+         'mid
         (list (effect 'clock+ approach 2) (effect 'clock+ hostility 1))
         (list (effect 'clock+ approach 1) (effect 'clock+ hostility 2))
         (list (effect 'clock+ hostility 3))
@@ -65,10 +65,10 @@
         "她看穿了你的意图，枪口重新把你钉在原地。")
       (when (>= (clock-value approach) 4)
         (make-standoff-action
-          "压制手腕"
-          "你不夺枪，只压住她持枪手的角度，把最后一点距离抢出来。"
-          意志
-          'high
+           "压制手腕"
+           "你不夺枪，只压住她持枪手的角度，把最后一点距离抢出来。"
+           暴力
+           'high
           (list (effect 'clock+ approach 2) (effect 'clock+ hostility 2))
           (list (effect 'clock+ approach 1) (effect 'clock+ hostility 3) (effect 'add health -1))
           (disarm-fail)
@@ -77,10 +77,10 @@
           "她猛地挣开，枪声贴着你的身体炸开。"))
       (when (>= (clock-value approach) 6)
         (make-standoff-action
-          "强行夺枪"
-          "你已经足够近，只能靠速度硬抢。越拖，枪声越可能先到。"
-          意志
-          'high
+           "强行夺枪"
+           "你已经足够近，只能靠速度硬抢。越拖，枪声越可能先到。"
+           暴力
+           'high
           (list (effect 'clock+ disarm 1))
           (list (effect 'add health -1) (effect 'clock+ hostility 3))
           (list (effect 'clock+ hostility 4))

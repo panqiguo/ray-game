@@ -25,6 +25,7 @@ def build_city_1() -> CompiledWorldProgram:
             "food": 0,
             "mysterious_item": 0,
             "wounded_man_lead": 0,
+            "criminal_clue": 0,
         },
     )
 

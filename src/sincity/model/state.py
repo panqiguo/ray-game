@@ -35,9 +35,10 @@ class PartyActorState:
     max_health: int
     energy: int
     max_energy: int
-    logic: int = 0
-    perception: int = 0
-    willpower: int = 0
+    force: int = 0
+    charm: int = 0
+    knowledge: int = 0
+    sense: int = 0
     is_player: bool = False
 
     @property

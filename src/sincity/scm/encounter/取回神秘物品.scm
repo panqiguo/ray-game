@@ -44,13 +44,13 @@
       (make-mid-search-action
         "掀开防雨布"
         "帆布下面压着一排潮湿木箱。"
-        感知
+        敏锐
         awning_progress
         "帆布被你扯出一声脆响，巷子里有人抬头。")
       (make-high-search-action
         "硬搬开前排木箱"
         "直接把前面的障碍掀开，看后面有没有藏层。"
-        意志
+        暴力
         awning_progress
         "木箱砸地的声音让巷口更紧张了。"))))
 
@@ -60,19 +60,19 @@
       (make-mid-search-action
         "翻账桌抽屉"
         "账桌里塞满了收据、烟盒和剪碎的纸片。"
-        感知
+        敏锐
         office_progress
         "抽屉卡了一下，发出的声音让你停住了手。")
       (make-low-search-action
         "比对出货账本"
         "不急着动铁柜，先把错页和出货记录一页页捋顺。"
-        逻辑
+        知识
         office_progress
         "你还是没理出头绪，只是白白耗掉了一口气。")
       (make-high-search-action
         "撬开铁皮柜"
         "不管账本，直接开最像临时藏物的铁柜。"
-        意志
+        暴力
         office_progress
         "铁柜纹丝不动，你反而先弄出了响声。"))))
 
@@ -82,13 +82,13 @@
       (make-mid-search-action
         "钻进车厢底部"
         "车厢里堆着麻袋和旧帆布，下面也许另有一层。"
-        感知
+        敏锐
         truck_progress
         "你刚探进去，车厢铁皮就回了一声闷响。")
       (make-high-search-action
         "掀翻麻袋搜底"
         "不管细节，先把能藏东西的地方全翻开。"
-        意志
+        暴力
         truck_progress
         "麻袋砸在铁板上的声音太响了。"))))
 

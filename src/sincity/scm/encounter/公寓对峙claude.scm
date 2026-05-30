@@ -68,9 +68,9 @@
                      :title "开口"
                      :desc "你必须说些什么。在这个状态下，任何话都可能是最后一句。"
                      :check (check
-                             :suits (list 意志)
-                             :risk 'high
-                             :ok      (outcome (list (effect 'clock+ emotion 1)) "")
+                      :suits (list 魅力)
+                      :risk 'high
+                      :ok      (outcome (list (effect 'clock+ emotion 1)) "")
                              :partial (outcome (list (effect 'clock+ crisis 1)) "")
                              :fail    (outcome (list (effect 'clock+ crisis 2)) ""))))
 
@@ -79,9 +79,9 @@
                      :title "继续说"
                      :desc "她在听，但还没有信。你有空间，但不多。"
                      :check (check
-                             :suits (list 意志)
-                             :risk 'mid
-                             :ok      (outcome (list (effect 'clock+ emotion 1)) "")
+                      :suits (list 魅力)
+                      :risk 'mid
+                      :ok      (outcome (list (effect 'clock+ emotion 1)) "")
                              :partial (outcome (list (effect 'clock+ crisis 1)) "")
                              :fail    (outcome (list (effect 'clock+ crisis 2)) ""))))
 
@@ -90,9 +90,9 @@
                      :title "说下去"
                      :desc "她愿意听。这是目前最安全的推进方式。"
                      :check (check
-                             :suits (list 意志)
-                             :risk 'low
-                             :ok      (outcome (list (effect 'clock+ emotion 1)) "")
+                      :suits (list 魅力)
+                      :risk 'low
+                      :ok      (outcome (list (effect 'clock+ emotion 1)) "")
                              :partial (outcome (list) "")
                              :fail    (outcome (list (effect 'clock+ crisis 2)) "")))))
              ;; 阶段 1：防御警惕 — 中风险
@@ -112,9 +112,9 @@
                 :title "靠近"
                 :desc "你用她注意力的间隙缩短距离。每一步都让枪口更近，也让选择更少。"
                 :check (check
-                        :suits (list 感知)
-                        :risk 'mid
-                        :ok      (outcome (list (effect 'clock+ distance 1) (effect 'clock+ crisis 1)) "")
+                         :suits (list 敏锐)
+                         :risk 'mid
+                         :ok      (outcome (list (effect 'clock+ distance 1) (effect 'clock+ crisis 1)) "")
                         :partial (outcome (list (effect 'clock+ crisis 1)) "")
                         :fail    (outcome (list (effect 'clock+ crisis 2)) ""))))
 
@@ -130,9 +130,9 @@
                 :title "强冲"
                 :desc "距离够了，但她还没有准备好。这是一个赌命的选择。"
                 :check (check
-                        :suits (list 意志)
-                        :risk 'high
-                        :ok      (outcome (list (effect 'end-encounter 'success)) "")
+                         :suits (list 暴力)
+                         :risk 'high
+                         :ok      (outcome (list (effect 'end-encounter 'success)) "")
                         :partial (outcome (list (effect 'add health -1)
                                                 (effect 'clock+ crisis 1)) "")
                         :fail    (outcome (list (effect 'add health -1)
@@ -144,9 +144,9 @@
                 :title "夺枪"
                 :desc "距离够了，她也没那么紧张了。现在是最好的时机。"
                 :check (check
-                        :suits (list 意志)
-                        :risk 'mid
-                        :ok      (outcome (list (effect 'end-encounter 'success)) "")
+                         :suits (list 暴力)
+                         :risk 'mid
+                         :ok      (outcome (list (effect 'end-encounter 'success)) "")
                         :partial (outcome (list (effect 'add health -1)
                                                 (effect 'clock+ crisis 1)) "")
                         :fail    (outcome (list (effect 'clock+ crisis 2)) "")))))))

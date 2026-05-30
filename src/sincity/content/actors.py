@@ -11,9 +11,10 @@ class PartyActorDef:
     name: str
     max_health: int
     max_energy: int
-    logic: int
-    perception: int
-    willpower: int
+    force: int = 0
+    charm: int = 0
+    knowledge: int = 0
+    sense: int = 0
     is_player: bool = False
 
     def instantiate(self, *, health: int | None = None, energy: int | None = None) -> PartyActorState:
@@ -24,14 +25,16 @@ class PartyActorDef:
             max_health=self.max_health,
             energy=self.max_energy if energy is None else energy,
             max_energy=self.max_energy,
-            logic=self.logic,
-            perception=self.perception,
-            willpower=self.willpower,
+            force=self.force,
+            charm=self.charm,
+            knowledge=self.knowledge,
+            sense=self.sense,
             is_player=self.is_player,
         )
 
 
 PLAYER_ACTOR_ID = "cole"
+INITIAL_COMPANION_ID = "lena"
 DEBUG_COMPANION_ORDER: tuple[str, ...] = ("lena", "marco")
 
 PARTY_ACTOR_DEFS: dict[str, PartyActorDef] = {
@@ -40,9 +43,8 @@ PARTY_ACTOR_DEFS: dict[str, PartyActorDef] = {
         name="科尔",
         max_health=10,
         max_energy=5,
-        logic=1,
-        perception=0,
-        willpower=0,
+        knowledge=1,
+        sense=1,
         is_player=True,
     ),
     "lena": PartyActorDef(
@@ -50,18 +52,16 @@ PARTY_ACTOR_DEFS: dict[str, PartyActorDef] = {
         name="莉娜",
         max_health=6,
         max_energy=3,
-        logic=0,
-        perception=2,
-        willpower=0,
+        charm=2,
+        sense=1,
     ),
     "marco": PartyActorDef(
         id="marco",
         name="马可",
         max_health=8,
         max_energy=2,
-        logic=0,
-        perception=0,
-        willpower=2,
+        force=2,
+        sense=1,
     ),
 }
 

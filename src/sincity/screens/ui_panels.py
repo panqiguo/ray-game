@@ -547,12 +547,10 @@ def draw_profile_modal(font: Font | None, state: GameState, growth_defs=GROWTH_D
 
     counts = count_spirit_cards(state)
     growth_ids = (
-        "upgrade_logic",
-        "upgrade_perception",
-        "upgrade_willpower",
-        "major_logic_slot",
-        "major_perception_slot",
-        "major_willpower_slot",
+        "upgrade_force",
+        "upgrade_charm",
+        "upgrade_knowledge",
+        "upgrade_sense",
     )
     card_gap = 10
     card_w = (left.width - 30) / 2
@@ -562,21 +560,15 @@ def draw_profile_modal(font: Font | None, state: GameState, growth_defs=GROWTH_D
         can_claim = state.growth_points > 0
         unmet_labels = tuple(condition.label for condition in growth.conditions if condition.label)
         if unmet_labels:
-            if growth_id == "major_logic_slot":
-                can_claim = party_actor(state, state.player_actor_id).logic >= 3
-            elif growth_id == "major_perception_slot":
-                can_claim = party_actor(state, state.player_actor_id).perception >= 3
-            elif growth_id == "major_willpower_slot":
-                can_claim = party_actor(state, state.player_actor_id).willpower >= 3
+            can_claim = False
         col = index % 2
         row = index // 2
-        card_rect = Rectangle(left.x + 10 + col * (card_w + card_gap), left.y + 38 + row * (card_h + card_gap), card_w, card_h)
-        draw_frame(card_rect, Color(24, 27, 34, 255), Color(92, 96, 104, 220) if can_claim else Color(70, 72, 78, 180))
-        draw_text(font, growth.title, int(card_rect.x) + 10, int(card_rect.y) + 8, body_style.size, section_style.color if can_claim else ui_text_color("disabled"))
-        body_lines = wrap_text_lines_any(font, growth.description, card_rect.width - 24, body_style.size)
-        body_y = int(card_rect.y) + 30
-        for line in body_lines[:2]:
-            draw_text(font, line, int(card_rect.x) + 10, body_y, body_style.size, body_style.color)
+        card_rect = Rectangle(left.x + 12 + col * (card_w + card_gap), left.y + 40 + row * (card_h + card_gap), card_w, card_h)
+        draw_frame(card_rect, Color(24, 26, 34, 255), Color(60, 63, 72, 220))
+        draw_text(font, growth.title, int(card_rect.x) + 8, int(card_rect.y) + 6, body_style.size, body_style.color)
+        body_y = int(card_rect.y) + 26
+        for line in wrap_text_lines(font, growth.description, int(card_w) - 16, body_style.size):
+            draw_text(font, line, int(card_rect.x) + 8, body_y, body_style.size, faint_style.color)
             body_y += body_style.line_height - 2
         if unmet_labels and not can_claim:
             draw_text(font, unmet_labels[0], int(card_rect.x) + 10, int(card_rect.y + card_rect.height) - 24, body_style.size, faint_style.color)
@@ -586,39 +578,28 @@ def draw_profile_modal(font: Font | None, state: GameState, growth_defs=GROWTH_D
             end_layer("profile")
             return
 
-    owned_y = int(right.y) + 40
-    for label, key in (("逻辑", "logic"), ("感知", "perception"), ("意志", "willpower")):
-        value = getattr(party_actor(state, state.player_actor_id), key)
-        slots = counts[key]
-        draw_text(font, f"· {label} 值 {value} / 槽位 {slots}", int(right.x) + 12, owned_y, meta_style.size, meta_style.color)
-        owned_y += 24
-    owned_y += 16
-    draw_text(font, "每点生命损失会按固定顺序给精力叠加创伤。", int(right.x) + 12, owned_y, faint_style.size, faint_style.color)
-    _draw_companion_profile_column(font, companions, state, meta_style.size)
+    _draw_profile_column(font, right, state, state.player_actor_id, meta_style.size, faint_style)
+    _draw_profile_column(font, companions, state, state.companion_actor_ids[0] if state.companion_actor_ids else None, meta_style.size, faint_style)
     end_layer("profile")
 
 
-def _draw_companion_profile_column(font: Font | None, rect: Rectangle, state: GameState, text_size: int) -> None:
-    if not state.companion_actor_ids:
+def _draw_profile_column(font: Font | None, rect: Rectangle, state: GameState, actor_id: str | None, text_size: int, small_style: dict) -> None:
+    if actor_id is None:
         empty_style = ui_text_style("body", "subtle")
         draw_text(font, "暂无同行同伴。", int(rect.x) + 12, int(rect.y) + 42, empty_style.size, empty_style.color)
         return
     y = int(rect.y) + 42
     label_style = ui_text_style("body", "muted")
-    small_style = ui_text_style("body_sm", "subtle")
-    for actor_id in state.companion_actor_ids:
-        actor = party_actor(state, actor_id)
-        color = _actor_theme_color(actor_id)
-        draw_rectangle_rec(Rectangle(rect.x + 12, y, rect.width - 24, 28), Color(color.r, color.g, color.b, 70))
-        draw_text(font, actor.name, int(rect.x) + 22, y + 5, label_style.size, ui_text_color("default"))
-        y += 36
-        draw_text(font, f"生命 {actor.health}/{actor.max_health}  精力 {actor.energy}/{actor.max_energy}", int(rect.x) + 16, y, text_size, label_style.color)
-        y += 24
-        draw_text(font, f"逻辑 {actor.logic}  感知 {actor.perception}  意志 {actor.willpower}", int(rect.x) + 16, y, text_size, label_style.color)
-        best = max((("逻辑", actor.logic), ("感知", actor.perception), ("意志", actor.willpower)), key=lambda item: item[1])
-        y += 22
-        draw_text(font, f"擅长：{best[0]}", int(rect.x) + 16, y, small_style.size, small_style.color)
-        y += 34
+    actor = party_actor(state, actor_id)
+    color = _actor_theme_color(actor_id)
+    draw_rectangle_rec(Rectangle(rect.x + 12, y, rect.width - 24, 28), Color(color.r, color.g, color.b, 70))
+    draw_text(font, actor.name, int(rect.x) + 22, y + 5, label_style.size, ui_text_color("default"))
+    y += 36
+    draw_text(font, f"生命 {actor.health}/{actor.max_health}  精力 {actor.energy}/{actor.max_energy}", int(rect.x) + 16, y, text_size, label_style.color)
+    y += 24
+    for label, key in (("暴力", actor.force), ("魅力", actor.charm), ("知识", actor.knowledge), ("敏锐", actor.sense)):
+        draw_text(font, f"{label} {key}", int(rect.x) + 16, y, text_size, label_style.color)
+        y += 20
 
 
 def draw_card_pile_modal(font: Font | None, state: GameState) -> None:

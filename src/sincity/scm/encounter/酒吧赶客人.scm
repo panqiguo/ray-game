@@ -6,7 +6,7 @@
     :title "把话说得够冷"
     :desc "先给他一个体面的台阶，看他要不要自己滚下去。"
     :check (check
-      :suits (list 逻辑)
+      :suits (list 魅力)
       :risk 'low
       :ok (outcome (list (effect 'clock+ pressure 2)) "")
       :partial (outcome (list (effect 'clock+ pressure 1) (effect 'add 'energy -1)) "")
@@ -17,7 +17,7 @@
     :title "直接把人从吧台前挤开"
     :desc "别讲道理，直接把空间抢回来。"
     :check (check
-      :suits (list 意志)
+      :suits (list 暴力)
       :risk 'mid
       :ok (outcome (list (effect 'clock+ pressure 2)) "")
       :partial (outcome (list (effect 'clock+ pressure 1) (effect 'add 'health -1)) "")

@@ -101,7 +101,7 @@
           :title "压制敌人"
           :desc "先打断他的攻击节奏，不急着把人彻底打倒。"
           :check (check
-            :suits (list 意志)
+            :suits (list 暴力)
             :risk 'mid
             :ok (outcome (list (hit-this-enemy enemy 1)) "你把他逼回货架后，攻击节奏被打断。")
             :partial (outcome (list (hit-this-enemy enemy 1) (effect 'add energy -1)) "你挡住这一波，自己也被拖住。")
@@ -110,7 +110,7 @@
           :title "冒险击倒"
           :desc "不管撤退节奏，直接把这个威胁从场上清掉。"
           :check (check
-            :suits (list 感知)
+            :suits (list 敏锐)
             :risk 'high
             :ok (outcome (list (hit-this-enemy enemy 2)) "你狠狠干中要害，他快撑不住了。")
             :partial (outcome (list (hit-this-enemy enemy 1) (effect 'add energy -1)) "你打中了，也被他拖住。")
@@ -128,7 +128,7 @@
         :title "冲开出口"
         :desc "越过碎玻璃和铁门，把逃生路线硬推出去。"
         :check (check
-          :suits (list 感知)
+          :suits (list 敏锐)
           :risk (if (some enemies (lambda (enemy) (= (enemy-kind enemy) 'gun))) 'high 'mid)
           :ok (outcome (list (effect 'clock+ exit 2)) "出口被你撞开一截。")
           :partial (outcome (list (effect 'clock+ exit 1) (effect 'add energy -1)) "你推进了，但枪声和碎片一起追上来。")

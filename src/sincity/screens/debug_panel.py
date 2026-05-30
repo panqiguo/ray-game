@@ -97,6 +97,6 @@ def _companion_summary(state: GameState) -> str:
     parts: list[str] = []
     for actor_id in state.companion_actor_ids:
         actor = state.party[actor_id]
-        best = max((("逻辑", actor.logic), ("感知", actor.perception), ("意志", actor.willpower)), key=lambda item: item[1])
+        best = max((("暴力", actor.force), ("魅力", actor.charm), ("知识", actor.knowledge), ("敏锐", actor.sense)), key=lambda item: item[1])
         parts.append(f"{actor.name} {best[0]}{best[1]}")
     return "，".join(parts)

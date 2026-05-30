@@ -4,17 +4,21 @@
 
 (define high 'high)
 
-(define logic 'logic)
+(define force 'force)
 
-(define perception 'perception)
+(define charm 'charm)
 
-(define willpower 'willpower)
+(define knowledge 'knowledge)
 
-(define 逻辑 'logic)
+(define sense 'sense)
 
-(define 感知 'perception)
+(define 暴力 'force)
 
-(define 意志 'willpower)
+(define 魅力 'charm)
+
+(define 知识 'knowledge)
+
+(define 敏锐 'sense)
 
 (define success 'success)
 

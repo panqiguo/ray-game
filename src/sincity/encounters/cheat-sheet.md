@@ -100,7 +100,7 @@ Encounter / World SCM 速查
 
 ```scheme
 (check
-  :suits (list 'logic 'perception)
+  :suits (list 知识 敏锐)
   :risk 'mid
   :factors (list
     (factor -1 :when security_online :label "监控")
@@ -111,7 +111,8 @@ Encounter / World SCM 速查
 ```
 
 - `:risk`：`'low` `'mid` `'high`
-- `:suits`：`'logic` `'perception` `'willpower`
+- `:suits`：`暴力` `魅力` `知识` `敏锐`（或英文 `force` `charm` `knowledge` `sense`）
+- `include` 了 `enum-symbols.scm` 后可使用中文符号：`暴力` `魅力` `知识` `敏锐`
 - 不写 `:suits` 或写空列表时，表示不使用人物属性加成
 - 写了 `:suits` 时，行动卡本身仍然无属性；最终值 = 行动卡点数 + 使用者对应属性 + 启用的 `:factors`
 - `factor` 用于环境/场景状态修正，`:when` 为真时启用；会显示在行动卡上，例如 `监控 -1`
@@ -264,10 +265,11 @@ alist：
 
 精神与成长：
 
-- 初始精神：`logic = 2`，`perception = 1`，`willpower = 1`
-- 每种精力默认 1 项；重大升级可以增加额外精力项
-- 每个槽位每回合只能使用 1 次
-- 受伤会按固定顺序给槽位叠加创伤；每层创伤让该槽位当前值 `-2`
+- 四项属性：`暴力(force)` `魅力(charm)` `知识(knowledge)` `敏锐(sense)`
+- 初始：Cole `知识=1` `敏锐=1`，Lena `魅力=2` `敏锐=1`
+- 每种属性默认 1 个精力槽位
+- 城市中主角抽 2 张、同伴抽 2 张；外出中主角抽 4 张、同伴 0 张
+- 受伤会按固定顺序给精力叠加创伤；每层创伤让该精力当前值 `-2`
 
 数值/比较：
 

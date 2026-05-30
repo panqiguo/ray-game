@@ -4,7 +4,7 @@ import time
 from dataclasses import dataclass
 
 from sincity.constants import HAND_SIZE, MAX_LOG_LINES
-from sincity.content import DEBUG_COMPANION_ORDER, GROWTH_DEFS, PLAYER_ACTOR_ID, SCENARIO, build_initial_party
+from sincity.content import DEBUG_COMPANION_ORDER, GROWTH_DEFS, INITIAL_COMPANION_ID, PLAYER_ACTOR_ID, SCENARIO, build_initial_party
 from sincity.content.runtime import next_react_rule as next_world_react_rule
 from sincity.content.runtime import react_rule_matches as world_react_rule_matches
 from sincity.content.runtime import evaluate_world_expr, evaluate_world_react_effects, render_tasks, render_world
@@ -13,7 +13,7 @@ from sincity.dialogues import continue_dialogue_session, create_dialogue_session
 from sincity.encounters import MAX_REACT_STEPS, evaluate_cycle_effects, evaluate_effect_expr, evaluate_fail_effects, evaluate_react_rules, evaluate_reaction_die, evaluate_success_effects, get_encounter, initial_store, next_react_rule, react_rule_matches, render_encounter
 from sincity.encounters.defs import CompiledEncounterProgram
 from sincity.model.defs import ActionDef, AddFieldPayload, DynamicValue, Effect, FieldRef, InputRequirement, ProgressClockSpec, SetFieldPayload, ShiftClockPayload
-from sincity.model.enums import ResultType, ScreenName
+from sincity.model.enums import ResultType, ScreenName, Suit
 from sincity.model.state import (
     ActiveEncounterState,
     ActionAssemblyState,
@@ -32,7 +32,6 @@ from sincity.rules.deck import list_spirit_slots, make_starting_deck, refresh_sp
 from sincity.rules.judgment import compute_action_value, roll_result
 from sincity.rules.notifications import push_notification
 from sincity.rules.rng import RandomSource
-from sincity.model.enums import Suit
 
 
 @dataclass(frozen=True)
@@ -90,7 +89,7 @@ def start_new_run(seed: int) -> tuple[GameState, RandomSource]:
     )
     state.player_actor_id = PLAYER_ACTOR_ID
     state.party = build_initial_party(player_health=state.attributes.health, player_energy=state.attributes.stress)
-    state.companion_actor_ids = []
+    state.companion_actor_ids = [INITIAL_COMPANION_ID] if INITIAL_COMPANION_ID and INITIAL_COMPANION_ID in state.party else []
     sync_trauma_cards_with_health(state)
     start_city_day(state.deck, rng, HAND_SIZE, actors=_active_card_actors(state))
     _reset_action_cycle_from_deck(state)
@@ -233,7 +232,7 @@ def _field_value(state: GameState, key: str) -> int | bool | str:
             return state.world.values.get(key, spec.initial)
         if spec.persist == "world_inventory":
             return state.world.inventory.get(key, int(spec.initial))
-    if key in {"energy", "stress", "health", "logic", "perception", "willpower"}:
+    if key in {"energy", "stress", "health", "force", "charm", "knowledge", "sense"}:
         return _world_attr_value(state, key)
     if key in state.world.values:
         return state.world.values[key]
@@ -304,12 +303,14 @@ def _world_attr_value(state: GameState, key: str) -> int:
         return actor.energy
     if key == "health":
         return actor.health
-    if key == "logic":
-        return actor.logic
-    if key == "perception":
-        return actor.perception
-    if key == "willpower":
-        return actor.willpower
+    if key == "force":
+        return actor.force
+    if key == "charm":
+        return actor.charm
+    if key == "knowledge":
+        return actor.knowledge
+    if key == "sense":
+        return actor.sense
     raise AssertionError(f"Unknown world attr: {key}")
 
 
@@ -324,7 +325,7 @@ def _set_world_attr(state: GameState, key: str, value: int) -> None:
         state.attributes.health = actor.health
         sync_trauma_cards_with_health(state)
         return
-    assert key in {"logic", "perception", "willpower"}, f"Unknown world attr: {key}"
+    assert key in {"force", "charm", "knowledge", "sense"}, f"Unknown world attr: {key}"
     setattr(actor, key, value)
 
 
@@ -400,7 +401,10 @@ def _refresh_cards_after_party_change(state: GameState, rng: RandomSource | None
 
 
 def _active_card_actors(state: GameState) -> tuple:
-    ids = [state.player_actor_id] if state.screen != ScreenName.ENCOUNTER else [state.player_actor_id, *state.companion_actor_ids]
+    if state.screen == ScreenName.ENCOUNTER:
+        ids = [state.player_actor_id]
+    else:
+        ids = [state.player_actor_id, *state.companion_actor_ids]
     return tuple(actor for actor_id in ids if (actor := state.party.get(actor_id)) is not None and actor.can_act)
 
 
@@ -445,12 +449,14 @@ def slot_is_preferred_for_check(slot_id: str, check) -> bool | None:
 
 def _actor_attribute_value(state: GameState, owner_id: str, suit: Suit) -> int:
     actor = party_actor(state, owner_id)
-    if suit == Suit.LOGIC:
-        return actor.logic
-    if suit == Suit.PERCEPTION:
-        return actor.perception
-    if suit == Suit.WILLPOWER:
-        return actor.willpower
+    if suit == Suit.FORCE:
+        return actor.force
+    if suit == Suit.CHARM:
+        return actor.charm
+    if suit == Suit.KNOWLEDGE:
+        return actor.knowledge
+    if suit == Suit.SENSE:
+        return actor.sense
     return 0
 
 
@@ -482,12 +488,14 @@ def slot_value_breakdown(state: GameState, slot_id: str, check) -> CheckValueBre
 
 
 def _suit_label(suit: Suit) -> str:
-    if suit == Suit.LOGIC:
-        return "逻辑"
-    if suit == Suit.PERCEPTION:
-        return "感知"
-    if suit == Suit.WILLPOWER:
-        return "意志"
+    if suit == Suit.FORCE:
+        return "暴力"
+    if suit == Suit.CHARM:
+        return "魅力"
+    if suit == Suit.KNOWLEDGE:
+        return "知识"
+    if suit == Suit.SENSE:
+        return "敏锐"
     if suit == Suit.WOUND:
         return "流血"
     if suit == Suit.SHOCK:
@@ -742,15 +750,8 @@ def start_quick_dialogue(state: GameState, raw_text: str) -> None:
 
 
 def _open_dialogue_session(state: GameState, session, *, primary_id: str) -> None:
+    del primary_id
     state.active_dialogue = session
-    if state.modal.kind:
-        state.modal.return_kind = state.modal.kind
-        state.modal.return_primary_id = state.modal.primary_id
-    else:
-        state.modal.return_kind = ""
-        state.modal.return_primary_id = None
-    state.modal.kind = "dialogue"
-    state.modal.primary_id = primary_id
     clear_assembly(state)
     clear_selected_input(state)
 
@@ -808,7 +809,6 @@ def finish_dialogue(state: GameState) -> None:
 
 def _clear_dialogue_modal(state: GameState) -> None:
     state.active_dialogue = None
-    state.modal = ModalState()
     clear_assembly(state)
     clear_selected_input(state)
 
@@ -1485,7 +1485,7 @@ def _resolve_world_reacts(state: GameState, rng: RandomSource, extra_lines: list
 
 
 def reset_hand(state: GameState, rng: RandomSource) -> None:
-    refresh_spirit_slots(state.deck, rng, actors=_active_card_actors(state))
+    refresh_spirit_slots(state.deck, rng, actors=_active_card_actors(state), screen=state.screen)
     _reset_action_cycle_from_deck(state)
     _mark_content_dirty(state)
 
@@ -1705,14 +1705,14 @@ def sync_trauma_cards_with_health(state: GameState) -> None:
 
 def count_spirit_cards(state: GameState) -> dict[str, int]:
     return {
-        spirit: 1 + state.deck.extra_slots.get(spirit, 0)
-        for spirit in ("logic", "perception", "willpower")
+        attr: 1 + state.deck.extra_slots.get(attr, 0)
+        for attr in ("force", "charm", "knowledge", "sense")
     }
 
 
 def _upgrade_spirit_value(state: GameState, spirit: str, amount: int, extra_lines: list[str] | None = None) -> None:
     actor = _player_actor(state)
-    assert spirit in {"logic", "perception", "willpower"}, f"Unknown spirit: {spirit}"
+    assert spirit in {"force", "charm", "knowledge", "sense"}, f"Unknown spirit: {spirit}"
     setattr(actor, spirit, getattr(actor, spirit) + amount)
     sync_trauma_cards_with_health(state)
     _mark_content_dirty(state)
@@ -1721,9 +1721,8 @@ def _upgrade_spirit_value(state: GameState, spirit: str, amount: int, extra_line
 
 
 def _add_spirit_slot(state: GameState, spirit: str, extra_lines: list[str] | None = None) -> None:
-    assert spirit in state.deck.extra_slots, f"Unknown spirit: {spirit}"
-    state.deck.extra_slots[spirit] += 1
-    refresh_spirit_slots(state.deck)
+    state.deck.extra_slots[spirit] = state.deck.extra_slots.get(spirit, 0) + 1
+    refresh_spirit_slots(state.deck, rng=None, actors=_active_card_actors(state), screen=state.screen)
     sync_trauma_cards_with_health(state)
     _mark_content_dirty(state)
     if extra_lines is not None:
@@ -1858,12 +1857,14 @@ def _field_label(field_id: str) -> str:
         return "金钱"
     if field_id == "cigarettes":
         return "烟卷"
-    if field_id == "logic":
-        return "逻辑"
-    if field_id == "perception":
-        return "感知"
-    if field_id == "willpower":
-        return "意志"
+    if field_id == "force":
+        return "暴力"
+    if field_id == "charm":
+        return "魅力"
+    if field_id == "knowledge":
+        return "知识"
+    if field_id == "sense":
+        return "敏锐"
     return _item_label(field_id)
 
 

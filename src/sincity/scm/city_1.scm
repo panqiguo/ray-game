@@ -1,16 +1,18 @@
 (include "helper.scm")
 (include "common_clock_macros.scm")
 (include "city/bookshop.scm")
+(include "city/nightingale_story.scm")
 (include "city/shared_work.scm")
 (include "city/scenes/building.scm")
 (include "city/scenes/rich_enclave.scm")
 (include "city/scenes/street.scm")
+(include "city/scenes/theater.scm")
 (include "city/scenes/waste.scm")
 
 ;; 城市内容现在按“生存底盘 + 主线章节”组织：
 ;; - 诊所、黑市、书店、摊贩、仓库等长期功能保留。
-;; - 第一章围绕中枪男人闯入、警方调查、取回神秘物品。
-;; - 送去鉴定后的第二天开启薇拉委托线；鉴定结果稍后并入主线信息。
+;; - 当前开场主线围绕剧院、威胁信和首演前的调查。
+;; - 旧主线内容暂时保留在城市中，但不再作为当前任务面板的主推进。
 
 (define intrusion-intro-text
   "# 雨夜闯入者\n\n# speaker: 科尔\n门被撞开的时候，我正试着让一杯冷咖啡变得像晚饭。\n\n# speaker: 男人\n他捂着腹部，血从指缝里往外冒。枪伤。不是新手打的，也不是警告用的。\n\n# speaker: 男人\n“他们会来找这个。”\n\n# speaker: 科尔\n他把一个包着油纸的小东西塞进抽屉，倒在我的地板上。十分钟后，警笛停在楼下。")
@@ -87,6 +89,15 @@
 (define rehab-done-text
   "# 康复训练完成\n\n# speaker: 科尔\n最后一组动作做完，身体终于不再像一台生锈的机器。虽然离痊愈还远，但至少能喘一口顺畅的气了。\n\n恢复了 3 点健康。")
 
+(define black-loan-borrow-text
+  "# 黑市高利贷\n\n# speaker: 掌柜\n“拿走。别问利息怎么算，你只要记得它每天都会变多。”\n\n# speaker: 科尔\n一百块现金塞进口袋的时候很轻，像一块还没落下来的石头。")
+
+(define black-loan-repaid-text
+  "# 还清高利贷\n\n# speaker: 掌柜\n“干净了。至少这笔账干净了。”\n\n# speaker: 科尔\n他把账页撕下来，火柴一擦，纸灰落进杯底。")
+
+(define black-loan-default-text
+  "# 高利贷到期\n\n# speaker: 科尔\n他们没有多说废话。拳头、墙角、翻空的口袋，程序简单得像一张收据。\n\n# speaker: 科尔\n等我重新站起来，身上的钱没了，骨头也少了点脾气。")
+
 (define (make-investigate-action title desc clock suit)
   (action
     :title title
@@ -126,7 +137,7 @@
           :title "清理地板上的血迹"
           :desc "不是为了骗过鉴识科，是为了让自己还能在这里闭眼。"
           :check (check
-            :suits (list 意志 感知)
+            :suits (list 暴力 敏锐)
             :risk 'low
             :ok (outcome (list (effect 'clock+ blood_clean_progress 2)))
             :partial (outcome  (list (effect 'clock+ blood_clean_progress 1)))
@@ -154,25 +165,28 @@
     :title "街边摊贩"
     :desc "铁锅、热汤、油烟和零钱。这里不问你从哪里来，只问你要不要加辣。"
     :position '(245 280)
-    :show-clocks (list (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress))
+    :show-clocks (list
+      (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress)
+      (when (and nightingale_city_day_started (not nightingale_restaurant_done)) nightingale_restaurant_talk))
     :actions (list
       (action
         :title "吃一碗热汤"
-        :desc "便宜、烫嘴，立刻恢复 3 点精力。"
+        :desc (if (and nightingale_city_day_started (not nightingale_restaurant_done))
+          "便宜、烫嘴，立刻恢复 3 点精力。老板还会顺口多说一点送信人的路线。"
+          "便宜、烫嘴，立刻恢复 3 点精力。")
         :inputs (list (item 'money 6 "饭钱"))
-        :effects (list (effect 'add energy 3)))
-      (action
-        :title "买一包干粮"
-        :desc "把 2 点精力恢复存成 1 份干粮，之后可以在办公室里吃掉。"
-        :inputs (list (item 'money 10 "干粮钱"))
-        :effects (list (effect 'add food 1)))
-      (make-work-action "帮摊贩收摊洗碗" "低风险，钱少，但至少不会把腰和命都押在仓库里。" 意志 'low 6 4 2 0)
+        :effects (list
+          (effect 'add energy 3)
+          (when (and nightingale_city_day_started (not nightingale_restaurant_done))
+            (effect 'clock+ nightingale_restaurant_talk 1))))
+      (make-work-action "帮摊贩收摊洗碗" "低风险，钱少，但至少不会把腰和命都押在仓库里。" 暴力 'low 6 4 2 0)
+      (nightingale-stall-investigation-action)
       (when (and intrusion_seen (not item_recovered) (not stall_investigated))
         (action
           :title "向摊贩打听中枪男人"
           :desc "饭点时人群最杂。有人也许见过那个捂着腹部从雨里穿过去的男人。"
           :check (check
-            :suits (list 感知)
+            :suits (list 敏锐)
             :risk 'mid
             :ok (outcome "你从摊贩的闲谈里拼出了一个方向。" (list (effect 'clock+ investigation_progress 1) (effect 'set stall_investigated true)))
             :partial (outcome "碎片不多，但足够让你继续往前走。" (list (effect 'clock+ investigation_progress 1) (effect 'set stall_investigated true) (effect 'add energy -1)))
@@ -183,24 +197,49 @@
     :title "黑市"
     :desc "修表铺后门、药味、假章和压低的声音。这里什么都能办，只是从不保证干净。"
     :position '(450 280)
-    :show-clocks (list (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress))
+    :show-clocks (list
+      (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress)
+      (when black_loan_active black_loan_due))
     :actions (list
       (action
         :title "找黑市医生处理伤口"
         :desc "便宜，不报警。坏处是你最好别仔细看他的器械。"
         :inputs (list (item 'money 12 "诊费"))
         :check (check
-          :suits (list 意志)
+          :suits (list 魅力)
           :risk 'mid
           :ok (outcome (list (effect 'add health 3)))
           :partial (outcome (list (effect 'add health 2)))
           :fail (outcome (list (effect 'add health 2) (effect 'add energy -1)))))
+      (when (not black_loan_active)
+        (action
+          :title "借黑市高利贷"
+          :desc "立刻拿 100 元。每天利息两元,最多借10天.。"
+          :effects (list
+            (effect 'add money 100)
+            (effect 'set black_loan_active true)
+            (effect 'set black_loan_debt 100)
+            (effect 'set black_loan_last_day day)
+            (effect-reset-clock black_loan_due)
+            (effect 'start-quick-dialogue black-loan-borrow-text))))
+      (when black_loan_active
+        (action
+          :title "还清黑市高利贷"
+          :desc "把当前欠款一次还清。拖得越久，账越难看。"
+          :conditions (list (field-at-least 'money black_loan_debt "需要足够现金还债"))
+          :inputs (list (item 'money black_loan_debt "还款"))
+          :effects (list
+            (effect 'set black_loan_active false)
+            (effect 'set black_loan_debt 0)
+            (effect-reset-clock black_loan_due)
+            (effect 'start-quick-dialogue black-loan-repaid-text))))
+      (nightingale-blackmarket-investigation-action)
       (when (and intrusion_seen (not item_recovered) (not market_investigated))
         (action
           :title "问枪伤药品的去向"
           :desc "正规诊所会登记，黑市不会。不会登记的地方，反而更容易留下口风。"
           :check (check
-            :suits (list 逻辑)
+            :suits (list 知识)
             :risk 'mid
             :ok (outcome "黑市的人记性比诊所好。他记得那个买绷带的人。" (list (effect 'clock+ investigation_progress 1) (effect 'set market_investigated true)))
             :partial (outcome "他半遮半掩地说了几个细节，够你接着查。" (list (effect 'clock+ investigation_progress 1) (effect 'set market_investigated true) (effect 'add energy -1)))
@@ -233,7 +272,7 @@
           :title "进行康复训练"
           :desc "动作不大，但每天坚持会有用。低风险，失败没有惩罚。"
           :check (check
-            :suits (list 意志)
+            :suits (list 暴力)
             :risk 'low
             :ok (outcome (list (effect 'clock+ rehab_progress 2)))
             :partial (outcome (list (effect 'clock+ rehab_progress 1)))
@@ -252,7 +291,7 @@
           :title "进行简易康复训练"
           :desc "投入行动卡训练一次。效果看发挥，次数用完为止。"
           :check (check
-            :suits (list 意志)
+            :suits (list 暴力)
             :risk 'low
             :ok (outcome (list (effect 'clock+ rehab2_progress 1) (effect 'add health 1)))
             :partial (outcome (list (effect 'clock+ rehab2_progress 1) (effect 'add energy 1)))
@@ -272,7 +311,7 @@
           :title "查急诊登记"
           :desc "中枪的人不一定敢进诊室，但附近总有人看见过他。"
           :check (check
-            :suits (list 逻辑)
+            :suits (list 知识)
             :risk 'mid
             :ok (outcome "登记簿上没有他，但护士记得那件血衣。" (list (effect 'clock+ investigation_progress 1) (effect 'set clinic_investigated true)))
             :partial (outcome "你翻到了一些记录，不全，但有用。" (list (effect 'clock+ investigation_progress 1) (effect 'set clinic_investigated true) (effect 'add energy -1)))
@@ -300,13 +339,13 @@
     :position '(40 520)
     :show-clocks (list (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress))
     :actions (list
-      (make-work-action "搬货打散工" "高风险，现金来得快，代价也直接。坏结果会伤到身体。" 意志 'high 16 11 6 1)
+      (make-work-action "搬货打散工" "高风险，现金来得快，代价也直接。坏结果会伤到身体。" 暴力 'high 16 11 6 1)
       (when (and intrusion_seen (not item_recovered) (not warehouse_investigated))
         (action
           :title "问码头装卸工"
           :desc "死者鞋底带着码头泥。仓库的人也许见过他从哪条路上来。"
           :check (check
-            :suits (list 感知)
+            :suits (list 敏锐)
             :risk 'mid
             :ok (outcome (list (effect 'clock+ investigation_progress 1) (effect 'set warehouse_investigated true)) "装卸工见过那个方向有车急刹的声音。")
             :partial (outcome (list (effect 'clock+ investigation_progress 1) (effect 'set warehouse_investigated true)) "他不能确定，但给你指了可能的方向。")
@@ -341,11 +380,12 @@
         :conditions (list (field-at-least 'money 10 "需要 10 元赌本"))
         :inputs (list (item 'money 10 "赌本"))
         :check (check
-          :suits (list 感知)
+          :suits (list 敏锐)
           :risk 'high
           :ok (outcome (list (effect 'add money 24)) "你读懂了对面那点迟疑，今晚的酒钱有人替你付。")
           :partial (outcome (list (effect 'add money 8) (effect 'add energy -1)) "你赢回一点，但坐得太久，头也开始发沉。")
           :fail (outcome (list (effect 'clock+ gambling_debt 1) (effect 'add energy -1)) "牌面翻下去，你只剩下一笔被人记住的小账。")))
+      (nightingale-bar-context-action)
       ;; 薇拉主线 — 电话中已接下委托，直接去三个地方打听
       (when (and vera_thread_unlocked (not vera_bar_checked))
         (action
@@ -456,7 +496,7 @@
     :desc "地下室、绿绒桌、假笑和真债。这里能赢钱，也能把明天提前输掉。"
     :position '(1270 520)
     :actions (list
-      (make-work-action "替赌场看一晚场子" "不问问题，只看住门口。" 意志 'high 18 12 6 1))))
+      (make-work-action "替赌场看一晚场子" "不问问题，只看住门口。" 暴力 'high 18 12 6 1))))
 
 (define (情景测试C)
   (node
@@ -517,6 +557,7 @@
 (define world-vars
   (append
     bookshop-vars
+    nightingale-vars
     building-vars
     rich-enclave-vars
     waste-vars
@@ -525,6 +566,11 @@
       (var 'intrusion_seen false)
       (var 'chapter_2_started false)
       (var 'main_resolved false)
+      (var 'black_loan_active false)
+      (var 'black_loan_debt 0)
+      (var 'black_loan_last_day 0)
+      (var 'black_loan_due (clock :title "高利贷倒计时" :desc "黑市借款每天涨 10 元。满 10 天还不上，就会有人替账本动手。" :initial 0 :max 10))
+      (var 'black_loan_defaulted false)
 
       (var 'recovery_deadline_day 5)
       (var 'police_interview_started false)
@@ -607,8 +653,27 @@
       :when (not intro_seen)
       :then (list
         (effect 'set intro_seen true)
-        (effect 'set intrusion_seen true)
-        (effect 'start-quick-dialogue intrusion-intro-text)))
+        (effect 'set nightingale_theater_unlocked true)
+        (effect 'start-quick-dialogue nightingale-opening-text)))
+
+    (react
+      :when (and black_loan_active (> day black_loan_last_day))
+      :then (list
+        (effect 'clock+ black_loan_due 1)
+        (effect 'add black_loan_debt 2)
+        (effect 'set black_loan_last_day day)))
+
+    (react
+      :when (and black_loan_active (clock-filled? black_loan_due))
+      :then (list
+        (effect 'set black_loan_active false)
+        (effect 'set black_loan_defaulted true)
+        (effect 'set black_loan_debt 0)
+        (effect-reset-clock black_loan_due)
+        (effect 'add health -2)
+        (effect 'add energy -2)
+        (effect 'add money (- money))
+        (effect 'start-quick-dialogue black-loan-default-text)))
 
     (react
       :when (and intrusion_seen (not police_interview_started) (not police_interview_forced) (>= day 2))
@@ -703,21 +768,16 @@
       :then (list
         (effect 'set blonde_drinks_done true)
         (effect 'start-quick-dialogue blonde-done-text))))
+    nightingale-reacts
     bookshop-reacts
     building-reacts
     rich-enclave-reacts
     waste-reacts))
 
 (define world-tasks
-  (list
-    (task
-      :kind '主线
-      :title "几天之后去取东西"
-      :desc "那个男人让你第 5 天去取回东西。警察、血迹、死者线索都是你可以提前处理的事。"
-      :active (and intrusion_seen (not item_recovered))
-      :completed item_recovered
-      :failed item_recovery_failed
-      :steps (list))
+  (append
+    nightingale-tasks
+    (list
     (task
       :kind '主线
       :title "处理神秘物品的鉴定"
@@ -767,39 +827,36 @@
         (step :title "碰上被按在巷口的赌徒" :completed gambler_met)
         (step :title "处理追债人留下的麻烦" :completed gambler_debt_choice_done)
         (step :title "检查下注单上的暗号" :completed casino_unlocked)))
-    (task
-      :kind '压力
-      :title "警方调查"
-      :desc "警方想尽快结案。你可以主动去警局配合调查；拖到第二天，他们会亲自上门。"
-      :active (and intrusion_seen (not police_investigation_done))
-      :completed police_investigation_done
-      :failed (and police_interview_forced (not police_investigation_done))
-      :steps (list))))
+    )))
 
 (content
-  :meta (meta :key 'city_1 :title "贝城县" :desc "雨夜闯入者、警方笔录、薇拉委托，以及被一点点揭开的城市。")
+  :meta (meta :key 'city_1 :title "贝城县" :desc "剧院的威胁信、旧码头的影子，以及城市里不断改写方向的线索。")
   :vars world-vars
   :reacts world-reacts
   :tasks world-tasks
   :root
   (node
     :title "贝城县"
-    :desc "贝城县不大。办公室、诊所、酒吧、老街和那些没写在地图上的入口，足够装下一个人继续追问的代价。"
-    :show-clocks (list (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress))
+    :desc (if nightingale_city_day_started
+      "贝城县不大。你从剧院醒来后，城市才重新露出那些能救命、能买消息、也能把人推向旧码头的地方。"
+      "首演前的剧院把整座城暂时挡在外面。今晚先处理夜莺收到的第二封威胁信。")
+    :show-clocks (list
+      (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress))
     :children (list
       (办公室)
-      (街边摊贩)
-      (黑市)
-      (正规诊所)
-      (书店)
-      (警局)
-      (仓库)
-      (酒吧)
+      (when nightingale_stall_unlocked (街边摊贩))
+      (when nightingale_market_unlocked (黑市))
+      (when nightingale_clinic_unlocked (正规诊所))
+      (when false (书店))
+      (when nightingale_theater_unlocked (剧院))
+      (when intrusion_seen (警局))
+      (when (or intrusion_seen nightingale_city_day_started) (仓库))
+      (when nightingale_bar_unlocked (酒吧))
       (when (or vera_thread_unlocked (and exploitation_incident_active (= exploitation_incident_location 'street))) (老街))
-      (废弃区)
-      (大厦)
-      (富人飞地)
+      (when nightingale_waste_unlocked (废弃区))
+      (when false 大厦)
+      (when false (富人飞地))
       (when frederick_real_lead_found (望月旅馆))
       (when vera_apartment_found (公寓))
       (when casino_unlocked (赌场))
-      (情景测试C))))
+      (when false (情景测试C)))))

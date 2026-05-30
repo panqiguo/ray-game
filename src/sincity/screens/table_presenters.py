@@ -248,7 +248,7 @@ def _actor_factor_previews(state: GameState, action: ActionDef) -> tuple[ActionF
     if action.check is None:
         return ()
     previews: list[ActionFactorPreview] = []
-    actor_ids = [state.player_actor_id, *state.companion_actor_ids] if state.active_encounter is not None else [state.player_actor_id]
+    actor_ids = [state.player_actor_id, *state.companion_actor_ids] if state.active_encounter is None else [state.player_actor_id]
     for suit in action.check.suits:
         for actor_id in actor_ids:
             actor = party_actor(state, actor_id)

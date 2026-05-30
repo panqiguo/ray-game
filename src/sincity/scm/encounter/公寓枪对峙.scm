@@ -32,10 +32,10 @@
     :show-clocks (list hostility distance disarm)
     :actions (list
       (make-standoff-action
-        "举起双手，先停住"
-        "先让她知道你现在不会扑过去。活着的人才有资格问第二个问题。"
-        意志
-        'low
+         "举起双手，先停住"
+         "先让她知道你现在不会扑过去。活着的人才有资格问第二个问题。"
+         魅力
+         'low
         (list (effect 'clock- hostility 2))
         (list (effect 'clock- hostility 1))
         (list )
@@ -43,10 +43,10 @@
         "她盯着你的手，枪口仍然稳着。"
         "你停得慢了半拍，她把那半拍理解成准备扑过去。")
       (make-standoff-action
-        "安抚她的呼吸"
-        "不急着解释案子，只让她跟着你的语速慢下来。"
-        意志
-        'low
+         "安抚她的呼吸"
+         "不急着解释案子，只让她跟着你的语速慢下来。"
+         魅力
+         'low
         (list (effect 'clock- hostility 2))
         (list (effect 'clock- hostility 1))
         (list )
@@ -54,10 +54,10 @@
         "她听进去了半句，手指仍然扣着扳机。"
         "她把你的安抚听成了哄骗。")
       (make-standoff-action
-        "承认自己受雇于德雷福雷"
-        "这句话很危险，但半真半假的辩解只会让枪口更稳。"
-        逻辑
-        'mid
+         "承认自己受雇于德雷福雷"
+         "这句话很危险，但半真半假的辩解只会让枪口更稳。"
+         知识
+         'mid
         (list (effect 'clock- hostility 2))
         (list (effect 'clock- hostility 1))
         (list (effect 'clock+ hostility 1))
@@ -66,10 +66,10 @@
         "她以为你终于承认自己是来抓她的人。")
       (when (<= (clock-value hostility) 3)
         (make-standoff-action
-          "靠近桌边"
-          "你把移动伪装成寻找支撑点。桌角、椅背、她的手腕，距离开始有意义。"
-          感知
-          'mid
+           "靠近桌边"
+           "你把移动伪装成寻找支撑点。桌角、椅背、她的手腕，距离开始有意义。"
+           敏锐
+           'mid
           (list (effect 'clock+ distance 2))
           (list (effect 'clock+ distance 1) (effect 'clock+ hostility 1))
           (list (effect 'clock+ hostility 2) (effect 'clock- distance 3))
@@ -78,10 +78,10 @@
           "她看穿了你的意图，枪口重新把你钉回原地。"))
       (when (<= (clock-value hostility) 3)
         (make-standoff-action
-          "借椅背挡住半身"
-          "你没有冲过去，只是让一件家具变成她和你之间的犹豫。"
-          逻辑
-          'mid
+           "借椅背挡住半身"
+           "你没有冲过去，只是让一件家具变成她和你之间的犹豫。"
+           知识
+           'mid
           (list (effect 'clock+ distance 2) (effect 'clock- hostility 1))
           (list (effect 'clock+ distance 1))
           (list (effect 'clock+ hostility 2) (effect 'clock- distance 3))
@@ -90,10 +90,10 @@
           "椅脚擦过地面，她的枪口立刻追了上来。"))
       (when (>= (clock-value distance) 3)
         (make-standoff-action
-          "关键时刻夺枪"
-          "只能在她分神的一瞬间动手。失败的话，距离会被重新拉开。"
-          意志
-          'high
+           "关键时刻夺枪"
+           "只能在她分神的一瞬间动手。失败的话，距离会被重新拉开。"
+           暴力
+           'high
           (list (effect 'clock+ disarm 1))
           (append (list (effect 'clock+ hostility 2)) (disarm-fail))
           (disarm-fail)

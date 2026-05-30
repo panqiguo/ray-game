@@ -2,13 +2,13 @@
 (include "../common_clock_macros.scm")
 (include "../common_world_bindings.scm")
 
-(define perception-factors
+(define charm-factors
   (lambda ()
     (list
       (factor -1 :when (>= (clock-value tension) 6) :label "关系过热")
       (factor -1 :when (<= (clock-value tension) 1) :label "关系冷淡"))))
 
-(define logic-factors
+(define knowledge-factors
   (lambda ()
     (list
       (factor -1 :when (>= (clock-value tension) 6) :label "关系过热")
@@ -24,9 +24,9 @@
         :title "铺垫（推进关系）"
         :desc "把冷淡开局推向安全区。好：情报 +1、关系 +2；中：关系 +1；坏：关系 -1。"
         :check (check
-          :suits (list 感知)
+          :suits (list 魅力)
           :risk 'low
-          :factors (perception-factors)
+          :factors (charm-factors)
           :ok (outcome (list (effect 'clock+ intel 1) (effect 'clock+ tension 2)) "对方接住了你的话，顺口漏出一点信息。")
           :partial (outcome (list (effect 'clock+ tension 1)) "气氛热了一点，但还没到能问关键问题的时候。")
           :fail (outcome (list (effect 'clock- tension 1)) "你铺得太刻意，对方反而冷了一点。")))
@@ -34,9 +34,9 @@
         :title "试探（套话）"
         :desc "主要获取情报。好：情报 +2；中：情报 +1、关系 -1；坏：关系 -2。"
         :check (check
-          :suits (list 感知)
+          :suits (list 魅力)
           :risk 'mid
-          :factors (perception-factors)
+          :factors (charm-factors)
           :ok (outcome (list (effect 'clock+ intel 2)) "你问得刚好，对方没有防备。")
           :partial (outcome (list (effect 'clock+ intel 1) (effect 'clock- tension 1)) "你拿到一点东西，但问题让她起了疑心。")
           :fail (outcome (list (effect 'clock- tension 2)) "她绕开了问题，眼神也冷了下来。")))
@@ -44,9 +44,9 @@
         :title "追问（快速情报）"
         :desc "快速推进情报。好：情报 +3、关系 +1；中：情报 +2、关系 +2；坏：关系 -3。"
         :check (check
-          :suits (list 逻辑)
+          :suits (list 知识)
           :risk 'high
-          :factors (logic-factors)
+          :factors (knowledge-factors)
           :ok (outcome (list (effect 'clock+ intel 3) (effect 'clock+ tension 1)) "你抓住了矛盾，她被迫多说了几句。")
           :partial (outcome (list (effect 'clock+ intel 2) (effect 'clock+ tension 2)) "你逼出一点真东西，也把关系推得太近。")
           :fail (outcome (list (effect 'clock- tension 3)) "追问太明显了，她开始防备。")))
@@ -54,7 +54,7 @@
         :title "后撤（拉开关系）"
         :desc "用于防止越界。好：关系 -2；中：关系 -1；坏：关系 +1。"
         :check (check
-          :suits (list 意志)
+          :suits (list 魅力)
           :risk 'low
           :ok (outcome (list (effect 'clock- tension 2)) "你及时收住，气氛重新松下来。")
           :partial (outcome (list (effect 'clock- tension 1)) "你让对方缓了一口气。")

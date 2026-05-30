@@ -19,7 +19,7 @@
       :title "工厂计件：组装螺丝"
       :desc (piecework-desc)
       :check (check
-        :suits (list 逻辑)
+        :suits (list 知识)
         :risk 'mid
         :ok (outcome (list (effect 'clock+ piecework_part 1)) "这一半零件咬合得很顺，像是机器也终于肯帮你一次。")
         :partial (outcome (list (effect 'clock+ piecework_part 1) (effect 'add piecework_bad_halves 1) (effect 'add energy -1)) "这一半勉强装上了，但已经算残次。")
@@ -65,6 +65,7 @@
     :actions (list
       (exploitation-incident-action 'waste)
       (piecework-action)
+      (nightingale-waste-investigation-action)
       (when (and vera_thread_unlocked (not vera_waste_checked))
         (action
           :title "搜索废弃区"

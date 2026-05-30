@@ -66,8 +66,8 @@ def register_screen_input_regions(state: GameState) -> None:
             blocks_pointer=True,
         )
 
-    # Dialogue modal: block everything (full screen, modal=True)
-    if modal_kind == "dialogue":
+    # Dialogue overlay: block everything while leaving the underlying modal intact.
+    if state.active_dialogue is not None:
         register_input_region(
             "dialogue_modal_block",
             dialogue_blocking_rect(),

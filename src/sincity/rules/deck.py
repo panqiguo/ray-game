@@ -1,24 +1,35 @@
 from __future__ import annotations
 
+from sincity.model.enums import ScreenName
 from sincity.model.state import DeckState
 
 from .rng import RandomSource
 
 
-SPIRIT_ORDER = ("logic", "perception", "willpower")
-BASE_ACTION_CARD_COUNT = 4
+ATTRIBUTE_ORDER = ("force", "charm", "knowledge", "sense")
+
+CARD_DRAW_RULES: dict[ScreenName, dict[str, int]] = {
+    ScreenName.CITY: {"player": 2, "companion": 2},
+    ScreenName.ENCOUNTER: {"player": 4, "companion": 0},
+}
 
 
 def make_starting_deck(rng: RandomSource) -> DeckState:
     del rng
     deck = DeckState(
-        extra_slots={
-            "logic": 0,
-            "perception": 0,
-            "willpower": 0,
-        },
+        extra_slots={},
     )
     return deck
+
+
+def card_count_for_actor(actor, screen: ScreenName) -> int:
+    base = CARD_DRAW_RULES[screen]
+    count = base["player"] if actor.is_player else base["companion"]
+    if actor.health <= 0:
+        return 0
+    if actor.health <= 3:
+        return max(0, count - 1)
+    return count
 
 
 def list_spirit_slots(deck: DeckState) -> list[str]:
@@ -40,23 +51,13 @@ def _slot_sort_key(slot_id: str) -> tuple[int, str, int]:
     return (owner_rank, owner, int(raw_index or 0))
 
 
-def action_card_count_for_health(health: int, *, is_player: bool = True) -> int:
-    if health <= 0:
-        return 0
-    if not is_player:
-        return 1
-    if health <= 3:
-        return 3
-    return BASE_ACTION_CARD_COUNT
-
-
 def health_penalty_for_cards(health: int) -> int:
     if health <= 6:
         return 1
     return 0
 
 
-def refresh_spirit_slots(deck: DeckState, rng: RandomSource | None = None, *, actors=()) -> None:
+def refresh_spirit_slots(deck: DeckState, rng: RandomSource | None = None, *, actors=(), screen: ScreenName = ScreenName.CITY) -> None:
     if rng is None:
         rng = RandomSource(0)
     deck.action_card_values.clear()
@@ -66,16 +67,15 @@ def refresh_spirit_slots(deck: DeckState, rng: RandomSource | None = None, *, ac
     deck.available_slots.clear()
     deck.locked_slots.clear()
     for actor in actors:
-        count = action_card_count_for_health(actor.health, is_player=actor.is_player)
-        max_slots = BASE_ACTION_CARD_COUNT if actor.is_player else 1
+        count = card_count_for_actor(actor, screen)
         penalty = health_penalty_for_cards(actor.health)
-        for index in range(max_slots):
+        for index in range(count):
             slot_id = f"{actor.id}:{index}"
             raw = rng.randint(0, 3)
             value = max(0, raw - penalty)
             deck.action_card_values[slot_id] = value
             deck.action_card_owners[slot_id] = actor.id
-            if actor.can_act and index < count:
+            if actor.can_act:
                 deck.available_slots.append(slot_id)
             else:
                 deck.locked_slots.append(slot_id)
@@ -83,7 +83,7 @@ def refresh_spirit_slots(deck: DeckState, rng: RandomSource | None = None, *, ac
 
 def start_city_day(deck: DeckState, rng: RandomSource, hand_size: int = 0, *, actors=()) -> None:
     del hand_size
-    refresh_spirit_slots(deck, rng, actors=actors)
+    refresh_spirit_slots(deck, rng, actors=actors, screen=ScreenName.CITY)
 
 
 def draw_cards(deck: DeckState, rng: RandomSource, amount: int) -> None:

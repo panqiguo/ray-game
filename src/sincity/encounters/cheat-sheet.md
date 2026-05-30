@@ -18,6 +18,7 @@ Encounter / World SCM 速查
 ```
 
 - 顶层 `define` 会在模块加载时立即求值，和标准 Scheme 更接近。
+- ⚠️ **动态绑定**：lambda 内的自由变量不在定义时捕获，而在**每次调用时**从当前环境查找。这让状态字段（如 `security_online`）自然反映运行时值，但也意味着注意同名遮蔽和关键字冲突。详见 `如何写scm场景文件/SKILL.md` 中的设计说明。
 - `define-node` / `define-scene` 是零参数过程糖，适合动态 node/scene。
 - 使用 `define-node` / `define-scene` 后，引用时要显式调用：`(office)`、`(room_search)`。
 - `define-node` / `define-scene` 的直接 `(node ...)` / `(scene ...)` 没写 `:title` 时，会自动使用定义名作为标题。
@@ -50,16 +51,11 @@ Encounter / World SCM 速查
 
 字段作用域：
 
-- encounter 局部字段：encounter `:state` 绑定
-- encounter 需要读写世界状态时，先在 `:state` 显式导入：
-  - 角色属性：`(energy (world-attr 'energy))`、`(health (world-attr 'health))`
-  - 世界物品：`(money (world-item 'money 0))`
-  - 世界值：`(case_done (world-value 'case_done false))`
-- 可 include `common_world_bindings.scm` 使用 helper 展开常用绑定：`(use-world-health)`、`(use-world-energy)`、`(use-world-money)`、`(use-world-food)`、`(use-world-basics)`。
-- 修改字段统一写已绑定的字段名：`money`、`health`、`energy`、`villa_job_taken`
-- `stress` 是旧字段名兼容层；新内容优先写 `energy`。`(effect 'add energy -1)` 表示精力减少 1。
-- completion bucket（`:on-success` / `:on-fail`）可以使用已导入的世界绑定；未在 `:state` 导入的世界字段继续使用 quoted key，例如 `(effect 'add 'money 20)`。
-- `day` 是特例：修改只用 `(effect 'advance-day)`
+- encounter `:state` → 局部字段
+- 读写世界状态需在 `:state` 导入：`(energy (world-attr 'energy))`、`(money (world-item 'money 0))`、`(case_done (world-value 'case_done false))`
+- 可 include `common_world_bindings.scm` 使用 `(use-world-basics)` 等 helper
+- 未导入的世界字段用 quoted key：`(effect 'add 'money 80)`
+- `day` 特例：只用 `(effect 'advance-day)`
 
 `node` / `scene`：
 
@@ -212,85 +208,14 @@ Encounter / World SCM 速查
 (effect-reset-clock clock-field)
 ```
 
-基础 Scheme：
+基础 Scheme 函数：
 
-```scheme
-(if cond a b)
-(when cond expr)
-(cond (cond expr) (else expr))
-(and ...)
-(or ...)
-(not expr)
-(let ((name expr)) body)
-(let* ((name expr)) body)
-(lambda (args...) body)
-(begin ...)
-(quote x)
-'x
-(console-log ...)
-```
-
-- `let` 是标准并行绑定：绑定表达式在外层环境求值。
-- `let*` 是顺序绑定：后一个绑定可以使用前一个绑定。
-- truthiness：只有 `false` 和 `nil` 为假；`0` 和空列表都是真。
-- `(- x)` 是一元取负。
-- `(console-log ...)` 会打印到 Python 终端，返回最后一个参数；常用于调试脚本
-
-列表：
-
-```scheme
-(list ...)
-(car xs)
-(cdr xs)
-(cons x xs)
-(append xs ys)
-(length xs)
-(list? x)
-(pair? x)
-(map f xs)
-(filter f xs)
-(member x xs)
-(reverse xs)
-(apply f xs)
-```
-
-alist：
-
-```scheme
-(assoc 'key table)
-(assoc-ref table 'key)
-(assoc-set table 'key value)
-(assoc-remove table 'key)
-```
-
-精神与成长：
-
-- 四项属性：`暴力(force)` `魅力(charm)` `知识(knowledge)` `敏锐(sense)`
-- 初始：Cole `知识=1` `敏锐=1`，Lena `魅力=2` `敏锐=1`
-- 每种属性默认 1 个精力槽位
-- 城市中主角抽 2 张、同伴抽 2 张；外出中主角抽 4 张、同伴 0 张
-- 受伤会按固定顺序给精力叠加创伤；每层创伤让该精力当前值 `-2`
-
-数值/比较：
-
-```scheme
-(+ ...)
-(- ...)
-(min ...)
-(max ...)
-(= a b)
-(< a b)
-(<= a b)
-(> a b)
-(>= a b)
-```
-
-判定：
-
-```scheme
-(null? value)
-(number? value)
-(string? value)
-(boolean? value)
-(symbol? value)
-```
+- **控制流** `if` `when` `cond` `and/or/not` `let` `let*` `lambda` `begin` `quote`
+- **列表** `list` `car` `cdr` `cons` `append` `length` `list?` `pair?` `map` `filter` `member` `reverse` `apply`
+- **alist** `assoc` `assoc-ref` `assoc-set` `assoc-remove`
+- **数值/比较** `+` `-` `min` `max` `=` `<` `<=` `>` `>=`
+- **判定** `null?` `number?` `string?` `boolean?` `symbol?`
+- **调试** `(console-log ...)` 打印到终端，返回最后一个参数
+- `let` 并行绑定，`let*` 顺序绑定
+- 仅 `false`/`nil` 为假；`0` 和空列表为真
+- `(- x)` 一元取负

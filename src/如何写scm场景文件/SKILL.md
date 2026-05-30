@@ -14,6 +14,10 @@
 3. 可见性优先用 `if / when / cond` 表达，不要把“显示/隐藏”塞进专门字段。
 4. `conditions` 只表示“可见但不可执行”。
 5. 顶层统一用 `(content ...)` 组装；只有 `meta :key` 是稳定标识。
+6. 合理拆分文件，避免一个文件塞太多内容。
+7. 不要把"是否出现"写成 `conditions`。
+8. 不要为了复用先加底层专用语法。
+9. 不要按旧 Python builder 思路平移。
 
 ---
 
@@ -45,22 +49,9 @@
 - `define-node` / `define-scene` 的直接 `(node ...)` / `(scene ...)` 没写 `:title` 时，会自动使用定义名作为标题
 - 最终必须有一个 `(content ...)`
 - 不再写旧式顶层 `meta/state/reacts` 裸声明
-
 ---
 
-## 三、推荐文件划分
-
-常见拆法：
-
-- 一个主内容文件：当前场景/任务本体
-- 一个通用工具文件：helper、时钟函数、重复动作模板
-- 一个对白文件：Ink / quick dialogue 单独放
-
-不要把所有区域、所有任务、所有对白硬塞进一个 `.scm` 文件。
-
----
-
-## 四、顶层 `(content ...)`
+## 三、顶层 `(content ...)`
 
 ```scheme
 (content
@@ -83,14 +74,9 @@
 | `:on-success` | ❌ | encounter 成功后追加效果 |
 | `:on-fail` | ❌ | encounter 失败后追加效果 |
 
-说明：
-
-- `:on-success` / `:on-fail` 更常用于 encounter；world 内容通常不需要
-- 全局初始状态仍可放 Python，不必强行脚本化
-
 ---
 
-## 五、常用构造器
+## 四、常用构造器
 
 ### 1. `(meta ...)`
 
@@ -161,88 +147,11 @@
 
 ### 4. 字段作用域：全局 vs 局部
 
-这条很重要：
+- world `:state` → 全局。可读字段含 `day/health/stress/money` + world 自定义绑定 + Python inventory 物品（`clothes/gun/hotel_pass/lockpick`）
+- encounter `:state` → 仅当前任务可见
 
-- world 脚本里的 `:state` 绑定，是**本次 run 的全局状态**
-- encounter 脚本里的 `:state` 绑定，是**当前任务的局部状态**
-
-#### world 里的全局字段
-
-固定可读字段：
-
-- `day`
-- `health`
-- `stress`
-- `money`
-- `cigarettes`
-
-除此之外，下面这些也属于 world 全局字段：
-
-- 当前 world `:state` 里定义的所有绑定
-- Python 初始 inventory 里的物品计数  
-  当前主场景是：`clothes`、`gun`、`hotel_pass`、`lockpick`
-
-例如在 world 里可以直接写：
-
-```scheme
-(effect 'add money 20)
-(effect 'set villa_job_taken true)
-(effect 'add clothes 1)
-```
-
-#### encounter 里的局部字段
-
-encounter `:state` 里定义的字段，只属于当前任务：
-
-```scheme
-(state
-  (escaped false)
-  (local_score 0)
-  (alert (clock :title "警觉" :initial 0 :max 6)))
-```
-
-这里的：
-
-- `escaped`
-- `local_score`
-- `alert`
-
-都只是这个 encounter 的局部字段。
-
-所以可以直接写：
-
-```scheme
-(effect 'add local_score 10)
-(effect 'set escaped true)
-(effect 'clock+ alert 1)
-```
-
-#### 在 encounter 里改全局字段
-
-如果 encounter 里要改全局字段，推荐显式写 quoted symbol：
-
-```scheme
-(effect 'add 'money 80)
-(effect 'set 'villa_job_taken true)
-```
-
-这样不会和 encounter 局部绑定混淆。
-
-#### `day` 是特例
-
-`day` 虽然是全局字段，但不要把它当普通 `add/set` 字段。  
-推进日期只用：
-
-```scheme
-(effect 'advance-day)
-```
-
-不要写：
-
-```scheme
-(effect 'add day 1)
-(effect 'set day 2)
-```
+encounter 里改全局字段用 quoted symbol：`(effect 'add 'money 80)`。  
+`day` 特例：只用 `(effect 'advance-day)`，不要直接 `add/set`。
 
 ---
 
@@ -316,7 +225,7 @@ encounter `:state` 里定义的字段，只属于当前任务：
 
 ```scheme
 (check
-  :suits (list 'logic 'perception)
+  :suits (list 'force 'charm)
   :risk 'mid
   :ok outcome
   :partial outcome
@@ -334,8 +243,8 @@ encounter `:state` 里定义的字段，只属于当前任务：
 合法值：
 
 - `:risk`：`'low` / `'mid` / `'high`
-- `:suits`：`'logic` / `'perception` / `'willpower`
-- 不写 `:suits` 或写空列表时，三种基础精力都可以放
+- `:suits`：`'force` / `'charm` / `'knowledge` / `'sense`（或中文 `暴力`/`魅力`/`知识`/`敏锐`，需 include `enum-symbols.scm`）
+- 不写 `:suits` 或写空列表时，不使用人物属性加成
 
 ---
 
@@ -349,7 +258,7 @@ encounter `:state` 里定义的字段，只属于当前任务：
 
 ---
 
-### 8. `(react ...)` / `(reacts ...)`
+### 9. `(react ...)` / `(reacts ...)`
 
 ```scheme
 (react
@@ -370,7 +279,7 @@ encounter `:state` 里定义的字段，只属于当前任务：
 
 ---
 
-## 六、`conditions` 的语义
+## 五、`conditions` 的语义
 
 实际写法：
 
@@ -385,16 +294,9 @@ encounter `:state` 里定义的字段，只属于当前任务：
 - 节点或行动已经进入树里，但 `conditions` 不满足：可见、不可执行
 - 要控制是否出现，用 `if / when / cond`
 
-常用条件：
-
-- `(has-item 'clothes 1 "提示")`
-- `(field-at-least 'money 20 "提示")`
-- `(field-truthy 'hotel_pass "提示")`
-- `(condition 'clock_at_least "alert:2" "提示")`
-
 ---
 
-## 七、输入
+## 六、输入
 
 输入只保留两类：
 
@@ -412,7 +314,7 @@ encounter `:state` 里定义的字段，只属于当前任务：
 
 ---
 
-## 八、effect
+## 七、effect
 
 ```scheme
 (effect 'clock+ east_info 1)
@@ -420,7 +322,7 @@ encounter `:state` 里定义的字段，只属于当前任务：
 (effect 'set hotel_pass true)
 (effect 'add money -20)
 (effect 'add health 1)
-(effect 'add stress -1)
+(effect 'add energy -1)
 (effect 'start-dialogue 'intro)
 (effect 'start-quick-dialogue "一段短对白")
 (effect 'start-encounter 'villa_infiltration)
@@ -436,67 +338,42 @@ encounter `:state` 里定义的字段，只属于当前任务：
 
 - 统一使用最准确的 effect 名称
 - 修改字段统一用 `(effect 'set field value)` / `(effect 'add field amount)`
-- 不再使用 `(effect 'health amount)` / `(effect 'stress amount)` 短名
-- 不再使用 `resource`
-- 不再使用 `start-content`
+- 不再使用旧短名（`effect 'health`、`effect 'stress`）、`resource`、`start-content`
 
 ---
 
-## 九、基础 Scheme 能力
+## 八、基础 Scheme 能力
 
-### 控制流
+- **控制流**: `if` `when` `cond` `and/or/not` `let` `let*` `lambda` `begin` `quote`
+- **列表**: `list` `car` `cdr` `cons` `append` `length` `list?` `pair?` `map` `filter` `member` `reverse` `apply`
+- **alist**: `assoc` `assoc-ref` `assoc-set` `assoc-remove`
+- **数值/比较**: `+` `-` `min` `max` `=` `<` `<=` `>` `>=`
+- **判定**: `null?` `number?` `string?` `boolean?` `symbol?`
+- **调试**: `(log ...)` 打印到终端，返回最后一个参数
+- `let` 并行绑定，`let*` 顺序绑定
+- 仅 `false`/`nil` 为假；`0` 和空列表为真
+- `(- x)` 一元取负
 
-- `if`
-- `when`
-- `cond`
-- `and` / `or` / `not`
-- `let`
-- `let*`
-- `lambda`
-- `begin`
-- `quote` / `'`
+---
 
-### 列表
+## 九、动态绑定（重要）
 
-- `list`
-- `car` `cdr` `cons`
-- `append`
-- `length`
-- `list?` `pair?`
-- `map`
-- `filter`
-- `member`
-- `reverse`
-- `apply`
+本 DSL 使用**动态绑定**：lambda 内的自由变量不在定义时捕获，而在**每次调用时**从当前环境中查找。
 
-### alist
+```scheme
+(define x 1)
+(define f (lambda () x))
+(define x 2)
+(f)  ; → 返回 2（不是 1）
+```
 
-- `assoc`
-- `assoc-ref`
-- `assoc-set`
-- `assoc-remove`
+**为什么：** 状态字段（如 `security_online`）必须在运行时取值，不能被编译时快照固定。
 
-### 数值 / 比较
+**注意事项：**
 
-- `+` `-`
-- `min` `max`
-- `=` `<` `<=` `>` `>=`
-
-### 判定
-
-- `null?`
-- `number?`
-- `string?`
-- `boolean?`
-- `symbol?`
-
-### 调试
-
-- `log`
-- `(log ...)` 会打印到 Python 终端，返回最后一个参数；适合临时排查脚本状态
-- `let` 是标准并行绑定；`let*` 是顺序绑定
-- 只有 `false` 和 `nil` 为假；`0` 和空列表都是真
-- `(- x)` 是一元取负
+1. **同名遮蔽** — lambda 内的自由符号不要和状态字段名或其他 `define` 名重复。修饰符 lambda 用长名（`stealth-modifiers`），状态字段用下划线（`clue_a_done`）。
+2. **避免使用 DSL 关键字做字段名** — 不要用 `factor`、`effect`、`check`、`action`、`clock` 作为状态字段名，它们会遮蔽 builtin。
+3. **修饰符尽量扁平化** — 多层嵌套组合链里符号被遮蔽很难查，推荐 `append` 简单 lambda。
 
 ---
 
@@ -505,12 +382,12 @@ encounter `:state` 里定义的字段，只属于当前任务：
 ### 1. 用 helper 生成重复结构
 
 ```scheme
-(define make-paid-relief-action
-  (lambda (title cost stress-down)
+(define make-rest-action
+  (lambda (title cost energy-up)
     (action
       :title title
       :inputs (list (item 'money cost "美钞"))
-      :effects (list (effect 'add stress (- 0 stress-down))))))
+      :effects (list (effect 'add energy energy-up)))))
 ```
 
 ### 2. 用 `when` 在列表里做条件插入
@@ -537,16 +414,7 @@ encounter `:state` 里定义的字段，只属于当前任务：
 
 ---
 
-## 十一、不推荐写法
-
-- 为了复用先加底层专用语法
-- 把“是否出现”写成 `conditions`
-- 继续按旧 Python builder 思路平移
-- 一个文件里塞太多完整区域，导致 helper 无法复用
-
----
-
-## 十二、一个最小骨架
+## 十一、一个最小骨架
 
 ```scheme
 (include "common.scm")

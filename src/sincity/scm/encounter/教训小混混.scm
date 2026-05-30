@@ -1,14 +1,14 @@
 (include "../enum-symbols.scm")
 (include "../common_world_bindings.scm")
 
-(define breathe
+(define-fragment breathe
   (action
     :title "喘息一下"
     :desc "你强行拉开半口气，重新整理手里的节奏，但也会挨上一下。"
     :always (list (effect 'reset-hand) (effect 'add health -1))
   ))
 
-(define counter
+(define-fragment counter
   (action
     :title "防守反击"
     :desc "你先稳住头脸和脚步，再找机会把他顶开。"
@@ -21,7 +21,7 @@
   )
   ))
 
-(define heavy_punch
+(define-fragment heavy_punch
   (action
     :title "重拳追击"
     :desc "你不给他喘气空间，直接压上去狠狠干。"
@@ -34,7 +34,7 @@
   )
   ))
 
-(define feint
+(define-fragment feint
   (action
     :title "假动作试探"
     :desc "你做一个假动作，先试着把他的防守骗开一层。"
@@ -47,7 +47,7 @@
   )
   ))
 
-(define knee_kick
+(define-fragment knee_kick
   (action
     :title "踹膝脱身"
     :desc "你不追求漂亮，而是直接踹他的支撑腿。"
@@ -60,7 +60,7 @@
   )
   ))
 
-(define rush_knife
+(define-fragment rush_knife
   (action
     :title "扑向折刀"
     :desc "你冒险扑向地上的折刀，想先把局势翻过来。"
@@ -74,7 +74,7 @@
   )
   ))
 
-(define blunt_punch
+(define-fragment blunt_punch
   (action
     :title "直接挥拳"
     :desc "你不跟他磨，直接狠狠干出一步空间。"
@@ -87,7 +87,7 @@
   )
   ))
 
-(define knife_press
+(define-fragment knife_press
   (action
     :title "持刀逼退"
     :desc "刀一到手，你立刻逼他后撤，把主动权压回来。"
@@ -100,7 +100,7 @@
   )
   ))
 
-(define finisher
+(define-fragment finisher
   (action
     :title "终结一击"
     :desc "你抓住空门，一击把他放倒。"
@@ -133,20 +133,20 @@
     :title "徒手受压"
     :desc "打手把你逼在墙边，低声重复那个名字：红房间。你得先决定，是稳着反顶、直接狠狠干、还是冒险把折刀夺到手。"
     :show-clocks (list initiative (when (> (clock-value knife) 0) knife))
-    :actions (list counter blunt_punch rush_knife breathe)
+    :actions (list (counter) (blunt_punch) (rush_knife) (breathe))
   ) (scene
     :title "持刀逼退"
     :desc "刀终于到了你手里。现在你可以借着这口气把主动权彻底抢回来。"
     :show-clocks (list initiative knife)
-    :actions (list counter knife_press breathe)
+    :actions (list (counter) (knife_press) (breathe))
   ))) ((< (clock-value opening) (clock-max opening)) (scene
     :title "对峙"
     :desc "对方后退半步，准备再扑上来。他背后的人不想杀你，至少现在不想。他们只想让你学会害怕。"
     :show-clocks (list enemy_hp opening)
-    :actions (list heavy_punch feint knee_kick breathe)
+    :actions (list (heavy_punch) (feint) (knee_kick) (breathe))
   )) (else (scene
     :title "空门大开"
     :desc "他的防守空档已经完全露出来了。狠狠干净地结束这场架。"
     :show-clocks (list enemy_hp opening)
-    :actions (list finisher knee_kick breathe)
+    :actions (list (finisher) (knee_kick) (breathe))
   ))))

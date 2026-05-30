@@ -25,6 +25,11 @@
 - 修改后重新运行游戏或 Ctrl+R 热重启即生效
 - Scheme 参考: `encounters/cheat-sheet.md`
 - `:suits` 只写一个最适属性，环境修正用 modifier 表达
+- DSL 语义规则（city 和 encounter 统一）：
+  - `define value` = 模块加载时求值一次
+  - `define function` = 调用时求值函数体
+  - `define-fragment` = 语法糖，等价于零参数函数
+  - 动态 node/action/desc 必须写成函数或 `define-fragment`，不要写成 top-level value define
 
 ## 内容术语
 - 地点：城市地图上的可进入空间，对应 SCM 里的 `node` / `scene`。

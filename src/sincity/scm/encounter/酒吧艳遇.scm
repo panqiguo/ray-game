@@ -1,7 +1,7 @@
 (include "../enum-symbols.scm")
 (include "../common_world_bindings.scm")
 
-(define cold_direct_talk
+(define-fragment cold_direct_talk
   (action
     :title "直白搭话"
     :desc "你没有铺垫，直接把话扔到他面前。"
@@ -14,14 +14,14 @@
   )
   ))
 
-(define breathe
+(define-fragment breathe
   (action
     :title "喘息一下"
     :desc "你拉开半口气，重新整理手里的节奏，但也会挨上一下。"
     :always (list (effect 'reset-hand) (effect 'add health -1))
   ))
 
-(define cold_ask_help
+(define-fragment cold_ask_help
   (action
     :title "寻求帮助"
     :desc "你借一个无害的小问题，把自己的目的藏进请教里。"
@@ -34,7 +34,7 @@
   )
   ))
 
-(define cold_use_room
+(define-fragment cold_use_room
   (action
     :title "借环境起头"
     :desc "你拿酒吧里的动静做引子，把他拉到同一条观察线上。"
@@ -47,7 +47,7 @@
   )
   ))
 
-(define cold_leave_hook
+(define-fragment cold_leave_hook
   (action
     :title "留个钩子"
     :desc "你故意停在半句上，让他忍不住追问。"
@@ -60,7 +60,7 @@
   )
   ))
 
-(define warm_interest
+(define-fragment warm_interest
   (action
     :title "引起兴趣"
     :desc "你抛出一个他没想到的观点，让这段聊天开始有重量。"
@@ -73,7 +73,7 @@
   )
   ))
 
-(define warm_flirt
+(define-fragment warm_flirt
   (action
     :title "制造暧昧"
     :desc "你把语气往模糊的地方轻轻一推。"
@@ -86,7 +86,7 @@
   )
   ))
 
-(define warm_read_him
+(define-fragment warm_read_him
   (action
     :title "展示判断力"
     :desc "你说出他没说出口的那半句，让他知道你听懂了。"
@@ -99,7 +99,7 @@
   )
   ))
 
-(define warm_keep_distance
+(define-fragment warm_keep_distance
   (action
     :title "留一点距离"
     :desc "你在他靠近的时候轻轻退半步，让他意识到你不是唾手可得。"
@@ -112,7 +112,7 @@
   )
   ))
 
-(define soft_follow_lead
+(define-fragment soft_follow_lead
   (action
     :title "接住主动"
     :desc "他主动抛出一句话，你只负责顺着接住，不打断也不评判。"
@@ -125,7 +125,7 @@
   )
   ))
 
-(define soft_make_promise
+(define-fragment soft_make_promise
   (action
     :title "许诺"
     :desc "你给他一个理由，相信继续说是值得的。"
@@ -138,7 +138,7 @@
   )
   ))
 
-(define soft_tempt
+(define-fragment soft_tempt
   (action
     :title "诱惑"
     :desc "你让他看到，说出来会得到某种隐秘的好处。"
@@ -151,7 +151,7 @@
   )
   ))
 
-(define soft_pull_thread
+(define-fragment soft_pull_thread
   (action
     :title "顺势套话"
     :desc "你抓住他刚刚那句无心的话，从口子里继续往里切。"
@@ -164,7 +164,7 @@
   )
   ))
 
-(define soft_answer_probe
+(define-fragment soft_answer_probe
   (action
     :title "回应试探"
     :desc "他在测试你，你的回答决定他会不会把最后那层门打开。"
@@ -177,14 +177,14 @@
   )
   ))
 
-(define leave_polite
+(define-fragment leave_polite
   (action
     :title "找借口离开"
     :desc "你编一个合理的理由，把今晚收得体面一点。"
     :always (list (effect 'set ending 'clean) (effect 'end-encounter 'success))
   ))
 
-(define walk_away
+(define-fragment walk_away
   (action
     :title "头也不回地离开"
     :desc "你什么也不解释，起身就走。"
@@ -197,7 +197,7 @@
   )
   ))
 
-(define invite_along
+(define-fragment invite_along
   (action
     :title "邀请共度一晚"
     :desc "你把话题往更近的地方推了一步。"
@@ -215,7 +215,7 @@
     :title "冷淡"
     :desc "目标把自己裹在沉默里。你得先让他愿意继续说话。"
     :show-clocks (list rapport tension)
-    :actions (list breathe (when (and (< (clock-value rapport) 3) (= cold_direct_talk_used false)) cold_direct_talk) (when (and (< (clock-value rapport) 3) (= cold_ask_help_used false)) cold_ask_help) (when (and (< (clock-value rapport) 3) (= cold_use_room_used false)) cold_use_room) (when (and (< (clock-value rapport) 3) (= cold_leave_hook_used false)) cold_leave_hook))
+    :actions (list (breathe) (when (and (< (clock-value rapport) 3) (= cold_direct_talk_used false)) (cold_direct_talk)) (when (and (< (clock-value rapport) 3) (= cold_ask_help_used false)) (cold_ask_help)) (when (and (< (clock-value rapport) 3) (= cold_use_room_used false)) (cold_use_room)) (when (and (< (clock-value rapport) 3) (= cold_leave_hook_used false)) (cold_leave_hook)))
   ))
 
 (define (stage_warm)
@@ -223,7 +223,7 @@
     :title "熟络"
     :desc "话题已经打开了。你要让他意识到，这次偶遇有点不一样。"
     :show-clocks (list rapport tension)
-    :actions (list breathe (when (and (>= (clock-value rapport) 3) (< (clock-value rapport) 6) (= warm_interest_used false)) warm_interest) (when (and (>= (clock-value rapport) 3) (< (clock-value rapport) 6) (= warm_flirt_used false)) warm_flirt) (when (and (>= (clock-value rapport) 3) (< (clock-value rapport) 6) (= warm_read_him_used false)) warm_read_him) (when (and (>= (clock-value rapport) 3) (< (clock-value rapport) 6) (= warm_keep_distance_used false)) warm_keep_distance))
+    :actions (list (breathe) (when (and (>= (clock-value rapport) 3) (< (clock-value rapport) 6) (= warm_interest_used false)) (warm_interest)) (when (and (>= (clock-value rapport) 3) (< (clock-value rapport) 6) (= warm_flirt_used false)) (warm_flirt)) (when (and (>= (clock-value rapport) 3) (< (clock-value rapport) 6) (= warm_read_him_used false)) (warm_read_him)) (when (and (>= (clock-value rapport) 3) (< (clock-value rapport) 6) (= warm_keep_distance_used false)) (warm_keep_distance)))
   ))
 
 (define (stage_soft)
@@ -231,7 +231,7 @@
     :title "松动"
     :desc "他的防备已经松了。现在只差最后一层，情报就在那后面。"
     :show-clocks (list rapport tension)
-    :actions (list breathe (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_follow_lead_used false)) soft_follow_lead) (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_make_promise_used false)) soft_make_promise) (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_tempt_used false)) soft_tempt) (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_pull_thread_used false)) soft_pull_thread) (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_answer_probe_used false)) soft_answer_probe))
+    :actions (list (breathe) (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_follow_lead_used false)) (soft_follow_lead)) (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_make_promise_used false)) (soft_make_promise)) (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_tempt_used false)) (soft_tempt)) (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_pull_thread_used false)) (soft_pull_thread)) (when (and (>= (clock-value rapport) 6) (< (clock-value rapport) 9) (= soft_answer_probe_used false)) (soft_answer_probe)))
   ))
 
 (define (stage_exit)
@@ -239,7 +239,7 @@
     :title "离场"
     :desc "情报已经到手。你只剩下决定今晚怎么收尾。"
     :show-clocks (list rapport tension)
-    :actions (list breathe leave_polite walk_away invite_along)
+    :actions (list (breathe) (leave_polite) (walk_away) (invite_along))
   ))
 
 (content

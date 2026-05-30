@@ -19,7 +19,7 @@
 ;; ==========================================
 ;; 通用动作
 ;; ==========================================
-(define rest
+(define-fragment rest
   (action
    :title "原地喘口气"
    :desc "靠在墙上深呼吸，试图把肺里的药味和眩晕感排出去。"
@@ -75,7 +75,7 @@
    :desc "我的脑袋像塞满了浸水的棉花，双手被皮带死死捆在椅子上。门外偶尔传来胶底鞋走过的声音。我得尽快弄断这些束缚。"
    :show-clocks (list alert_clock 挣脱束缚钟)
    :actions (list
-             rest
+             (rest)
              ;; 方式一：用蛮力
              (action
               :title "暴力挣脱"
@@ -115,7 +115,7 @@
    :title "疗养院走廊"
    :desc "你跌跌撞撞地溜出病房。走廊里的灯光昏暗得像劣质威士忌。前方有三条岔路，桑德堡医生的狗腿子随时会巡逻过来。"
    :show-clocks (list alert_clock)
-   :actions (list rest)
+   :actions (list (rest))
    :children (list
               ;; 探索路径A
               (scene

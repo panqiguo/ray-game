@@ -1,7 +1,7 @@
 (include "../enum-symbols.scm")
 (include "../common_clock_macros.scm")
 
-(define cold-warning
+(define-fragment cold-warning
   (action
     :title "把话说得够冷"
     :desc "先给他一个体面的台阶，看他要不要自己滚下去。"
@@ -12,7 +12,7 @@
       :partial (outcome (list (effect 'clock+ pressure 1) (effect 'add 'energy -1)) "")
       :fail (outcome (list (effect 'add 'energy -1)) "他把你的客气听成了软弱。"))))
 
-(define push-him-back
+(define-fragment push-him-back
   (action
     :title "直接把人从吧台前挤开"
     :desc "别讲道理，直接把空间抢回来。"
@@ -38,4 +38,4 @@
     :title "吧台边的麻烦"
     :desc "一个喝高了的客人把手搭得太自然，像这里所有女人都该免费替他解闷。你只需要让他明白今晚不行。"
     :show-clocks (list pressure)
-    :actions (list cold-warning push-him-back)))
+    :actions (list (cold-warning) (push-him-back))))

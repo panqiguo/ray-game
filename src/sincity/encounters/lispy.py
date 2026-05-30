@@ -59,9 +59,15 @@ _MISSING = object()
 
 
 def desugar_define_form(form: Any) -> tuple[str, Any] | None:
-    if not isinstance(form, list) or not form or form[0] != "define":
+    if not isinstance(form, list) or not form or form[0] not in {"define", "define-fragment"}:
         return None
-    assert len(form) >= 3, "`define` expects name and expr, or a function signature and body."
+    assert len(form) >= 3, f"`{form[0]}` expects a name and at least one body expression."
+    if form[0] == "define-fragment":
+        name = form[1]
+        assert isinstance(name, str), "`define-fragment` name must be a symbol."
+        body = form[2] if len(form) == 3 else ["begin", *form[2:]]
+        return name, ["lambda", [], body]
+    # define
     target = form[1]
     if isinstance(target, str):
         assert len(form) == 3, "`define` with a symbol expects exactly one expression."

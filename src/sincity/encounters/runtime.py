@@ -4,6 +4,12 @@ from pathlib import Path
 from copy import deepcopy
 from typing import Any
 
+from sincity.content_lang.module_runtime import (
+    bind_runtime_definition as _bind_runtime_definition,
+    collect_top_level_definitions as _collect_top_level_definitions,
+    resolve_definition_ref as _resolve_definition_ref,
+    schema_definition_values as _schema_definition_values,
+)
 from sincity.content_lang.runtime_core import (
     build_check as _build_check,
     eval_react_condition as _eval_react_condition,
@@ -41,7 +47,7 @@ from .defs import (
     StateBindingValue,
     StoreFieldSpec,
 )
-from .lispy import Environment, Procedure, StringAtom, _MISSING, base_environment, desugar_define_form, evaluate, expand_includes, truthy
+from .lispy import Environment, Procedure, _MISSING, base_environment, desugar_define_form, evaluate, expand_includes, truthy
 
 
 MAX_REACT_STEPS = 64
@@ -92,8 +98,21 @@ def compile_encounter_program(source: str, *, source_path: str | Path | None = N
     assert root_expr is not None, "Encounter content is missing required field: :root"
     module = ModuleState(root_expr=root_expr)
     _load_state_expr(_resolve_expr(kwargs.get(":vars"), raw_definitions), raw_definitions, module)
-    definitions = _top_level_definition_exprs(forms)
-    validation_env = _runtime_env(definitions=definitions, store=initial_store_from_specs(module.store_specs), store_specs=module.store_specs)
+    definitions = _collect_top_level_definitions(forms)
+    # Phase 6: evaluate definitions once at compile time
+    initial_store = initial_store_from_specs(module.store_specs)
+    builtins = _host_values(store_specs=module.store_specs, store=initial_store)
+    eval_env = Environment(
+        parent=base_environment(),
+        values={**builtins, **_schema_definition_values(definitions)},
+        resolver=lambda name: _state_resolver(name, store=initial_store, store_specs=module.store_specs),
+    )
+    definition_values: dict[str, Any] = {}
+    for name, expr in definitions.items():
+        value = evaluate(expr, eval_env)
+        eval_env.values[name] = value
+        definition_values[name] = value
+    validation_env = _runtime_env(definitions=definition_values, store=initial_store, store_specs=module.store_specs)
     meta_expr = kwargs.get(":meta")
     if meta_expr is not None:
         module.metadata = _eval_meta_expr(meta_expr, validation_env)
@@ -115,7 +134,7 @@ def compile_encounter_program(source: str, *, source_path: str | Path | None = N
         source_path=path,
         store_specs=dict(module.store_specs),
         clocks_by_id=dict(module.clocks_by_id),
-        definitions=definitions,
+        definitions=definition_values,
         react_rules=tuple(module.react_rules),
         view_expr=root_expr,
         rewards=module.rewards,
@@ -361,35 +380,8 @@ def _reaction_die_body(expr: Any | None) -> Any | None:
     return expr[1]
 
 
-def _top_level_definition_exprs(forms: list[Any]) -> dict[str, Any]:
-    definitions: dict[str, Any] = {}
-    for form in forms:
-        if not isinstance(form, list) or not form:
-            continue
-        head = form[0]
-        if head == "content":
-            continue
-        define_form = desugar_define_form(form)
-        if define_form is not None:
-            name, expr = define_form
-            definitions[name] = expr
-            continue
-    return definitions
-
-
-def _eval_top_level_definitions(forms: list[Any], env: Environment) -> dict[str, Any]:
-    definitions: dict[str, Any] = {}
-    for name, expr in _top_level_definition_exprs(forms).items():
-        value = _eval_definition_expr(name, expr, env)
-        env.values[name] = value
-        definitions[name] = value
-    return definitions
-
-
 def _resolve_expr(expr: Any, definitions: dict[str, Any]) -> Any:
-    if isinstance(expr, str) and expr in definitions:
-        return definitions[expr]
-    return expr
+    return _resolve_definition_ref(expr, definitions)
 
 
 def _runtime_env(
@@ -405,41 +397,18 @@ def _runtime_env(
         values={**builtins},
         resolver=lambda name: _state_resolver(name, store=store, store_specs=store_specs),
     )
-    for name, expr in definitions.items():
-        env.values[name] = _eval_definition_expr(name, expr, env)
+    for name, value in definitions.items():
+        env.values[name] = _bind_runtime_definition(value, env)
     if extra_values is not None:
         env.values.update(extra_values)
     return env
-
-
-def _eval_definition_expr(name: str, expr: Any, env: Environment) -> Any:
-    return evaluate(expr, env)
 
 
 def _schema_env(*, definitions: dict[str, Any]) -> Environment:
     return Environment(parent=base_environment(), values={**_host_values(store_specs={}, store={}), **_schema_definition_values(definitions)})
 
 
-def _schema_definition_values(definitions: dict[str, Any]) -> dict[str, Any]:
-    values: dict[str, Any] = {}
-    env = Environment(parent=base_environment(), values={**_host_values(store_specs={}, store={}), **values})
-    for name, expr in definitions.items():
-        if not _is_schema_definition_expr(name, expr):
-            continue
-        value = evaluate(expr, env)
-        env.values[name] = value
-        values[name] = value
-    return values
 
-
-def _is_schema_definition_expr(name: str, expr: Any) -> bool:
-    if isinstance(expr, (bool, int, StringAtom)):
-        return True
-    if not isinstance(expr, list) or not expr:
-        return False
-    if expr[0] in {"quote", "lambda", "var"}:
-        return True
-    return expr[0] in {"list", "append"} and (name.endswith("-state") or name.endswith("_state") or name.endswith("-vars") or name.endswith("_vars"))
 
 
 def _state_resolver(name: str, *, store: dict[str, int | bool | str], store_specs: dict[str, StoreFieldSpec]) -> Any:

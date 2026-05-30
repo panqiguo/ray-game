@@ -5,9 +5,8 @@ Encounter / World SCM 速查
 ```scheme
 (include "common.scm")
 (define name expr)
-(define-node name node-expr)
-(define-scene name scene-expr)
-
+(define (name params) body...)
+(define-fragment name body...)
 (content
   :meta meta-expr
   :state state-expr
@@ -17,11 +16,38 @@ Encounter / World SCM 速查
   :root node-expr)
 ```
 
-- 顶层 `define` 会在模块加载时立即求值，和标准 Scheme 更接近。
-- ⚠️ **动态绑定**：lambda 内的自由变量不在定义时捕获，而在**每次调用时**从当前环境查找。这让状态字段（如 `security_online`）自然反映运行时值，但也意味着注意同名遮蔽和关键字冲突。详见 `如何写scm场景文件/SKILL.md` 中的设计说明。
-- `define-node` / `define-scene` 是零参数过程糖，适合动态 node/scene。
-- 使用 `define-node` / `define-scene` 后，引用时要显式调用：`(office)`、`(room_search)`。
-- `define-node` / `define-scene` 的直接 `(node ...)` / `(scene ...)` 没写 `:title` 时，会自动使用定义名作为标题。
+### define 语义（city 和 encounter 统一）
+
+```text
+define value     = 模块加载时求值一次，之后引用同一值
+define function  = 调用时求值函数体
+define-fragment  = 内容片段构造器，语法糖，等价于零参数函数
+```
+
+- `(define price 10)` → 静态值，编译时求值。
+- `(define (make-action title desc) (action ...))` → 函数，每次调用时构造。
+- `(define-fragment loan-action (when active? (action ...)))` → 等价于 `(define (loan-action) (when active? (action ...)))`，使用时显式调用 `(loan-action)`。
+
+> ⚠️ **不要**把动态 node/action/desc/title 写成 top-level value define：
+>
+> ```scheme
+> ;; 错误：这个 define 只求值一次，不会随状态变化
+> (define loan-action
+>   (when black_loan_active
+>     (action ...)))
+> ```
+>
+> ```scheme
+> ;; 正确：写成函数或 define-fragment，每次引用时求值
+> (define-fragment loan-action
+>   (when black_loan_active
+>     (action ...)))
+>
+> ;; 使用时显式调用
+> :actions (list (loan-action))
+> ```
+
+- ⚠️ **函数闭包重新绑定**：顶层 `define` / `define-fragment` 声明的函数在每次渲染时会重新绑定到当前环境，因此其自由变量（如 `security_online`）在每次调用时从当前状态查找。嵌套 lambda（函数内创建的闭包）仍然使用标准词法作用域。
 - 如果只是静态常量、文本、helper lambda，用普通 `define`。
 
 `meta`：

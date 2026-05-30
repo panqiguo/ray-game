@@ -4,6 +4,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from sincity.content_lang.module_runtime import (
+    bind_runtime_definition as _bind_runtime_definition,
+    resolve_definition_ref as _resolve_definition_ref,
+    schema_definition_values as _schema_definition_values,
+)
 from sincity.content_lang.runtime_core import (
     flatten_scene as _flatten_scene,
     eval_react_condition as _eval_react_condition,
@@ -17,7 +22,7 @@ from sincity.content_lang.runtime_core import (
     validate_scene_template as _validate_scene_template,
 )
 from sincity.encounters.defs import ActionTemplate, ClockTemplate, EncounterMeta, EncounterSchemaError, EncounterSchemeError, ReactRule, ReactTemplate, SceneTemplate, StateBindingValue, StoreFieldSpec, TaskStepTemplate, TaskTemplate
-from sincity.encounters.lispy import Environment, Procedure, StringAtom, _MISSING, base_environment, desugar_define_form, evaluate, expand_includes, truthy
+from sincity.encounters.lispy import Environment, Procedure, _MISSING, base_environment, desugar_define_form, evaluate, expand_includes, truthy
 from sincity.model.defs import CompiledScenario, Effect, LocationNode, ProgressClockSpec
 from sincity.model.enums import ScreenName
 from sincity.model.state import GameState, ProgressClockState
@@ -344,32 +349,7 @@ def _flatten_state_bindings(value: Any) -> list[list[Any]]:
     return result
 
 
-def _resolve_expr(expr: Any, definitions: dict[str, Any]) -> Any:
-    if isinstance(expr, str) and expr in definitions:
-        return definitions[expr]
-    return expr
 
-
-def _schema_definition_values(definitions: dict[str, Any]) -> dict[str, Any]:
-    values: dict[str, Any] = {}
-    env = Environment(parent=base_environment(), values={**_host_values(store_specs={}, store={}), **values})
-    for name, expr in definitions.items():
-        if not _is_schema_definition_expr(name, expr):
-            continue
-        value = evaluate(expr, env)
-        env.values[name] = value
-        values[name] = value
-    return values
-
-
-def _is_schema_definition_expr(name: str, expr: Any) -> bool:
-    if isinstance(expr, (bool, int, StringAtom)):
-        return True
-    if not isinstance(expr, list) or not expr:
-        return False
-    if expr[0] in {"quote", "lambda", "var"}:
-        return True
-    return expr[0] in {"list", "append"} and (name.endswith("-vars") or name.endswith("_vars") or name.endswith("-state") or name.endswith("_state"))
 
 
 def _resolve_reacts(expr: Any, env: Environment) -> list[ReactRule]:
@@ -461,14 +441,8 @@ def _world_env(program: CompiledWorldProgram, state: GameState) -> Environment:
         values={**_host_values(store_specs={}, store={})},
         resolver=lambda name: _world_resolver(name, program, state),
     )
-    env.values.update({name: _bind_world_definition(value, env) for name, value in program.definitions.items()})
+    env.values.update({name: _bind_runtime_definition(value, env) for name, value in program.definitions.items()})
     return env
-
-
-def _bind_world_definition(value: Any, env: Environment) -> Any:
-    if isinstance(value, Procedure):
-        return Procedure(params=value.params, body=value.body, env=env)
-    return value
 
 
 def _world_resolver(name: str, program: CompiledWorldProgram, state: GameState) -> Any:

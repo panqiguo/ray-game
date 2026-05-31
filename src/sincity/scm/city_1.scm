@@ -8,6 +8,7 @@
 (include "city/scenes/street.scm")
 (include "city/scenes/theater.scm")
 (include "city/scenes/waste.scm")
+(include "city/scenes/docks.scm")
 
 ;; 城市内容现在按“生存底盘 + 主线章节”组织：
 ;; - 诊所、黑市、书店、摊贩、仓库等长期功能保留。
@@ -562,6 +563,7 @@
     building-vars
     rich-enclave-vars
     waste-vars
+    docks-vars
     (list
       (var 'intro_seen false)
       (var 'intrusion_seen false)
@@ -671,7 +673,7 @@
         (effect 'set black_loan_defaulted true)
         (effect 'set black_loan_debt 0)
         (effect-reset-clock black_loan_due)
-        (effect 'add health -2)
+        (effect 'add pressure 2)
         (effect 'add energy -2)
         (effect 'add money (- money))
         (effect 'start-quick-dialogue black-loan-default-text)))
@@ -773,7 +775,8 @@
     bookshop-reacts
     building-reacts
     rich-enclave-reacts
-    waste-reacts))
+    waste-reacts
+    docks-reacts))
 
 (define world-tasks
   (append
@@ -829,9 +832,9 @@
       (when intrusion_seen (警局))
       (when (or intrusion_seen nightingale_city_day_started) (仓库))
       (when nightingale_side_job_available (旧码头卸货))
-      (when nightingale_bar_unlocked (酒吧))
       (when (or vera_thread_unlocked (and exploitation_incident_active (= exploitation_incident_location 'street))) (老街))
       (when nightingale_waste_unlocked (废弃区))
+      (when ryan_docks_unlocked (旧码头))
       (when false 大厦)
       (when false (富人飞地))
       (when frederick_real_lead_found (望月旅馆))

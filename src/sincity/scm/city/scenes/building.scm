@@ -1,5 +1,4 @@
-;; Scene: 大厦.
-;; Exports: building-vars, building-reacts, 大厦
+;; EXPORT building-vars, building-reacts, 大厦
 
 (define office-salary
   (lambda ()

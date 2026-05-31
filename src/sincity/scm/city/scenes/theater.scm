@@ -1,3 +1,6 @@
+;; EXPORT 剧院, 剧院后巷
+;; IMPORT nightingale_*, 夜莺 actions FROM nightingale_story.scm
+
 (define (theater-search-action title desc suit)
   (action
     :title title

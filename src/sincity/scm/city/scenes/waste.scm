@@ -1,10 +1,6 @@
-;; Scene: 废弃区.
-;; Exports: waste-vars, waste-reacts, 废弃区
-;;
-;; Dependency note:
-;; - Uses `exploitation-incident-action` from 富人飞地 scene when an incident
-;;   lands in waste. This location also hosts Vera and gambler actions, so the
-;;   scene naturally depends on those thread states/texts in city_1.scm.
+;; EXPORT waste-vars, waste-reacts, 废弃区
+;; IMPORT exploitation-incident-action FROM 富人飞地 scene
+;; IMPORT vera_waste_checked, vera-waste-empty-text, gambler_met, gambler_debt_choice_done, gambler_return_day, gambler-clocktower-text, gambler_clocktower_ready, casino_unlocked, casino-found-text, chapter_2_started FROM city_1.scm
 
 (define piecework-desc
   (lambda ()
@@ -50,7 +46,7 @@
       :when (clock-filled? gambling_debt)
       :then (list
         (effect-reset-clock gambling_debt)
-        (effect 'add health -1)
+        (effect 'add pressure 1)
         (effect 'start-quick-dialogue "# 酒吧赌债\n\n# speaker: 科尔\n酒吧里欠下的小账不会永远小下去。今晚有人在后巷提醒了我这一点。")))))
 
 (define (废弃区)

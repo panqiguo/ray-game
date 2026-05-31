@@ -1,10 +1,5 @@
-;; Scene: 老街.
-;; Exports: 老街
-;;
-;; Dependency note:
-;; - Uses `exploitation-incident-action` from 富人飞地 scene when an incident
-;;   lands in old street. This is a scene-level cross dependency until the DSL
-;;   grows explicit provide/require.
+;; EXPORT 老街
+;; IMPORT exploitation-incident-action FROM 富人飞地 scene
 
 (define (老街)
   (node

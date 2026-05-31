@@ -1,11 +1,5 @@
-;; Scene: 富人飞地.
-;; Exports: rich-enclave-vars, rich-enclave-reacts, exploitation-incident-action, 富人飞地
-;;
-;; Dependency note:
-;; - 富人飞地 creates `exploitation_incident_location` values that 老街 and
-;;   废弃区 consume to show incident-resolution actions. Without a real
-;;   provide/require system, this contract is documented here and enforced by
-;;   full content validation.
+;; EXPORT rich-enclave-vars, rich-enclave-reacts, exploitation-incident-action, 富人飞地
+;; (creates exploitation_incident_location values consumed by 老街 and 废弃区)
 
 (define exploitation-incident-desc
   (lambda (location)
@@ -30,7 +24,7 @@
           :risk 'high
           :ok (outcome (list (effect 'clock+ exploitation_incident_resolution 2)) "你把几个带头的人压了下去，局面开始松动。")
           :partial (outcome (list (effect 'clock+ exploitation_incident_resolution 1) (effect 'add pressure 1)) "你暂时压住了事，但火还在下面烧。")
-          :fail (outcome (list (effect 'add health -1) (effect 'add pressure 1)) (exploitation-incident-fail-text location)))))))
+          :fail (outcome (list (effect 'add pressure 2)) (exploitation-incident-fail-text location)))))))
 
 (define rich-enclave-vars
   (list

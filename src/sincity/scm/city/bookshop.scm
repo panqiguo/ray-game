@@ -1,6 +1,5 @@
-;; Bookshop growth slice.
-;; Exports: bookshop-vars, bookshop-reacts, 书店
-;; Depends on: helper.scm, common_clock_macros.scm
+;; EXPORT bookshop-vars, bookshop-reacts, 书店
+;; IMPORT helper.scm, common_clock_macros.scm (included by city_1.scm)
 
 (define book-knowledge-text
   "# 读完：《县城账簿与谎言》\n\n# speaker: 科尔\n数字不会说真话，但它们也不擅长撒谎。读完这本书后，我更知道该从哪里看起。")

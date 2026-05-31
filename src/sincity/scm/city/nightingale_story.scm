@@ -1,6 +1,4 @@
-;; Nightingale chapter 1 story state and action helpers.
-;; Exports: nightingale-vars, nightingale-reacts, nightingale-tasks,
-;;          nightingale-* location action helpers.
+;; EXPORT nightingale-vars, nightingale-reacts, nightingale-tasks, nightingale-* action helpers
 
 (define nightingale-opening-text
   "# 保护夜莺\n\n# speaker: 科尔\n首演前一天，剧院的人把话递到我门口，说夜莺收到了威胁。\n\n# speaker: 科尔\n这座城里会写恐吓信的人不少，真正麻烦的是总有人愿意替他们把信送到地方。\n\n# speaker: 科尔\n先去剧院。别让整座城太早吵起来。")
@@ -239,7 +237,20 @@
         (step :title "从摊贩处打听街头跑腿" :completed nightingale_stall_checked)
         (step :title "凑钱从黑市买到送信线索" :completed nightingale_market_checked)
         (step :title "在饭摊吃几顿饭，让老板说完" :completed nightingale_restaurant_done)
-        (step :title "拼出下一次送信路线" :completed nightingale_first_letter_done)))))
+        (step :title "拼出下一次送信路线" :completed nightingale_first_letter_done)))
+    (task
+      :kind '主线
+      :title "保护夜莺：旧码头的莱恩"
+      :desc "第二封威胁信没有解释所有问题，但它把线索推向旧码头。莱恩的名字开始反复出现——醉话、闹事、旧怨，以及一间已经撑不住的新店。"
+      :active (and ryan_docks_unlocked (not ryan_confronted))
+      :completed ryan_confronted
+      :failed false
+      :steps (list
+        (step :title "在旧码头打听莱恩" :completed ryan_tavern_challenge_unlocked)
+        (step :title "在码头酒馆问出莱恩的地址" :completed ryan_address_found)
+        (step :title "调查莱恩的老店铺" :completed ryan_old_shop_checked)
+        (step :title "去莱恩的新店找他" :completed ryan_new_shop_unlocked)
+        (step :title "与莱恩第一次正面对峙" :completed ryan_confronted)))))
 
 (define (nightingale-stall-investigation-action)
   (when (and nightingale_commission_taken

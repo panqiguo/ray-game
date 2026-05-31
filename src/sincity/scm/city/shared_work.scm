@@ -13,7 +13,7 @@
         (outcome (list (effect 'add money partial-money)))
         (outcome (list (effect 'add money partial-money) (effect 'add pressure 1))))
       :fail (if (= risk 'high)
-        (outcome (list (effect 'add money fail-money) (effect 'add pressure 1) (when (> fail-health 0) (effect 'add health (- fail-health)))))
+        (outcome (list (effect 'add money fail-money) (effect 'add pressure 1) (when (> fail-health 0) (effect 'add pressure fail-health))))
         (if (= risk 'mid)
           (outcome (list (effect 'add money fail-money) (effect 'add pressure 1)))
           (outcome (list (effect 'add money fail-money))))))))

@@ -99,11 +99,18 @@ class PendingResolutionState:
 
 
 @dataclass
+class ModalFrame:
+    kind: str
+    primary_id: str | None = None
+
+
+@dataclass
 class ModalState:
     kind: str = ""
     primary_id: str | None = None
     return_kind: str = ""
     return_primary_id: str | None = None
+    stacked_frames: list[ModalFrame] = field(default_factory=list)
 
 
 @dataclass

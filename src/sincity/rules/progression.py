@@ -22,9 +22,10 @@ from sincity.model.state import (
     CardHintFlashState,
     DeckState,
     GameState,
+    ModalFrame,
+    ModalState,
     PendingResolutionState,
     ProgressClockState,
-    ModalState,
     SelectedInputState,
     WorldState,
 )
@@ -651,10 +652,11 @@ def open_action(state: GameState, action_id: str, modal_kind: str = "action") ->
 
 def open_modal(state: GameState, kind: str, primary_id: str | None = None) -> None:
     dismiss_pending_resolution(state)
-    state.modal.kind = kind
-    state.modal.primary_id = primary_id
+    state.modal.stacked_frames.clear()
     state.modal.return_kind = ""
     state.modal.return_primary_id = None
+    state.modal.kind = kind
+    state.modal.primary_id = primary_id
     if kind == "location" and primary_id is not None and state.screen == ScreenName.CITY:
         state.world.fresh_locations.discard(primary_id)
     if kind != "action":
@@ -665,8 +667,9 @@ def open_modal(state: GameState, kind: str, primary_id: str | None = None) -> No
 def open_overlay(state: GameState, kind: str, primary_id: str | None = None) -> None:
     dismiss_pending_resolution(state)
     assert state.modal.kind, "overlay requires an active base modal"
-    state.modal.return_kind = state.modal.kind
-    state.modal.return_primary_id = state.modal.primary_id
+    state.modal.stacked_frames.append(ModalFrame(kind=state.modal.kind, primary_id=state.modal.primary_id))
+    state.modal.return_kind = ""
+    state.modal.return_primary_id = None
     state.modal.kind = kind
     state.modal.primary_id = primary_id
 
@@ -711,9 +714,10 @@ def close_modal(state: GameState) -> None:
     if state.modal.kind == "dialogue":
         _clear_dialogue_modal(state)
         return
-    if state.modal.return_kind:
-        state.modal.kind = state.modal.return_kind
-        state.modal.primary_id = state.modal.return_primary_id
+    if state.modal.stacked_frames:
+        frame = state.modal.stacked_frames.pop()
+        state.modal.kind = frame.kind
+        state.modal.primary_id = frame.primary_id
         state.modal.return_kind = ""
         state.modal.return_primary_id = None
         return
@@ -1642,6 +1646,7 @@ def finish_encounter(state: GameState, outcome: str, rng: RandomSource, extra_li
     state.modal.primary_id = None
     state.modal.return_kind = ""
     state.modal.return_primary_id = None
+    state.modal.stacked_frames.clear()
     clear_assembly(state)
     clear_selected_input(state)
     state.encounter_resource_root_id = ""

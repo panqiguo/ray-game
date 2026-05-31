@@ -55,9 +55,14 @@ def draw_encounter_screen(font: Font | None, state: GameState, rng) -> None:
     draw_message_feed(font, message_rect, state)
     end_layer("message")
     if state.modal.kind == "location" and state.modal.primary_id is not None:
-        begin_layer("encounter_location_table", z=Z_LOCATION_MODAL)
-        _draw_encounter_location_table(font, state, rng)
-        end_layer("encounter_location_table")
+        for i, frame in enumerate(state.modal.stacked_frames):
+            if frame.kind == "location" and frame.primary_id is not None:
+                begin_layer(f"encounter_location_table_{i}", z=Z_LOCATION_MODAL)
+                _draw_encounter_location_table(font, state, rng, depth=i, location_id=frame.primary_id)
+                end_layer(f"encounter_location_table_{i}")
+        begin_layer("encounter_location_table_top", z=Z_LOCATION_MODAL + len(state.modal.stacked_frames))
+        _draw_encounter_location_table(font, state, rng, depth=len(state.modal.stacked_frames))
+        end_layer("encounter_location_table_top")
     draw_profile_modal(font, state)
     draw_dialogue_modal(font, state)
     draw_selected_card_curve_overlay(state)
@@ -208,26 +213,33 @@ def _fit_text(font: Font | None, text: str, max_width: float, size: int) -> str:
     return result + "…"
 
 
-def _draw_encounter_location_table(font: Font | None, state: GameState, rng) -> None:
+def _draw_encounter_location_table(font: Font | None, state: GameState, rng, *, depth: int = 0, location_id: str | None = None) -> None:
     root = current_encounter_root(state)
-    assert state.modal.primary_id is not None
-    location_id = state.modal.primary_id
-    target = next((child for child in _all_locations(root) if child.id == location_id), None)
+    lid = location_id if location_id is not None else state.modal.primary_id
+    assert lid is not None
+    target = next((child for child in _all_locations(root) if child.id == lid), None)
     if target is None:
         close_modal(state)
         return
     resolving = state.pending_resolution is not None and not state.pending_resolution.settled
+    offset = depth * 15
     rect = floating_table_rect()
-    draw_scrim(layout().stage)
+    rect.x += offset
+    rect.y += offset
+    if depth == 0:
+        draw_scrim(layout().stage)
+    is_top = lid == state.modal.primary_id
     sections, closed = draw_table_shell(
         font,
         rect,
         title=target.title,
         subtitle=target.description,
-        close_label="关闭",
+        close_label="关闭" if is_top else None,
     )
-    if closed and not resolving:
+    if closed and not resolving and is_top:
         close_modal(state)
+        return
+    if not is_top:
         return
     location_clocks = present_encounter_location_clocks(state, target.id)
     if location_clocks:

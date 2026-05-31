@@ -180,8 +180,8 @@ def draw_action_card(font: Font | None, state: GameState, presented: PresentedAc
 
 
 def draw_action_factor_sidebars(font: Font | None, rect: Rectangle, presented: PresentedActionCard, scale: float = 1.0) -> None:
-    sidebar_w = (128.0 if scale >= 0.9 else 96.0) * scale
-    offset = (138.0 if scale >= 0.9 else 78.0) * scale
+    sidebar_w = (96.0 if scale >= 0.9 else 72.0) * scale
+    offset = (72.0 if scale >= 0.9 else 48.0) * scale
     if presented.actor_factors:
         draw_factor_stack(font, Rectangle(rect.x - offset, rect.y + 104.0 * scale, sidebar_w, 96.0 * scale), presented.actor_factors, align="right", scale=scale)
     if presented.environment_factors:
@@ -463,8 +463,6 @@ def layout_action_cards(rect: Rectangle, cards: tuple[PresentedActionCard, ...],
 def action_factor_reserve(cards: tuple[PresentedActionCard, ...]) -> float:
     if not any(card.actor_factors or card.environment_factors for card in cards):
         return 0.0
-    if len(cards) <= 3:
-        return 138.0
     return 72.0
 
 

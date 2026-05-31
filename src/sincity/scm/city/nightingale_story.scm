@@ -91,6 +91,8 @@
     (var 'nightingale_publicist_talked false)
     (var 'nightingale_stagehand_talked false)
     (var 'nightingale_first_letter_progress (clock :title "威胁信调查" :desc "顺着纸张、递送链和口风，查清第一封信背后的方向。" :initial 0 :max 4))
+    (var 'nightingale_first_letter_deadline (clock :title "送信路线调查期限" :desc "必须在期限内查清送信路线。" :initial 3 :max 3))
+    (var 'nightingale_deadline_checked_day 0)
     (var 'nightingale_first_letter_done false)
     (var 'nightingale_first_letter_due_day 0)
     (var 'nightingale_trust (clock :title "夜莺的信任" :desc "拖得越久，夜莺和剧院越会怀疑你是否还能保护她。降到 0 时委托失败。" :initial 8 :max 8))
@@ -148,7 +150,15 @@
       :when (and nightingale_commission_taken (= nightingale_first_letter_due_day 0))
       :then (list
         (effect 'set nightingale_first_letter_due_day (+ day 3))
+        (effect 'set nightingale_deadline_checked_day day)
         (effect 'set nightingale_trust_checked_day day)))
+    (react
+      :when (and nightingale_commission_taken
+                 (not nightingale_first_letter_done)
+                 (> day nightingale_deadline_checked_day))
+      :then (list
+        (effect 'clock- nightingale_first_letter_deadline 1)
+        (effect 'set nightingale_deadline_checked_day day)))
     (react
       :when (and nightingale_city_day_started (not nightingale_trust_initialized))
       :then (list
@@ -290,7 +300,7 @@
     (action
       :title "花钱买送信人的来路"
       :desc "黑市掌柜把消息切成几段卖。十块钱，他就把送信人的关键名字吐出来。"
-      :conditions (list (field-at-least 'money 100 "需要 10 元"))
+      :conditions (list (field-at-least 'money 100 "需要 100 元"))
       :inputs (list (item 'money 100 "消息费"))
       :effects (list
         (effect 'set nightingale_market_checked true)

@@ -56,9 +56,14 @@ def draw_city_screen(font: Font | None, state: GameState, rng) -> None:
     draw_message_feed(font, message_rect, state)
     end_layer("message")
     if state.modal.kind == "location" and state.modal.primary_id is not None:
-        begin_layer("location_table", z=Z_LOCATION_MODAL)
-        _draw_location_table(font, state, rng)
-        end_layer("location_table")
+        for i, frame in enumerate(state.modal.stacked_frames):
+            if frame.kind == "location" and frame.primary_id is not None:
+                begin_layer(f"location_table_{i}", z=Z_LOCATION_MODAL)
+                _draw_location_table(font, state, rng, depth=i, location_id=frame.primary_id)
+                end_layer(f"location_table_{i}")
+        begin_layer("location_table_top", z=Z_LOCATION_MODAL + len(state.modal.stacked_frames))
+        _draw_location_table(font, state, rng, depth=len(state.modal.stacked_frames))
+        end_layer("location_table_top")
     draw_profile_modal(font, state, GROWTH_DEFS)
     draw_dialogue_modal(font, state)
     draw_selected_card_curve_overlay(state)
@@ -78,24 +83,32 @@ def _draw_world_table(font: Font | None, state: GameState, rect: Rectangle, rng)
     draw_world_objects(font, state, rng, sections.content, present_world_objects(state))
 
 
-def _draw_location_table(font: Font | None, state: GameState, rng) -> None:
-    assert state.modal.primary_id is not None
+def _draw_location_table(font: Font | None, state: GameState, rng, *, depth: int = 0, location_id: str | None = None) -> None:
+    lid = location_id if location_id is not None else state.modal.primary_id
+    assert lid is not None
     snapshot = current_world_snapshot(state)
-    location = snapshot.locations_by_id[state.modal.primary_id]
+    location = snapshot.locations_by_id[lid]
     resolving = state.pending_resolution is not None and not state.pending_resolution.settled
+    offset = depth * 15
     rect = floating_table_rect()
-    draw_scrim(layout().stage)
+    rect.x += offset
+    rect.y += offset
+    if depth == 0:
+        draw_scrim(layout().stage)
+    is_top = lid == state.modal.primary_id
     sections, closed = draw_table_shell(
         font,
         rect,
         title=location.title,
         subtitle=location.description,
-        close_label="关闭",
+        close_label="关闭" if is_top else None,
     )
-    if closed and not resolving:
+    if closed and not resolving and is_top:
         close_modal(state)
         return
-    location_clock_ids = present_location_clock_ids(state, location.id)
+    if not is_top:
+        return
+    location_clock_ids = present_location_clock_ids(state, lid)
     if location_clock_ids:
         draw_clock_row(font, Rectangle(sections.header.x + 18, sections.header.y + 84, sections.header.width - 36, 48), location_clock_ids, state)
     child_ids = tuple(child.id for child in location.children if location_is_visible(child.id, state))

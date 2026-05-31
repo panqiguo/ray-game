@@ -31,11 +31,6 @@
           :effects (list
             (effect 'set nightingale_commission_taken true)
             (effect 'start-quick-dialogue nightingale-stage-text))))
-      (when (and nightingale_commission_taken (not nightingale_shadow_seen))
-        (theater-search-action
-          "检查舞台边缘的动线"
-          "信能送到她手里，说明有人知道排练的空档。先从舞台和侧幕之间查起。"
-          敏锐))
       (when (and nightingale_commission_taken (not nightingale_manager_talked))
         (action
           :title "和剧院经理谈首演安排"
@@ -120,12 +115,9 @@
         (action
           :title "和前门保安交谈"
           :desc "他知道你是谁，也知道今晚最好别把话说得太大声。"
-          :check (check
-            :suits (list 暴力)
-            :risk 'low
-            :ok (outcome (list (effect 'set nightingale_front_done true) (effect 'start-quick-dialogue nightingale-guard-text)))
-            :partial (outcome (list (effect 'set nightingale_front_done true) (effect 'add energy -1)))
-            :fail (outcome (list (effect 'add energy -1))))))
+          :effects (list
+            (effect 'set nightingale_front_done true)
+            (effect 'start-quick-dialogue nightingale-guard-text))))
       (when (and nightingale_commission_taken (not nightingale_shadow_seen))
         (theater-search-action
           "搜索剧院入口和侧门"

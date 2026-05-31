@@ -167,7 +167,8 @@
     :position '(245 280)
     :show-clocks (list
       (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress)
-      (when (and nightingale_city_day_started (not nightingale_restaurant_done)) nightingale_restaurant_talk))
+      (when (and nightingale_city_day_started (not nightingale_restaurant_done)) nightingale_restaurant_talk)
+      (when (and nightingale_commission_taken (not nightingale_first_letter_done)) nightingale_first_letter_deadline))
     :actions (list
       (action
         :title "吃一碗热汤"
@@ -199,7 +200,8 @@
     :position '(450 280)
     :show-clocks (list
       (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress)
-      (when black_loan_active black_loan_due))
+      (when black_loan_active black_loan_due)
+      (when (and nightingale_commission_taken (not nightingale_first_letter_done)) nightingale_first_letter_deadline))
     :actions (list
       (action
         :title "找黑市医生处理伤口"
@@ -294,7 +296,7 @@
             :suits (list 暴力)
             :risk 'low
             :ok (outcome (list (effect 'clock+ rehab2_progress 1) (effect 'add health 1)))
-            :partial (outcome (list (effect 'clock+ rehab2_progress 1) (effect 'add energy 1)))
+            :partial (outcome (list (effect 'clock+ rehab2_progress 1) (effect 'add health 1) (effect 'add energy -1)))
             :fail (outcome (list (effect 'clock+ rehab2_progress 1))))))
       (when gunshot_wound
         (action

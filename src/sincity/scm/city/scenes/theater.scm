@@ -6,8 +6,8 @@
       :suits (list suit)
       :risk 'mid
       :ok (outcome (list (effect 'clock+ nightingale_theater_search 2)) "线索被你按回了正确的位置。")
-      :partial (outcome (list (effect 'clock+ nightingale_theater_search 1) (effect 'add energy -1)) "你找到了点东西，但剧院里的人和声音都在消耗注意力。")
-      :fail (outcome (list (effect 'add energy -1)) "你看见太多无关的脚印，真正的那一条反而混进去了。"))))
+      :partial (outcome (list (effect 'clock+ nightingale_theater_search 1) (effect 'add pressure 1)) "你找到了点东西，但剧院里的人和声音都在消耗注意力。")
+      :fail (outcome (list (effect 'add pressure 1)) "你看见太多无关的脚印，真正的那一条反而混进去了。"))))
 
 ;; Scene: 剧院.
 ;; Exports: 剧院
@@ -24,13 +24,6 @@
     :show-clocks (list
       (when (and nightingale_commission_taken (not nightingale_shadow_seen)) nightingale_theater_search))
     :actions (list
-      (when (and nightingale_front_done (not nightingale_commission_taken))
-        (action
-          :title "观看夜莺排练"
-          :desc "她唱了两句就停下，把刚收到的第二封威胁信递给你。"
-          :effects (list
-            (effect 'set nightingale_commission_taken true)
-            (effect 'start-quick-dialogue nightingale-stage-text))))
       (when (and nightingale_commission_taken (not nightingale_manager_talked))
         (action
           :title "和剧院经理谈首演安排"
@@ -102,6 +95,21 @@
           :effects (list
             (effect 'start-encounter '拦截第二封威胁信)))))))
 
+(define (夜莺)
+  (node
+    :title "夜莺"
+    :desc "剧院的台柱。她站在聚光灯下的时间太久，已经不习惯被人绕开说话。"
+    :show-clocks (list
+      (when nightingale_commission_taken nightingale_trust))
+    :actions (list
+      (when (and nightingale_front_done (not nightingale_commission_taken))
+        (action
+          :title "和夜莺谈话"
+          :desc "她唱了两句就停下，把刚收到的第二封威胁信递给你。"
+          :effects (list
+            (effect 'set nightingale_commission_taken true)
+            (effect 'start-quick-dialogue nightingale-stage-text)))))))
+
 (define (剧院)
   (node
     :title "剧院"
@@ -109,7 +117,8 @@
     :position '(860 500)
     :show-clocks (list
       (when (and nightingale_commission_taken (not nightingale_shadow_seen)) nightingale_theater_search)
-      (when (and nightingale_commission_taken (not nightingale_lore_known)) nightingale_lore_progress))
+      (when (and nightingale_commission_taken (not nightingale_lore_known)) nightingale_lore_progress)
+      (when nightingale_commission_taken nightingale_trust))
     :actions (list
       (when (not nightingale_front_done)
         (action
@@ -130,6 +139,8 @@
           :effects (list
                     (effect 'start-encounter '剧院后巷交锋)))))
     :children (list
+               (when nightingale_front_done (夜莺))
+               
                (when nightingale_front_done (舞台))
                (when nightingale_search_half_seen (化妆间))
                (when nightingale_search_half_seen (后台通道))

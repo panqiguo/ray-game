@@ -70,7 +70,6 @@ ENCOUNTER_COMPLETION_EFFECTS = {
 LEGACY_EFFECTS = {
     "change_health",
     "change_energy",
-    "change_stress",
     "advance_clock",
     "set_encounter_store",
     "advance_encounter_clock",
@@ -188,7 +187,7 @@ def _validation_state():
     from sincity.model.state import AttributeState, DeckState, GameState, WorldState, ProgressClockState
     return GameState(
         deck=DeckState(),
-        attributes=AttributeState(health=SCENARIO.initial_health, stress=SCENARIO.initial_stress),
+        attributes=AttributeState(health=SCENARIO.initial_health, energy=SCENARIO.initial_energy),
         world=WorldState(
             progress_clocks={clock_id: ProgressClockState(value=spec.initial, visible=True) for clock_id, spec in SCENARIO.clocks_by_id.items()},
             inventory={

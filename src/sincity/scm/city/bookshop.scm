@@ -19,8 +19,8 @@
       :suits (list suit)
       :risk 'low
       :ok (outcome (list (effect 'clock+ clock 2)))
-      :partial (outcome (list (effect 'clock+ clock 1) (effect 'add energy -1)))
-      :fail (outcome (list (effect 'add energy -1))))))
+      :partial (outcome (list (effect 'clock+ clock 1) (effect 'add pressure 1)))
+      :fail (outcome (list (effect 'add pressure 1))))))
 
 (define bookshop-vars
   (list

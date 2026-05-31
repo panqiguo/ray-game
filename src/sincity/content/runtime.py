@@ -41,7 +41,7 @@ class CompiledWorldProgram:
     task_templates: tuple[TaskTemplate, ...]
     view_expr: Any
     initial_health: int
-    initial_stress: int
+    initial_energy: int
     initial_money: int
     initial_cigarettes: int
     initial_inventory: dict[str, int]
@@ -88,7 +88,7 @@ def compile_world_program(
     *,
     source_path: str | Path | None = None,
     initial_health: int,
-    initial_stress: int,
+    initial_energy: int,
     initial_money: int,
     initial_cigarettes: int,
     initial_inventory: dict[str, int] | None = None,
@@ -130,7 +130,7 @@ def compile_world_program(
         task_templates=task_templates,
         view_expr=root_expr,
         initial_health=initial_health,
-        initial_stress=initial_stress,
+        initial_energy=initial_energy,
         initial_money=initial_money,
         initial_cigarettes=initial_cigarettes,
         initial_inventory=dict(initial_inventory or {}),
@@ -175,7 +175,7 @@ def render_world(program: CompiledWorldProgram, state: GameState) -> CompiledSce
         global_clock_ids=rendered.shown_clock_ids,
         location_clock_ids=dict(shown_clock_ids_by_scene),
         initial_health=program.initial_health,
-        initial_stress=program.initial_stress,
+        initial_energy=program.initial_energy,
         initial_money=program.initial_money,
         initial_cigarettes=program.initial_cigarettes,
         initial_inventory=dict(program.initial_inventory),
@@ -424,7 +424,7 @@ def _world_schema_resolver(
     if name in clocks_by_id:
         spec = clocks_by_id[name]
         return StateBindingValue(name=name, spec=StoreFieldSpec(id=name, kind="clock", initial=0, title=spec.title, maximum=spec.segments, persist="run"), value=0)
-    if name in {"health", "stress", "energy", "money", "cigarettes"}:
+    if name in {"health", "energy", "pressure", "force", "charm", "knowledge", "sense", "money", "cigarettes"}:
         return StateBindingValue(name=name, spec=StoreFieldSpec(id=name, kind="value", initial=0, persist="run"), value=0)
     if name in initial_values:
         initial = initial_values[name]
@@ -452,9 +452,11 @@ def _world_resolver(name: str, program: CompiledWorldProgram, state: GameState) 
         spec = program.clocks_by_id[name]
         value = state.world.progress_clocks.get(name)
         return StateBindingValue(name=name, spec=StoreFieldSpec(id=name, kind="clock", initial=0, title=spec.title, maximum=spec.segments, persist="run"), value=(0 if value is None else value.value))
-    if name in {"health", "stress", "energy"}:
-        attr_name = "stress" if name == "energy" else name
-        return StateBindingValue(name=name, spec=StoreFieldSpec(id=name, kind="value", initial=0, persist="run"), value=getattr(state.attributes, attr_name))
+    if name in {"health", "energy"}:
+        return StateBindingValue(name=name, spec=StoreFieldSpec(id=name, kind="value", initial=0, persist="run"), value=getattr(state.attributes, name))
+    if name == "pressure":
+        actor = state.party.get(state.player_actor_id)
+        return StateBindingValue(name=name, spec=StoreFieldSpec(id=name, kind="value", initial=0, persist="run"), value=actor.pressure if actor else 0)
     if name in {"money", "cigarettes"}:
         return StateBindingValue(name=name, spec=StoreFieldSpec(id=name, kind="value", initial=0, persist="run"), value=state.world.inventory.get(name, 0))
     if name in state.world.values:
@@ -473,7 +475,7 @@ def _dummy_state(program: CompiledWorldProgram) -> GameState:
 
     return GameState(
         deck=DeckState(),
-        attributes=AttributeState(health=program.initial_health, stress=program.initial_stress),
+        attributes=AttributeState(health=program.initial_health, energy=program.initial_energy),
         world=WorldState(
             progress_clocks={clock_id: ProgressClockState(value=spec.initial, visible=True) for clock_id, spec in program.clocks_by_id.items()},
             inventory={

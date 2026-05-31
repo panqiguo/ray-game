@@ -23,8 +23,8 @@ class DeckState:
 class AttributeState:
     health: int = 10
     max_health: int = 10
-    stress: int = 0
-    max_stress: int = 5
+    energy: int = 5
+    max_energy: int = 5
 
 
 @dataclass
@@ -40,10 +40,17 @@ class PartyActorState:
     knowledge: int = 0
     sense: int = 0
     is_player: bool = False
+    pressure: int = 0
+    max_pressure: int = 6
+    pressure_locked: bool = False
 
     @property
     def can_act(self) -> bool:
-        return self.health > 0
+        if self.health <= 0:
+            return False
+        if self.is_player:
+            return True
+        return not self.pressure_locked
 
 
 @dataclass
@@ -94,6 +101,7 @@ class PendingResolutionState:
     effects: tuple[Effect, ...]
     log_text: str
     location_id: str
+    acting_actor_id: str = ""
     progress: float = 0.0
     settled: bool = False
 
@@ -197,6 +205,7 @@ class GameState:
     seed: int = 0
     render_cache: RenderCacheState = field(default_factory=RenderCacheState)
     card_hint_flash: CardHintFlashState = field(default_factory=CardHintFlashState)
+    acting_actor_id: str = ""
     encounter_pressure_used: bool = False
     encounter_resource_root_id: str = ""
     task_panel_scroll: float = 0.0

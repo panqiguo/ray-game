@@ -22,8 +22,8 @@
         :suits (list 知识)
         :risk 'mid
         :ok (outcome (list (effect 'clock+ piecework_part 1)) "这一半零件咬合得很顺，像是机器也终于肯帮你一次。")
-        :partial (outcome (list (effect 'clock+ piecework_part 1) (effect 'add piecework_bad_halves 1) (effect 'add energy -1)) "这一半勉强装上了，但已经算残次。")
-        :fail (outcome (list (effect 'clock+ piecework_part 1) (effect 'add piecework_bad_halves 1) (effect 'add energy -1)) "这一半坏了。工头没说话，只把账记在你这件零件上。")))))
+        :partial (outcome (list (effect 'clock+ piecework_part 1) (effect 'add piecework_bad_halves 1) (effect 'add pressure 1)) "这一半勉强装上了，但已经算残次。")
+        :fail (outcome (list (effect 'clock+ piecework_part 1) (effect 'add piecework_bad_halves 1) (effect 'add pressure 1)) "这一半坏了。工头没说话，只把账记在你这件零件上。")))))
 
 (define waste-vars
   (list

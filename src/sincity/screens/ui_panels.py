@@ -11,6 +11,7 @@ from sincity.model.defs import ActionDef, InputRequirement
 from sincity.model.enums import ResultType, SUIT_LABELS, ScreenName
 from sincity.model.state import GameState
 from sincity.rendering import draw_text
+from sincity.rules.progression import pressure_recovery_threshold
 from sincity.rules.deck import list_all_spirit_slots, list_spirit_slots
 from sincity.rules.rng import RandomSource
 from sincity.rules import (
@@ -66,8 +67,8 @@ def draw_hud(font: Font | None, state: GameState) -> None:
         font,
         Rectangle(hud.x + 210, hud.y + 8, 140, 36),
         "精力",
-        state.attributes.stress,
-        state.attributes.max_stress,
+        state.attributes.energy,
+        state.attributes.max_energy,
         Color(208, 182, 108, 255),
         Color(78, 66, 34, 255),
     )
@@ -96,7 +97,7 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
     draw_frame(hand, Color(18, 20, 26, 250))
     hand_title_style = ui_text_style("subtitle")
     subtitle_style = ui_text_style("body", "muted")
-    draw_text(font, "行动卡", int(hand.x) + 18, int(hand.y) + 14, hand_title_style.size, hand_title_style.color)
+    draw_text(font, "侦探社", int(hand.x) + 18, int(hand.y) + 14, hand_title_style.size, hand_title_style.color)
     encounter_cards = encounter_action_cards(state)
     cards_exhausted = False
     if encounter_cards is not None:
@@ -127,18 +128,16 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
     cards_right_limit = _inventory_panel_rect().x - 12
     clicked_exhausted_card = False
     current_owner = ""
+    group_start_x = x
     for slot_index, slot_id in enumerate(list_all_spirit_slots(state.deck)):
         owner_id = slot_id.split(":", 1)[0]
         if owner_id != current_owner:
+            _draw_actor_name_bar(font, state, current_owner, group_start_x, y)
             current_owner = owner_id
-            actor = party_actor(state, owner_id)
             if slot_index > 0:
                 x += 24
-                y = int(hand.y) + 50
-            group_style = ui_text_style("body_sm", "accent" if actor.is_player else "muted")
-            group_label = ("主角" if actor.is_player else f"同伴 · {actor.name}") + f"  生命 {actor.health}/{actor.max_health}  精力 {actor.energy}/{actor.max_energy}"
-            draw_text(font, group_label, x, y, group_style.size, group_style.color)
-            y += 20
+                group_start_x = x
+            y = int(hand.y) + 50
         rect = Rectangle(x, y, 150, 106)
         if rect.x + rect.width > cards_right_limit:
             break
@@ -171,6 +170,7 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
         ):
             select_card_input(state, slot_id, slot_index)
         x += 162
+    _draw_actor_name_bar(font, state, current_owner, group_start_x, y)
     if clicked_exhausted_card:
         state.action_log.append("行动卡已耗尽：休息后会抽取新的行动卡。")
         del state.action_log[:-MAX_LOG_LINES]
@@ -188,6 +188,46 @@ def _draw_locked_slot(font: Font | None, rect: Rectangle, title: str, subtitle: 
     draw_text(font, title, int(rect.x) + 12, int(rect.y) + 12, title_style.size, title_style.color)
     sub_style = ui_text_style("body_sm", "disabled")
     draw_text(font, subtitle, int(rect.x) + 12, int(rect.y) + 68, sub_style.size, sub_style.color)
+
+
+def _draw_actor_name_bar(font: Font | None, state: GameState, owner_id: str, group_start_x: float, card_y: float) -> None:
+    if not owner_id:
+        return
+    actor = state.party.get(owner_id)
+    if actor is None:
+        return
+    bar_y = card_y + 106 + 4
+    name_style = ui_text_style("body_sm", "accent" if actor.is_player else "muted")
+    label = actor.name if actor.is_player else f"同伴 · {actor.name}"
+    draw_text(font, label, int(group_start_x), int(bar_y), name_style.size, name_style.color)
+    label_w = measure_text_width(font, label, name_style.size)
+    segments = actor.max_pressure
+    chip_size = 10
+    spacing = chip_size + 4
+    start_x = int(group_start_x) + int(label_w) + 10
+    max_seg_x = int(layout().hand.x + layout().hand.width - INVENTORY_PANEL_RIGHT_OFFSET - 12)
+    shown = min(segments, max(1, (max_seg_x - start_x) // spacing))
+    fill_color = Color(180, 72, 52, 220)
+    empty_color = Color(50, 50, 55, 200)
+    border_color = Color(80, 80, 90, 180)
+    threshold = pressure_recovery_threshold(actor)
+    for index in range(shown):
+        cell = Rectangle(start_x + index * spacing, bar_y + 2, chip_size, chip_size)
+        if index < actor.pressure:
+            draw_rectangle_rounded(cell, 0.25, 4, fill_color)
+        else:
+            draw_rectangle_rounded(cell, 0.25, 4, empty_color)
+        draw_rectangle_rounded_lines_ex(cell, 0.25, 4, 1.0, border_color)
+        if index == threshold:
+            draw_line(int(cell.x - 1), int(cell.y - 2), int(cell.x - 1), int(cell.y + cell.height + 2), Color(200, 200, 120, 180))
+    value_x = start_x + shown * spacing + 4
+    value_text = f"{actor.pressure}/{actor.max_pressure}"
+    if actor.pressure_locked:
+        value_text += " 锁"
+        value_style = ui_text_style("body_sm", "danger")
+    else:
+        value_style = ui_text_style("body_sm", "muted")
+    draw_text(font, value_text, value_x, int(bar_y), value_style.size, value_style.color)
 
 
 def draw_compact_card(
@@ -595,7 +635,17 @@ def _draw_profile_column(font: Font | None, rect: Rectangle, state: GameState, a
     draw_rectangle_rec(Rectangle(rect.x + 12, y, rect.width - 24, 28), Color(color.r, color.g, color.b, 70))
     draw_text(font, actor.name, int(rect.x) + 22, y + 5, label_style.size, ui_text_color("default"))
     y += 36
-    draw_text(font, f"生命 {actor.health}/{actor.max_health}  精力 {actor.energy}/{actor.max_energy}", int(rect.x) + 16, y, text_size, label_style.color)
+    if actor.is_player:
+        draw_text(font, f"生命 {actor.health}/{actor.max_health}  精力 {actor.energy}/{actor.max_energy}", int(rect.x) + 16, y, text_size, label_style.color)
+    else:
+        draw_text(font, f"生命 {actor.health}/{actor.max_health}", int(rect.x) + 16, y, text_size, label_style.color)
+    y += 24
+    pressure_text = f"压力 {actor.pressure}/{actor.max_pressure}"
+    if actor.pressure_locked:
+        lock_style = ui_text_style("body", "danger")
+        draw_text(font, pressure_text + " 锁", int(rect.x) + 16, y, text_size, lock_style.color)
+    else:
+        draw_text(font, pressure_text, int(rect.x) + 16, y, text_size, label_style.color)
     y += 24
     for label, key in (("暴力", actor.force), ("魅力", actor.charm), ("知识", actor.knowledge), ("敏锐", actor.sense)):
         draw_text(font, f"{label} {key}", int(rect.x) + 16, y, text_size, label_style.color)

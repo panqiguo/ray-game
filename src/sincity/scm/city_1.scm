@@ -106,8 +106,8 @@
       :suits (list suit)
       :risk 'mid
       :ok (outcome (list (effect 'clock+ clock 2)) "线索露出了一小截。你把它按在纸上。")
-      :partial (outcome (list (effect 'clock+ clock 1) (effect 'add energy -1)) "你得到了一点碎片，足够继续往下问。")
-      :fail (outcome (list (effect 'add energy -1)) "你问得太快，周围的人开始闭嘴。"))))
+      :partial (outcome (list (effect 'clock+ clock 1) (effect 'add pressure 1)) "你得到了一点碎片，足够继续往下问。")
+      :fail (outcome (list (effect 'add pressure 1)) "你问得太快，周围的人开始闭嘴。"))))
 
 (define (办公室)
   (node
@@ -119,13 +119,13 @@
       (action
         :title "在沙发上睡一晚"
         :desc (if (not blood_cleaned)
-          "睡觉 → 天数+1，精力-1，重抽行动卡。地板上有血迹时精力额外减少一点。精力不足时，健康可能受损。"
-          "睡觉 → 天数+1，精力-1，重抽行动卡。精力不足时，健康可能受损。")
+          "睡觉 → 天数+1，精力-1，重抽行动卡。地板上有血迹时额外增加一点压力。精力不足时转为压力。"
+          "睡觉 → 天数+1，精力-1，重抽行动卡。精力不足时转为压力。")
         :effects (list
           (effect 'advance-day)
           (effect 'reset-hand)
           (effect 'set bookshop_entered_today false)
-          (when (not blood_cleaned) (effect 'add energy -1))))
+          (when (not blood_cleaned) (effect 'add pressure 1))))
       (action
         :title "吃一包随身干粮"
         :desc "不用找摊贩，也不用花今天的钱。吃掉 1 份干粮，立刻恢复 3 点精力。"
@@ -141,7 +141,7 @@
             :risk 'low
             :ok (outcome (list (effect 'clock+ blood_clean_progress 2)))
             :partial (outcome  (list (effect 'clock+ blood_clean_progress 1)))
-            :fail (outcome  (list (effect 'add energy -1))))))
+            :fail (outcome  (list (effect 'add pressure 1))))))
       (when (and item_recovered (not item_auth_sent))
         (action
           :title "把神秘物品送去鉴定"
@@ -168,7 +168,7 @@
     :show-clocks (list
       (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress)
       (when (and nightingale_city_day_started (not nightingale_restaurant_done)) nightingale_restaurant_talk)
-      (when (and nightingale_commission_taken (not nightingale_first_letter_done)) nightingale_first_letter_deadline))
+      )
     :actions (list
       (action
         :title "吃一碗热汤"
@@ -190,8 +190,8 @@
             :suits (list 敏锐)
             :risk 'mid
             :ok (outcome "你从摊贩的闲谈里拼出了一个方向。" (list (effect 'clock+ investigation_progress 1) (effect 'set stall_investigated true)))
-            :partial (outcome "碎片不多，但足够让你继续往前走。" (list (effect 'clock+ investigation_progress 1) (effect 'set stall_investigated true) (effect 'add energy -1)))
-            :fail (outcome "他今天不想提中枪的事，你的出现反而让他闭了嘴。" (list (effect 'add energy -1)))))))))
+            :partial (outcome "碎片不多，但足够让你继续往前走。" (list (effect 'clock+ investigation_progress 1) (effect 'set stall_investigated true) (effect 'add pressure 1)))
+            :fail (outcome "他今天不想提中枪的事，你的出现反而让他闭了嘴。" (list (effect 'add pressure 1)))))))))
 
 (define (黑市)
   (node
@@ -200,8 +200,7 @@
     :position '(450 280)
     :show-clocks (list
       (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress)
-      (when black_loan_active black_loan_due)
-      (when (and nightingale_commission_taken (not nightingale_first_letter_done)) nightingale_first_letter_deadline))
+      (when black_loan_active black_loan_due))
     :actions (list
       (action
         :title "找黑市医生处理伤口"
@@ -212,7 +211,7 @@
           :risk 'mid
           :ok (outcome (list (effect 'add health 3)))
           :partial (outcome (list (effect 'add health 2)))
-          :fail (outcome (list (effect 'add health 2) (effect 'add energy -1)))))
+          :fail (outcome (list (effect 'add health 2) (effect 'add pressure 1)))))
       (when (not black_loan_active)
         (action
           :title "借黑市高利贷"
@@ -244,8 +243,8 @@
             :suits (list 知识)
             :risk 'mid
             :ok (outcome "黑市的人记性比诊所好。他记得那个买绷带的人。" (list (effect 'clock+ investigation_progress 1) (effect 'set market_investigated true)))
-            :partial (outcome "他半遮半掩地说了几个细节，够你接着查。" (list (effect 'clock+ investigation_progress 1) (effect 'set market_investigated true) (effect 'add energy -1)))
-            :fail (outcome "黑市的人嘴很严，你用错方式了。" (list (effect 'add energy -1)))))))))
+            :partial (outcome "他半遮半掩地说了几个细节，够你接着查。" (list (effect 'clock+ investigation_progress 1) (effect 'set market_investigated true) (effect 'add pressure 1)))
+            :fail (outcome "黑市的人嘴很严，你用错方式了。" (list (effect 'add pressure 1)))))))))
 
 (define (正规诊所)
   (node
@@ -296,7 +295,7 @@
             :suits (list 暴力)
             :risk 'low
             :ok (outcome (list (effect 'clock+ rehab2_progress 1) (effect 'add health 1)))
-            :partial (outcome (list (effect 'clock+ rehab2_progress 1) (effect 'add health 1) (effect 'add energy -1)))
+            :partial (outcome (list (effect 'clock+ rehab2_progress 1) (effect 'add health 1) (effect 'add pressure 1)))
             :fail (outcome (list (effect 'clock+ rehab2_progress 1))))))
       (when gunshot_wound
         (action
@@ -316,8 +315,8 @@
             :suits (list 知识)
             :risk 'mid
             :ok (outcome "登记簿上没有他，但护士记得那件血衣。" (list (effect 'clock+ investigation_progress 1) (effect 'set clinic_investigated true)))
-            :partial (outcome "你翻到了一些记录，不全，但有用。" (list (effect 'clock+ investigation_progress 1) (effect 'set clinic_investigated true) (effect 'add energy -1)))
-            :fail (outcome "护士警惕地看了你一眼，你没敢继续问。" (list (effect 'add energy -1)))))))))
+            :partial (outcome "你翻到了一些记录，不全，但有用。" (list (effect 'clock+ investigation_progress 1) (effect 'set clinic_investigated true) (effect 'add pressure 1)))
+            :fail (outcome "护士警惕地看了你一眼，你没敢继续问。" (list (effect 'add pressure 1)))))))))
 
 (define (警局)
   (node
@@ -351,7 +350,7 @@
             :risk 'mid
             :ok (outcome (list (effect 'clock+ investigation_progress 1) (effect 'set warehouse_investigated true)) "装卸工见过那个方向有车急刹的声音。")
             :partial (outcome (list (effect 'clock+ investigation_progress 1) (effect 'set warehouse_investigated true)) "他不能确定，但给你指了可能的方向。")
-            :fail (outcome (list (effect 'add energy -1)) "码头风大，人的记性也容易被吹散。"))))
+            :fail (outcome (list (effect 'add pressure 1)) "码头风大，人的记性也容易被吹散。"))))
       (when (and police_investigation_done (not item_recovered) (not item_recovery_started))
         (action
           :title "挑战 - 取回神秘物品"
@@ -385,8 +384,8 @@
           :suits (list 敏锐)
           :risk 'high
           :ok (outcome (list (effect 'add money 24)) "你读懂了对面那点迟疑，今晚的酒钱有人替你付。")
-          :partial (outcome (list (effect 'add money 8) (effect 'add energy -1)) "你赢回一点，但坐得太久，头也开始发沉。")
-          :fail (outcome (list (effect 'clock+ gambling_debt 1) (effect 'add energy -1)) "牌面翻下去，你只剩下一笔被人记住的小账。")))
+          :partial (outcome (list (effect 'add money 8) (effect 'add pressure 1)) "你赢回一点，但坐得太久，头也开始发沉。")
+          :fail (outcome (list (effect 'clock+ gambling_debt 1) (effect 'add pressure 1)) "牌面翻下去，你只剩下一笔被人记住的小账。")))
       (nightingale-bar-context-action)
       ;; 薇拉主线 — 电话中已接下委托，直接去三个地方打听
       (when (and vera_thread_unlocked (not vera_bar_checked))
@@ -416,7 +415,7 @@
           :desc "第八杯之后，她终于主动把身体靠近了一点。她拿你的欲望开玩笑，也在看你是不是会为了她把判断放低。"
           :effects (list
             (effect 'set blonde_flirted true)
-            (effect 'add energy -1)
+            (effect 'add pressure 1)
             (effect 'start-quick-dialogue blonde-flirt-text))))
       (when (and blonde_flirted (not blonde_customer_chased))
         (action
@@ -843,8 +842,8 @@
       "贝城县不大。你从剧院醒来后，城市才重新露出那些能救命、能买消息、也能把人推向旧码头的地方。"
       "首演前的剧院把整座城暂时挡在外面。今晚先处理夜莺收到的第二封威胁信。")
     :show-clocks (list
-      (when (and nightingale_city_day_started (not nightingale_first_letter_done) (not nightingale_trust_failed)) nightingale_trust)
-      (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress))
+      (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress)
+      (when (and nightingale_commission_taken (not nightingale_first_letter_done)) nightingale_first_letter_deadline))
     :children (list
       (办公室)
       (when nightingale_stall_unlocked (街边摊贩))

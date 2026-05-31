@@ -20,7 +20,7 @@ INCLUDE ./external.ink
 # speaker: 科尔
 他要的不是真相，是一份能合上的报告。每个字都像在把责任钉到你桌上。
 
-~ change_stress(2)
+~ change_energy(-2)
 
 # speaker: 警探
 “最后一个问题。他有没有留下什么东西？纸条、名字、地址，任何能让我们少跑几步的东西。”

@@ -107,12 +107,6 @@ def action_grid_columns(rect: Rectangle, cards: tuple[PresentedActionCard, ...])
     return min(len(cards), max(comfortable, min(compact, 3)))
 
 
-def _location_grid_natural_height(font: Font | None, cards: tuple[PresentedLocationCard, ...], columns: int) -> float:
-    card_h = max(preferred_location_height(font, card) for card in cards)
-    rows = max(1, (len(cards) + columns - 1) // columns)
-    return rows * card_h + (rows - 1) * 18.0
-
-
 def draw_location_contents(
     font: Font | None,
     state: GameState,
@@ -126,16 +120,84 @@ def draw_location_contents(
     if not child_cards and not action_cards:
         draw_note_block(font, Rectangle(content_rect.x, content_rect.y, content_rect.width, 86), "这里暂时没有可做的事", "换个地方，或者先满足别的条件。")
         return
-    if child_cards:
-        columns = max(1, min(3, len(child_cards)))
-        grid_h = _location_grid_natural_height(font, child_cards, columns)
-        child_strip = Rectangle(content_rect.x, content_rect.y, content_rect.width, grid_h)
-        draw_location_grid(font, state, child_strip, child_cards, columns=columns, nested=nested_locations)
-        action_top = child_strip.y + child_strip.height + 18
-    else:
-        action_top = content_rect.y
-    action_area = Rectangle(content_rect.x, action_top, content_rect.width, content_rect.y + content_rect.height - action_top)
-    draw_action_grid(font, state, rng, action_cards, action_area)
+    draw_mixed_location_flow(font, state, rng, content_rect, child_cards, action_cards, nested_locations=nested_locations)
+
+
+def draw_mixed_location_flow(
+    font: Font | None,
+    state: GameState,
+    rng,
+    rect: Rectangle,
+    child_cards: tuple[PresentedLocationCard, ...],
+    action_cards: tuple[PresentedActionCard, ...],
+    *,
+    nested_locations: bool,
+) -> None:
+    gap_x = 18.0
+    gap_y = 18.0
+    action_reserve = action_factor_reserve(action_cards)
+    rows: list[list[tuple[str, PresentedLocationCard | PresentedActionCard, float, float, float]]] = []
+    current_row: list[tuple[str, PresentedLocationCard | PresentedActionCard, float, float, float]] = []
+    current_w = 0.0
+
+    for item in _mixed_location_items(font, child_cards, action_cards, action_reserve):
+        item_w = item[2]
+        next_w = item_w if not current_row else current_w + gap_x + item_w
+        if current_row and next_w > rect.width:
+            rows.append(current_row)
+            current_row = [item]
+            current_w = item_w
+        else:
+            current_row.append(item)
+            current_w = next_w
+    if current_row:
+        rows.append(current_row)
+    if not rows:
+        return
+
+    row_heights = [max(item[4] for item in row) for row in rows]
+    row_widths = [sum(item[2] for item in row) + gap_x * max(0, len(row) - 1) for row in rows]
+    natural_h = sum(row_heights) + gap_y * max(0, len(rows) - 1)
+    natural_w = max(row_widths)
+    scale = min(1.0, rect.width / natural_w, rect.height / natural_h)
+    block_h = natural_h * scale
+    y = rect.y + max(0.0, (rect.height - block_h) * 0.5)
+    for row, row_w, row_h in zip(rows, row_widths, row_heights):
+        x = rect.x + max(0.0, (rect.width - row_w * scale) * 0.5)
+        for kind, presented, cell_w, card_h, _layout_h in row:
+            if kind == "location":
+                assert isinstance(presented, PresentedLocationCard)
+                card = Rectangle(x, y, cell_w * scale, card_h * scale)
+                if draw_table_card(font, card, state, presented.card, scale=scale):
+                    clear_assembly(state)
+                    clear_selected_input(state)
+                    if nested_locations:
+                        open_overlay(state, "location", presented.location_id)
+                    else:
+                        open_modal(state, "location", presented.location_id)
+            else:
+                assert isinstance(presented, PresentedActionCard)
+                card = Rectangle(x + action_reserve * scale, y, (cell_w - action_reserve * 2) * scale, card_h * scale)
+                draw_action_card(font, state, presented, card, rng, scale=scale)
+            x += (cell_w + gap_x) * scale
+        y += (row_h + gap_y) * scale
+
+
+def _mixed_location_items(
+    font: Font | None,
+    child_cards: tuple[PresentedLocationCard, ...],
+    action_cards: tuple[PresentedActionCard, ...],
+    action_reserve: float,
+) -> tuple[tuple[str, PresentedLocationCard | PresentedActionCard, float, float, float], ...]:
+    items: list[tuple[str, PresentedLocationCard | PresentedActionCard, float, float, float]] = []
+    for card in child_cards:
+        height = preferred_location_height(font, card)
+        items.append(("location", card, LOCATION_CARD_WIDTH, height, height))
+    for card in action_cards:
+        card_height = card.card.style.height
+        button_space = 36.0 if card.attachment is not None else 0.0
+        items.append(("action", card, card.card.style.width + action_reserve * 2, card_height, card_height + button_space))
+    return tuple(items)
 
 
 def draw_action_card(font: Font | None, state: GameState, presented: PresentedActionCard, rect: Rectangle, rng, scale: float = 1.0) -> None:

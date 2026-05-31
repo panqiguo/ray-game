@@ -179,7 +179,7 @@ class CompiledScenario:
     global_clock_ids: tuple[str, ...]
     location_clock_ids: dict[str, tuple[str, ...]]
     initial_health: int
-    initial_stress: int
+    initial_energy: int
     initial_money: int
     initial_cigarettes: int
     initial_inventory: dict[str, int]

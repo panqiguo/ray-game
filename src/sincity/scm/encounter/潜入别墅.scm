@@ -306,7 +306,7 @@
 
 (content
   :meta (meta :key '潜入别墅 :title "潜入别墅" :desc "深夜潜入戒备森严的宅邸，只为听到一个真相。")
-  :on-fail (list (effect 'add 'stress 2))
+  :on-fail (list (effect 'add 'energy -2))
   :vars (append
     world-health-vars
     (list

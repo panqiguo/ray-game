@@ -11,6 +11,7 @@ class PartyActorDef:
     name: str
     max_health: int
     max_energy: int
+    max_pressure: int = 6
     force: int = 0
     charm: int = 0
     knowledge: int = 0
@@ -25,6 +26,7 @@ class PartyActorDef:
             max_health=self.max_health,
             energy=self.max_energy if energy is None else energy,
             max_energy=self.max_energy,
+            max_pressure=self.max_pressure,
             force=self.force,
             charm=self.charm,
             knowledge=self.knowledge,

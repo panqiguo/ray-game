@@ -11,7 +11,7 @@ def build_city_1() -> CompiledWorldProgram:
         path.read_text(encoding="utf-8"),
         source_path=path,
         initial_health=10,
-        initial_stress=5,
+        initial_energy=5,
         initial_money=20,
         initial_cigarettes=0,
         initial_inventory={

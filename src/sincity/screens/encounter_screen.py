@@ -199,7 +199,7 @@ def _reaction_effect_summary(state: GameState, effects) -> str:
 def _field_label(key: str) -> str:
     if key == "health":
         return "生命"
-    if key == "energy" or key == "stress":
+    if key == "energy":
         return "精力"
     return key
 

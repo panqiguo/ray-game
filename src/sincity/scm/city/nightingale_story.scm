@@ -127,6 +127,7 @@
         (effect 'set nightingale_city_day_started true)
         (effect 'set nightingale_clinic_unlocked true)
         (effect 'set nightingale_stall_unlocked true)
+        (effect 'set nightingale_waste_unlocked true)
         (effect 'start-quick-dialogue nightingale-wakeup-text)))
     (react
       :when (and nightingale_stall_checked (not nightingale_market_unlocked))
@@ -142,10 +143,6 @@
       :when (and nightingale_market_checked (not nightingale_bar_unlocked))
       :then (list
         (effect 'set nightingale_bar_unlocked true)))
-    (react
-      :when (and (or nightingale_bar_checked nightingale_first_letter_done) (not nightingale_waste_unlocked))
-      :then (list
-        (effect 'set nightingale_waste_unlocked true)))
     (react
       :when (and nightingale_commission_taken (= nightingale_first_letter_due_day 0))
       :then (list
@@ -195,29 +192,6 @@
       :then (list
         (effect 'set nightingale_lore_known true)
         (effect 'start-quick-dialogue nightingale-lore-text)))
-    (react
-      :when (and nightingale_commission_taken
-                 (not nightingale_second_letter_ready)
-                 (> nightingale_first_letter_due_day 0)
-                 (>= day nightingale_first_letter_due_day))
-      :then (append
-        (list
-          (effect 'set nightingale_second_letter_ready true)
-          (effect 'set nightingale_second_letter_trigger_day day)
-          (effect 'start-quick-dialogue nightingale-second-letter-alert-text))
-        (if (not nightingale_first_letter_done)
-          (list (effect 'set nightingale_second_letter_harder true))
-          (list))))
-    (react
-      :when (and nightingale_second_letter_ready
-                 (not nightingale_second_letter_intercepted)
-                 (not nightingale_second_letter_failed)
-                 (> day nightingale_second_letter_trigger_day))
-      :then (list
-        (effect 'set nightingale_second_letter_failed true)
-        (effect 'set nightingale_second_letter_delivered true)
-        (effect 'add police_relation -1)
-        (effect 'start-quick-dialogue nightingale-second-letter-fail-text)))
   ))
 
 (define nightingale-tasks
@@ -238,7 +212,7 @@
       :kind '主线
       :title "三天内追查送信路线"
       :desc "你被打昏后醒来，身体状态很差。先找医生和食物撑住，再顺着城市里的线索追查下一次送信。"
-      :active (and nightingale_city_day_started (not nightingale_second_letter_ready))
+      :active nightingale_city_day_started
       :completed nightingale_first_letter_done
       :failed nightingale_trust_failed
       :steps (list
@@ -246,31 +220,7 @@
         (step :title "从摊贩处打听街头跑腿" :completed nightingale_stall_checked)
         (step :title "凑钱从黑市买到送信线索" :completed nightingale_market_checked)
         (step :title "在饭摊吃几顿饭，让老板说完" :completed nightingale_restaurant_done)
-        (step :title "拼出下一次送信路线" :completed nightingale_first_letter_done)))
-    (task
-      :kind '主线
-      :title "拦截第二封威胁信"
-      :desc "线人已经盯到送信人的影子。你只有当天这一点时间，赶在信件进剧院之前拦下它。"
-      :active (and nightingale_second_letter_ready
-                   (not nightingale_second_letter_intercepted)
-                   (not nightingale_second_letter_failed))
-      :completed nightingale_second_letter_intercepted
-      :failed nightingale_second_letter_failed
-      :steps (list
-        (step :title "赶到剧院后巷" :completed nightingale_second_letter_ready)
-        (step :title "拦下递信人" :completed nightingale_second_letter_intercepted)))
-    (task
-      :kind '主线
-      :title "了解首演与旧码头的关系"
-      :desc "首演不是单纯的一场演出。经理、宣传人员、后台工人都在回避某些名字，而莱恩开始越来越像被推向前台的替身。"
-      :active (and nightingale_commission_taken (not nightingale_lore_known))
-      :completed nightingale_lore_known
-      :failed false
-      :steps (list
-        (step :title "和剧院经理谈谈首演" :completed nightingale_manager_talked)
-        (step :title "听宣传口的人解释旧码头主题" :completed nightingale_publicist_talked)
-        (step :title "问后台工人最近谁在打听流程" :completed nightingale_stagehand_talked)
-        (step :title "收集夜莺的传说" :completed nightingale_lore_known)))))
+        (step :title "拼出下一次送信路线" :completed nightingale_first_letter_done)))))
 
 (define (nightingale-stall-investigation-action)
   (when (and nightingale_commission_taken
@@ -289,9 +239,9 @@
         :partial (outcome (list
           (effect 'set nightingale_stall_checked true)
           (effect 'clock+ nightingale_first_letter_progress 1)
-          (effect 'add energy -1)
+          (effect 'add pressure 1)
           (effect 'start-quick-dialogue nightingale-stall-text)))
-        :fail (outcome (list (effect 'add energy -1)) "摊贩先顾着手里的热汤，不想把你的问题也一起端起来。")))))
+        :fail (outcome (list (effect 'add pressure 1)) "摊贩先顾着手里的热汤，不想把你的问题也一起端起来。")))))
 
 (define (nightingale-blackmarket-investigation-action)
   (when (and nightingale_commission_taken

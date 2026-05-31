@@ -29,8 +29,8 @@
           :suits (list 魅力)
           :risk 'high
           :ok (outcome (list (effect 'clock+ exploitation_incident_resolution 2)) "你把几个带头的人压了下去，局面开始松动。")
-          :partial (outcome (list (effect 'clock+ exploitation_incident_resolution 1) (effect 'add energy -1)) "你暂时压住了事，但火还在下面烧。")
-          :fail (outcome (list (effect 'add health -1) (effect 'add energy -1)) (exploitation-incident-fail-text location)))))))
+          :partial (outcome (list (effect 'clock+ exploitation_incident_resolution 1) (effect 'add pressure 1)) "你暂时压住了事，但火还在下面烧。")
+          :fail (outcome (list (effect 'add health -1) (effect 'add pressure 1)) (exploitation-incident-fail-text location)))))))
 
 (define rich-enclave-vars
   (list
@@ -91,7 +91,7 @@
           :risk 'low
           :ok (outcome (list (effect 'set exploitation_incident_location 'street) (effect 'add money 35) (effect 'clock+ exploitation_unrest 2)) "你说的是规矩，听起来像威胁。业主很满意。")
           :partial (outcome (list (effect 'set exploitation_incident_location 'street) (effect 'add money 25) (effect 'clock+ exploitation_unrest 1)) "钱收回来一部分，楼下的怨声也多了一点。")
-          :fail (outcome (list (effect 'set exploitation_incident_location 'street) (effect 'add money 12) (effect 'clock+ exploitation_unrest 2) (effect 'add energy -1)) "租客没有钱，只有愤怒。你带走一点现金，留下更多火星。")))
+          :fail (outcome (list (effect 'set exploitation_incident_location 'street) (effect 'add money 12) (effect 'clock+ exploitation_unrest 2) (effect 'add pressure 1)) "租客没有钱，只有愤怒。你带走一点现金，留下更多火星。")))
       (action
         :title "压低工钱"
         :desc "替包工头砍掉尾款。轻松、体面、来钱快，但每一次都在废弃区和老街积一层火。"
@@ -99,5 +99,5 @@
           :suits (list 知识)
           :risk 'mid
           :ok (outcome (list (effect 'set exploitation_incident_location 'waste) (effect 'add money 45) (effect 'clock+ exploitation_unrest 2)) "合同上的小字替你完成了大部分暴力。")
-          :partial (outcome (list (effect 'set exploitation_incident_location 'waste) (effect 'add money 30) (effect 'clock+ exploitation_unrest 2) (effect 'add energy -1)) "账压下去了，但有人记住了你的脸。")
-          :fail (outcome (list (effect 'set exploitation_incident_location 'waste) (effect 'add money 15) (effect 'clock+ exploitation_unrest 3) (effect 'add energy -1)) "你没压住场面，只压出了更难收拾的怒气。"))))))
+          :partial (outcome (list (effect 'set exploitation_incident_location 'waste) (effect 'add money 30) (effect 'clock+ exploitation_unrest 2) (effect 'add pressure 1)) "账压下去了，但有人记住了你的脸。")
+          :fail (outcome (list (effect 'set exploitation_incident_location 'waste) (effect 'add money 15) (effect 'clock+ exploitation_unrest 3) (effect 'add pressure 1)) "你没压住场面，只压出了更难收拾的怒气。"))))))

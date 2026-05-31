@@ -79,8 +79,8 @@ def start_new_run(seed: int) -> tuple[GameState, RandomSource]:
         attributes=AttributeState(
             health=SCENARIO.initial_health,
             max_health=10,
-            stress=SCENARIO.initial_stress,
-            max_stress=5,
+            energy=SCENARIO.initial_energy,
+            max_energy=5,
         ),
         world=world,
         screen=ScreenName.CITY,
@@ -89,7 +89,7 @@ def start_new_run(seed: int) -> tuple[GameState, RandomSource]:
         seed=seed,
     )
     state.player_actor_id = PLAYER_ACTOR_ID
-    state.party = build_initial_party(player_health=state.attributes.health, player_energy=state.attributes.stress)
+    state.party = build_initial_party(player_health=state.attributes.health, player_energy=state.attributes.energy)
     state.companion_actor_ids = [INITIAL_COMPANION_ID] if INITIAL_COMPANION_ID and INITIAL_COMPANION_ID in state.party else []
     sync_trauma_cards_with_health(state)
     start_city_day(state.deck, rng, HAND_SIZE, actors=_active_card_actors(state))
@@ -233,7 +233,7 @@ def _field_value(state: GameState, key: str) -> int | bool | str:
             return state.world.values.get(key, spec.initial)
         if spec.persist == "world_inventory":
             return state.world.inventory.get(key, int(spec.initial))
-    if key in {"energy", "stress", "health", "force", "charm", "knowledge", "sense"}:
+    if key in {"energy", "health", "force", "charm", "knowledge", "sense", "pressure"}:  # pressure is actor-local
         return _world_attr_value(state, key)
     if key in state.world.values:
         return state.world.values[key]
@@ -273,6 +273,10 @@ def _set_field(state: GameState, key: str, value: int | bool | str, extra_lines:
         _set_world_attr(state, key, int(value))
         _mark_content_dirty(state)
         return
+    if key == "pressure":
+        _set_world_attr(state, key, int(value))
+        _mark_content_dirty(state)
+        return
     if hasattr(state.attributes, key):
         if key == "health":
             _set_world_attr(state, key, int(value))
@@ -300,10 +304,10 @@ def _world_attr_value(state: GameState, key: str) -> int:
     actor = _player_actor(state)
     if key == "energy":
         return actor.energy
-    if key == "stress":
-        return actor.energy
     if key == "health":
         return actor.health
+    if key == "pressure":
+        return actor.pressure
     if key == "force":
         return actor.force
     if key == "charm":
@@ -317,9 +321,13 @@ def _world_attr_value(state: GameState, key: str) -> int:
 
 def _set_world_attr(state: GameState, key: str, value: int) -> None:
     actor = _player_actor(state)
-    if key in {"energy", "stress"}:
+    if key == "energy":
         actor.energy = max(0, min(actor.max_energy, value))
-        state.attributes.stress = actor.energy
+        state.attributes.energy = actor.energy
+        return
+    if key == "pressure":
+        delta = value - actor.pressure
+        change_actor_pressure(state, delta, state.player_actor_id)
         return
     if key == "health":
         actor.health = max(0, min(actor.max_health, value))
@@ -342,8 +350,8 @@ def _add_field(state: GameState, key: str, amount: int, extra_lines: list[str] |
     if key == "energy":
         change_energy(state, amount, extra_lines)
         return
-    if key == "stress":
-        change_energy(state, -amount, extra_lines)
+    if key == "pressure":
+        change_actor_pressure(state, amount, state.acting_actor_id or state.player_actor_id, extra_lines)
         return
     current = _field_value(state, key)
     _set_field(state, key, int(current) + amount, extra_lines)
@@ -431,6 +439,10 @@ def slot_current_value(state: GameState, slot_id: str) -> int:
 
 def slot_is_available(state: GameState, slot_id: str) -> bool:
     if slot_id not in state.deck.available_slots:
+        return False
+    owner_id = slot_owner(slot_id)
+    actor = state.party.get(owner_id)
+    if actor is not None and not actor.can_act:
         return False
     return True
 
@@ -1040,6 +1052,8 @@ def perform_current_action(state: GameState, rng: RandomSource) -> None:
     assert action is not None
     assert action_ready_to_execute(action, state), f"Action not ready: {action.id}"
     location_id = location_for_action(action.id, state)
+    card_id = _slotted_card_id(state)
+    state.acting_actor_id = slot_owner(card_id) if card_id else ""
     _consume_inputs(state, action)
     if action.check is None:
         if action_requires_energy_slot(action):
@@ -1060,6 +1074,7 @@ def perform_current_action(state: GameState, rng: RandomSource) -> None:
             effects=action.effects,
             log_text=f"{action.title}: {action.description}",
             location_id=location_id or "",
+            acting_actor_id=state.acting_actor_id,
         )
     else:
         card_id = _slotted_card_id(state)
@@ -1092,6 +1107,7 @@ def perform_current_action(state: GameState, rng: RandomSource) -> None:
             effects=resolved_effects,
             log_text=f"{action.title}: {log_text}",
             location_id=location_id or "",
+            acting_actor_id=state.acting_actor_id,
         )
     clear_selected_input(state)
 
@@ -1110,7 +1126,10 @@ def advance_pending_resolution(state: GameState, rng: RandomSource, dt: float) -
         pending.progress = min(1.0, pending.progress + dt / 0.7)
         if pending.progress >= 1.0:
             _push_log(state, pending.log_text)
+            saved_actor_id = state.acting_actor_id
+            state.acting_actor_id = pending.acting_actor_id
             extra_lines = _apply_effects(pending.effects, state, rng)
+            state.acting_actor_id = saved_actor_id
             if extra_lines:
                 merged = list(pending.resolution.effect_lines)
                 for line in extra_lines:
@@ -1337,9 +1356,6 @@ def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines
     if item.kind == "change_energy":
         change_energy(state, int(value), extra_lines)
         return
-    if item.kind == "change_stress":
-        change_energy(state, -int(value), extra_lines)
-        return
     if item.kind == "advance_clock":
         assert isinstance(value, str)
         key, raw = value.split(":")
@@ -1413,6 +1429,10 @@ def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines
     if item.kind == "advance_day":
         state.day += 1
         change_energy(state, -1, extra_lines)
+        for actor_id in state.companion_actor_ids:
+            actor = state.party.get(actor_id)
+            if actor is not None:
+                change_actor_pressure(state, -2, actor_id, extra_lines)
         remaining = state.world.values.get("gang_days_remaining", 0)
         if isinstance(remaining, int) and remaining > 0:
             state.world.values["gang_days_remaining"] = remaining - 1
@@ -1680,28 +1700,45 @@ def change_health(state: GameState, amount: int, extra_lines: list[str] | None =
         state.screen = ScreenName.ENDING
 
 
+def change_actor_pressure(state: GameState, amount: int, actor_id: str, extra_lines: list[str] | None = None) -> None:
+    actor = party_actor(state, actor_id)
+    old = actor.pressure
+    actor.pressure = max(0, min(actor.max_pressure, actor.pressure + amount))
+    delta = actor.pressure - old
+    overflow = (old + amount) - actor.max_pressure
+    if overflow > 0 and actor.is_player:
+        change_health(state, -overflow, extra_lines)
+        if extra_lines is not None:
+            extra_lines.append(f"压力爆表，生命 -{overflow}")
+    if delta > 0 and actor.pressure >= actor.max_pressure and not actor.is_player:
+        actor.pressure_locked = True
+    if delta < 0 and actor.pressure <= pressure_recovery_threshold(actor):
+        actor.pressure_locked = False
+    _mark_content_dirty(state)
+    if extra_lines is not None and delta != 0 and overflow <= 0:
+        label = "压力" if delta > 0 else "压力恢复"
+        extra_lines.append(f"{actor.name} {label} {abs(delta)}")
+
+
+def pressure_recovery_threshold(actor: PartyActorState) -> int:
+    return max(0, actor.max_pressure - 3)
+
+
 def change_energy(state: GameState, amount: int, extra_lines: list[str] | None = None) -> None:
     actor = _player_actor(state)
     if amount >= 0:
         actor.energy = min(actor.max_energy, actor.energy + amount)
-        state.attributes.stress = actor.energy
+        state.attributes.energy = actor.energy
         _mark_content_dirty(state)
         return
     loss = -amount
     absorbed = min(actor.energy, loss)
     actor.energy -= absorbed
-    state.attributes.stress = actor.energy
+    state.attributes.energy = actor.energy
     overflow = loss - absorbed
     _mark_content_dirty(state)
     if overflow > 0:
-        if extra_lines is not None:
-            extra_lines.append(f"精力不足，生命 -{overflow}")
-        change_health(state, -overflow, extra_lines)
-        _push_log(state, "精力耗尽，身体替你付了代价。")
-
-
-def change_stress(state: GameState, amount: int, extra_lines: list[str] | None = None) -> None:
-    change_energy(state, -amount, extra_lines)
+        change_actor_pressure(state, overflow, state.player_actor_id, extra_lines)
 
 
 def sync_trauma_cards_with_health(state: GameState) -> None:
@@ -1763,11 +1800,7 @@ def _describe_effects(effects: tuple[Effect, ...], action_id: str, state: GameSt
             lines.append(f"{_field_label(key)} = {raw}")
         elif item.kind == "add_field":
             key, amount = _resolve_add_field_payload(value)
-            if key == "stress":
-                energy_amount = -amount
-                lines.append(f"精力 {'+' if energy_amount >= 0 else ''}{energy_amount}")
-            else:
-                lines.append(f"{_field_label(key)} {'+' if amount >= 0 else ''}{amount}")
+            lines.append(f"{_field_label(key)} {'+' if amount >= 0 else ''}{amount}")
         elif item.kind == "copy_field":
             assert isinstance(value, str)
             target, source = value.split(":", 1)
@@ -1782,9 +1815,6 @@ def _describe_effects(effects: tuple[Effect, ...], action_id: str, state: GameSt
         elif item.kind == "change_energy":
             amount = int(value)
             lines.append(f"精力 {'+' if amount >= 0 else ''}{amount}")
-        elif item.kind == "change_stress":
-            amount = int(value)
-            lines.append(f"精力 {'+' if -amount >= 0 else ''}{-amount}")
         elif item.kind == "advance_clock":
             assert isinstance(value, str)
             key, raw = value.split(":")
@@ -1855,7 +1885,9 @@ def _field_label(field_id: str) -> str:
     if field_id == "health":
         return "生命"
     if field_id == "stress":
-        return "精力"
+        return "压力"
+    if field_id == "pressure":
+        return "压力"
     if field_id == "energy":
         return "精力"
     if field_id == "money":

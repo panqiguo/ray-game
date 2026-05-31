@@ -147,7 +147,7 @@ def _bind_story(story: Any, state: GameState) -> None:
     story.BindExternalFunction("remove_item", lambda item_id, amount=1: _remove_item(state, str(item_id), int(amount)))
     story.BindExternalFunction("change_money", lambda amount: _change_money(state, int(amount)))
     story.BindExternalFunction("change_health", lambda amount: _change_health(state, int(amount)))
-    story.BindExternalFunction("change_stress", lambda amount: _change_stress(state, int(amount)))
+    story.BindExternalFunction("change_energy", lambda amount: _change_energy(state, int(amount)))
     story.BindExternalFunction("set_value", lambda key, value: _set_value(state, str(key), value))
     story.BindExternalFunction("add_value", lambda key, amount: _add_value(state, str(key), int(amount)))
     story.BindExternalFunction("start_encounter", lambda encounter_id: _start_encounter(state, str(encounter_id)))
@@ -187,10 +187,10 @@ def _change_health(state: GameState, amount: int) -> None:
     change_health(state, amount, [])
 
 
-def _change_stress(state: GameState, amount: int) -> None:
-    from sincity.rules.progression import change_stress
+def _change_energy(state: GameState, amount: int) -> None:
+    from sincity.rules.progression import change_energy
 
-    change_stress(state, amount, [])
+    change_energy(state, amount, [])
 
 
 def _set_value(state: GameState, key: str, value: Any) -> None:

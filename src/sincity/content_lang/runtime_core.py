@@ -391,7 +391,7 @@ def builtin_world_value(key: Any, initial: Any = False) -> StateBindingValue:
 
 def builtin_world_attr(key: Any) -> StateBindingValue:
     name = binding_name(key)
-    assert name in {"health", "energy", "stress", "force", "charm", "knowledge", "sense"}, f"Unsupported world attr: {name}"
+    assert name in {"health", "energy", "pressure", "force", "charm", "knowledge", "sense"}, f"Unsupported world attr: {name}"
     return StateBindingValue(
         name=name,
         spec=StoreFieldSpec(id=name, kind="value", initial=0, persist="world_attr"),

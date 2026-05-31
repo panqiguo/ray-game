@@ -780,31 +780,6 @@
     nightingale-tasks
     (list
     (task
-      :kind '主线
-      :title "处理神秘物品的鉴定"
-      :desc "东西已经拿回来了。把它送去雷奥那里，等六天，拿回初步结论。等薇拉那条线也走到旅馆，再看看这两案是不是踩进了同一片影子。"
-      :active (and item_recovered (not cases_link_hypothesis_done))
-      :completed cases_link_hypothesis_done
-      :failed false
-      :steps (list
-        (step :title "把东西送去鉴定" :completed item_auth_sent)
-        (step :title "等待鉴定，需要 6 天" :completed auth_done)
-        (step :title "领取雷奥的初步鉴定" :completed leo_report_collected)
-        (step :title "提出两案关联假设" :completed cases_link_hypothesis_done)))
-    (task
-      :kind '主线
-      :title "寻找薇拉"
-      :desc "德雷福雷在电话里给了三个方向：酒吧、老街、废弃区。至少有一个会留下她的痕迹。"
-      :active (and vera_thread_unlocked (not chapter_2_done))
-      :completed chapter_2_done
-      :failed false
-      :steps (list
-        (step :title "在老街三个地方打听薇拉的消息" :completed frederick_real_lead_found)
-        (step :title "和旅馆老板谈判" :completed hotel_boss_talk_done)
-        (step :title "潜入望月旅馆" :completed hotel_infiltrated)
-        (step :title "跟踪得到的线索" :completed vera_apartment_found)
-        (step :title "持枪对峙" :completed chapter_2_done)))
-    (task
       :kind '支线
       :title "酒吧金发女郎"
       :desc "她看起来放荡、轻佻、主动引诱，但这也是她在老街活下来的方式。"
@@ -853,6 +828,7 @@
       (when nightingale_theater_unlocked (剧院))
       (when intrusion_seen (警局))
       (when (or intrusion_seen nightingale_city_day_started) (仓库))
+      (when nightingale_side_job_available (旧码头卸货))
       (when nightingale_bar_unlocked (酒吧))
       (when (or vera_thread_unlocked (and exploitation_incident_active (= exploitation_incident_location 'street))) (老街))
       (when nightingale_waste_unlocked (废弃区))

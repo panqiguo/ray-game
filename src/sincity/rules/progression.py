@@ -1429,10 +1429,10 @@ def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines
     if item.kind == "advance_day":
         state.day += 1
         change_energy(state, -1, extra_lines)
-        for actor_id in state.companion_actor_ids:
+        for actor_id in [state.player_actor_id, *state.companion_actor_ids]:
             actor = state.party.get(actor_id)
             if actor is not None:
-                change_actor_pressure(state, -2, actor_id, extra_lines)
+                change_actor_pressure(state, -1, actor_id, extra_lines)
         remaining = state.world.values.get("gang_days_remaining", 0)
         if isinstance(remaining, int) and remaining > 0:
             state.world.values["gang_days_remaining"] = remaining - 1

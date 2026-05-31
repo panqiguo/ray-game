@@ -102,12 +102,9 @@
     (var 'nightingale_lore_progress (clock :title "夜莺的传说" :desc "经理、宣传、工人——每个人都记得一部分关于夜莺的传闻。拼起来就是一个完整的故事。" :initial 0 :max 3))
     (var 'nightingale_lore_known false)
     (var 'nightingale_docks_direction_known false)
-    (var 'nightingale_second_letter_ready false)
-    (var 'nightingale_second_letter_trigger_day 0)
-    (var 'nightingale_second_letter_harder false)
-    (var 'nightingale_second_letter_intercepted false)
-    (var 'nightingale_second_letter_failed false)
-    (var 'nightingale_second_letter_delivered false)))
+    (var 'nightingale_side_job_clock (clock :title "旧码头卸货" :desc "临时招工，搬几趟箱子换工钱。" :initial 0 :max 4))
+    (var 'nightingale_side_job_available false)
+    (var 'nightingale_side_job_done false)))
 
 (define nightingale-reacts
   (list
@@ -171,7 +168,9 @@
       :then (list
         (effect 'clock- nightingale_trust 1)
         (effect 'set nightingale_trust_checked_day day)
-        (effect 'start-quick-dialogue nightingale-trust-loss-text)))
+        (when (or (= (clock-value nightingale_trust) 7)
+                  (= (clock-value nightingale_trust) 2))
+          (effect 'start-quick-dialogue nightingale-trust-loss-text))))
     (react
       :when (and nightingale_city_day_started
                  (not nightingale_first_letter_done)
@@ -192,7 +191,27 @@
       :then (list
         (effect 'set nightingale_lore_known true)
         (effect 'start-quick-dialogue nightingale-lore-text)))
-  ))
+    (react
+      :when (and nightingale_commission_taken
+                 (not nightingale_side_job_done)
+                 (not nightingale_side_job_available)
+                 (> nightingale_first_letter_due_day 0)
+                 (>= day nightingale_first_letter_due_day))
+      :then (list
+        (effect 'set nightingale_side_job_available true)))
+    (react
+      :when (and nightingale_side_job_available
+                 (not nightingale_side_job_done)
+                 (> day (+ nightingale_first_letter_due_day 1)))
+      :then (list
+        (effect 'set nightingale_side_job_available false)))
+    (react
+      :when (and (clock-filled? nightingale_side_job_clock) (not nightingale_side_job_done))
+      :then (list
+        (effect 'set nightingale_side_job_done true)
+        (effect 'set nightingale_side_job_available false)
+        (effect 'add money 30)
+        (effect 'start-quick-dialogue "# 卸货工钱\n\n# speaker: 工头\n“干完了。这是你的工钱。”")))))
 
 (define nightingale-tasks
   (list
@@ -269,23 +288,19 @@
         (effect 'clock+ nightingale_lore_progress 1)
         (effect 'start-quick-dialogue nightingale-bar-text)))))
 
-(define (nightingale-waste-investigation-action)
-  (when (and nightingale_commission_taken
-             (not nightingale_second_letter_ready)
-             (not nightingale_waste_checked))
-    (action
-      :title "问底层跑腿有没有人替剧院送过信"
-      :desc "如果威胁信是花钱一层层递过去的，最便宜的那一层通常站在这里。"
-      :check (check
-        :suits (list 魅力)
-        :risk 'mid
-        :ok (outcome (list
-          (effect 'set nightingale_waste_checked true)
-          (effect 'clock+ nightingale_first_letter_progress 1)
-          (effect 'start-quick-dialogue nightingale-waste-text)))
-        :partial (outcome (list
-          (effect 'set nightingale_waste_checked true)
-          (effect 'clock+ nightingale_first_letter_progress 1)
-          (effect 'add health -1)
-          (effect 'start-quick-dialogue nightingale-waste-text)))
-        :fail (outcome (list (effect 'add health -1)) "你逼得太近了，他们先让你记住谁的地盘不能白问。")))))
+(define (旧码头卸货)
+  (node
+    :title "旧码头卸货"
+    :desc "码头临时招人手卸货，干一天结一天钱。机会不等人。"
+    :position '(700 520)
+    :show-clocks (list nightingale_side_job_clock)
+    :actions (list
+      (action
+        :title "帮忙卸货"
+        :desc "搬几趟箱子，出点力气换工钱。"
+        :check (check
+          :suits (list 暴力)
+          :risk 'low
+          :ok (outcome (list (effect 'clock+ nightingale_side_job_clock 1)) "你干得利索，工头点头记了一工。")
+          :partial (outcome (list (effect 'clock+ nightingale_side_job_clock 1)) "活不算重，你勉强跟上了节奏。")
+          :fail (outcome (list) "今天不缺人手，你白等了一趟。"))))))

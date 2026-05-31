@@ -41,7 +41,7 @@ class PartyActorState:
     sense: int = 0
     is_player: bool = False
     pressure: int = 0
-    max_pressure: int = 6
+    max_pressure: int = 5
     pressure_locked: bool = False
 
     @property

@@ -11,7 +11,7 @@ class PartyActorDef:
     name: str
     max_health: int
     max_energy: int
-    max_pressure: int = 6
+    max_pressure: int = 5
     force: int = 0
     charm: int = 0
     knowledge: int = 0

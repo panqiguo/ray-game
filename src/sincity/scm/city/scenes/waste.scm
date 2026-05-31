@@ -65,7 +65,6 @@
     :actions (list
       (exploitation-incident-action 'waste)
       (piecework-action)
-      (nightingale-waste-investigation-action)
       (when (and vera_thread_unlocked (not vera_waste_checked))
         (action
           :title "搜索废弃区"

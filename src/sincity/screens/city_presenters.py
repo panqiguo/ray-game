@@ -30,7 +30,8 @@ def present_world_objects(state: GameState) -> tuple[PresentedWorldObject, ...]:
     snapshot = current_world_snapshot(state)
     cards: list[PresentedWorldObject] = []
     for presented in present_location_cards(state, snapshot, snapshot.root_child_location_ids):
-        assert presented.position is not None
+        if presented.position is None:
+            continue
         cards.append(
             PresentedWorldObject(
                 kind="location",

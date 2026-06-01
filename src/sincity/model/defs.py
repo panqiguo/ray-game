@@ -96,6 +96,13 @@ class CheckDef:
 
 
 @dataclass(frozen=True)
+class ActionRevealDef:
+    text: str
+    duration: float = 4.0
+    title: str = ""
+
+
+@dataclass(frozen=True)
 class ActionDef:
     id: str
     title: str
@@ -107,6 +114,8 @@ class ActionDef:
     effects: tuple[Effect, ...] = ()
     conditions: tuple[Condition, ...] = ()
     linked_clock_ids: tuple[str, ...] = ()
+    reveal: ActionRevealDef | None = None
+    button_label: str = ""
 
 
 @dataclass(frozen=True)

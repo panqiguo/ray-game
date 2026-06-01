@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>故事时间线 · 贝城县</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#f7f7f5;
+  background-image:radial-gradient(circle,#c8c8c4 1px,transparent 1px);
+  background-size:24px 24px;
+  font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;
+  color:#1a1a1a;
+  padding:40px 32px 80px;
+  overflow-x:auto;
+}
+
+.page-title{text-align:center;margin-bottom:36px}
+.page-title h1{font-size:18px;font-weight:500;color:#333}
+.page-title p{font-size:12px;color:#bbb;margin-top:5px;letter-spacing:.04em}
+
+/* ── Main grid ── */
+.tl{
+  min-width:1280px;
+  display:grid;
+  grid-template-columns:140px 1.4fr 0.95fr 0.95fr 0.9fr;
+}
+
+/* ── Thread headers ── */
+.corner{}
+.th{margin:0 5px 14px}
+.thi{padding:11px 14px;border-radius:7px;text-align:center}
+.th-name{font-size:13px;font-weight:600;color:#fff;display:block}
+.th-sub{font-size:10px;color:rgba(255,255,255,.7);display:block;margin-top:2px}
+.cn{background:#9a3535}
+.cb{background:#b07020}
+.cg{background:#3a7a50}
+.cs{background:#2d6a8f}
+
+/* ── Chapter label ── */
+.cl{
+  display:flex;flex-direction:column;
+  align-items:flex-end;
+  padding:16px 10px 16px 0;
+  border-right:1.5px solid #ddd;
+}
+.cl-num{font-size:10px;color:#ccc;letter-spacing:.02em}
+.cl-name{font-size:13px;font-weight:500;color:#333;margin-top:2px}
+.cl-day{font-size:10px;color:#ccc;margin-top:2px}
+.cl-locs{
+  margin-top:10px;
+  display:flex;flex-direction:column;align-items:flex-end;gap:3px;
+}
+.cl-loc{
+  font-size:11px;color:#3a7a50;font-weight:500;
+  padding-left:9px;border-left:2px solid #3a7a50;
+}
+
+/* ── Thread cell ── */
+.tc{margin:5px;padding:14px 15px;border-radius:7px;align-self:stretch}
+.on{background:rgba(255,255,255,.78);border:1px solid #e2e2e2}
+.off{background:rgba(200,200,195,.06);border:1px dashed #e2e2e2;min-height:48px}
+.fade{background:rgba(154,53,53,.05);border:1px dashed #d8b0b0}
+
+/* ── Beat items ── */
+.b{font-size:12px;color:#444;line-height:1.55;padding:3px 0 3px 9px;border-left:2px solid transparent}
+.b.key{font-weight:500;color:#1a1a1a;border-left-color:#333}
+.b.red{color:#b03030;border-left-color:#b03030}
+.b.note{font-size:11px;color:#999;padding-left:18px;border-left:none}
+.b.mrg{font-size:11px;color:#8060d0;font-style:italic;border-left:2px solid #9070e0;padding-left:9px}
+.b.loc{font-size:11px;color:#3a7a50;font-weight:500;border-left:2px solid #3a7a50;padding-left:9px}
+.g{height:7px}
+
+/* ── Challenge tag ── */
+.ch{
+  display:inline-flex;align-items:center;gap:5px;
+  background:#e6c455;border-radius:5px;
+  padding:5px 10px;font-size:11px;font-weight:500;color:#5a3e00;
+  margin:6px 0;cursor:default;
+}
+.ch .t{font-size:10px;background:rgba(0,0,0,.1);border-radius:3px;padding:1px 5px;font-weight:400}
+
+/* ── Row separator ── */
+.sep{grid-column:1/-1;height:1px;background:linear-gradient(to right,#eee 0,#d4d4d0 30%,#d4d4d0 70%,#eee);margin:0 5px}
+
+/* ── Footer note ── */
+.foot{
+  margin-top:32px;
+  font-size:11px;color:#999;line-height:1.7;
+  max-width:1200px;
+}
+.foot code{background:#eee;border-radius:3px;padding:1px 5px;font-size:11px}
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>故事时间线 · 贝城县</h1>
+  <p>各故事线并行推进 &nbsp;·&nbsp; 黄色标注挑战场景 &nbsp;·&nbsp; 左侧章节块内联标出大地点解锁</p>
+</div>
+
+<div class="tl">
+
+<!-- ── 列标题 ── -->
+<div class="corner"></div>
+<div class="th"><div class="thi cn"><span class="th-name">夜莺主线</span><span class="th-sub">威胁信 · 送信路线 · 旧码头</span></div></div>
+<div class="th"><div class="thi cb"><span class="th-name">金发女郎</span><span class="th-sub">酒吧暧昧 · 旧名字</span></div></div>
+<div class="th"><div class="thi cg"><span class="th-name">赌徒与赌场</span><span class="th-sub">巷口 · 钟楼 · 地下入口</span></div></div>
+<div class="th"><div class="thi cs"><span class="th-name">生存底盘</span><span class="th-sub">工作 · 债务 · 恢复</span></div></div>
+
+<!-- ══════════ 第一章 ══════════ -->
+<div class="cl">
+  <span class="cl-num">第一章</span>
+  <span class="cl-name">剧院之夜</span>
+  <span class="cl-day">Day 0–3</span>
+  <div class="cl-locs">
+    <span class="cl-loc">► 剧院</span>
+    <span class="cl-loc">► 摊贩 / 黑市 / 诊所 / 废弃区</span>
+  </div>
+</div>
+
+<div class="tc on">
+  <div class="b key">夜莺收到第二封威胁信</div>
+  <div class="b note">开场 react 自动触发：<code>intro_seen</code> → 剧院解锁 → 夜莺开场对白</div>
+  <div class="g"></div>
+  <div class="b">和剧院前门保安交谈</div>
+  <div class="b">在舞台见到夜莺，接下保护委托</div>
+  <div class="b note">3 天倒计时从这一刻开始（<code>nightingale_first_letter_deadline</code>）</div>
+  <div class="g"></div>
+  <div class="b key">搜查剧院（填 <code>theater_search</code> 4/4）</div>
+  <div class="b">入口/侧门 + 后台湿脚印（知识·敏锐 各 +2/1/0）</div>
+  <div class="b">检查第二封威胁信（+1）</div>
+  <div class="b note">进度 ≥2 时解锁化妆间 / 后台通道子节点</div>
+  <div class="b">剧院经理 / 宣传 / 工人对话 → 拼出莱恩之名</div>
+  <div class="g"></div>
+  <div class="b red">搜查满 4 → 后巷可疑人影出现</div>
+  <div class="ch">追上那个鬼祟的人 <span class="t">剧院后巷交锋</span></div>
+  <div class="b red">被人从背后打晕</div>
+  <div class="b loc">► 摊贩 / 黑市 / 诊所 / 废弃区 解锁</div>
+  <div class="g"></div>
+  <div class="b key">三天内追查送信路线</div>
+  <div class="b loc">► 摊贩：打听跑信人（必要）</div>
+  <div class="b note">湿鞋底、剧院后巷方向</div>
+  <div class="b">→ 解锁黑市 | <code>first_letter_progress</code> +1</div>
+  <div class="b loc">► 黑市：100 元买线索（必要）</div>
+  <div class="b note">"背后有人按段付钱"</div>
+  <div class="b">→ 解锁酒吧 | +1</div>
+  <div class="b loc">► 摊贩 ×6 顿（共 36 元，必要）</div>
+  <div class="b">每碗热汤 → <code>restaurant_talk</code> +1</div>
+  <div class="b">填满后：送信小孩 → 旧码头 | +1</div>
+  <div class="g"></div>
+  <div class="b key">三项集齐 → 旧码头解锁</div>
+  <div class="b mrg">夜莺的信任 8/8 初始化；超期每日 -1，归零则委托失败</div>
+  <div class="b red">第二封威胁信拦截口（<code>nightingale_second_letter_ready</code> 尚未接通）</div>
+</div>
+
+<div class="tc off">
+  <div class="b note">bar 节点本身已开放，但「和金发女郎交谈」动作</div>
+  <div class="b note">需要 <code>vera_thread_unlocked</code> → 当前未接通</div>
+  <div class="b mrg">整条支线等待薇拉线接通后才能跑</div>
+</div>
+
+<div class="tc off">
+  <div class="b note">废弃区已开放，但「赌徒碰撞」动作</div>
+  <div class="b note">需要 <code>chapter_2_started</code> → 当前未接通</div>
+  <div class="b mrg">整条支线等待薇拉线接通后才能跑</div>
+</div>
+
+<div class="tc on">
+  <div class="b key">熟悉办公与生存点</div>
+  <div class="b">办公室：睡觉推进天数 · 吃干粮 · 血迹清理</div>
+  <div class="b">诊所：标准治疗 / 康复训练（健康线）</div>
+  <div class="b">黑市：黑市医生 / 高利贷（100 元 · 日息 2）</div>
+  <div class="b">仓库：搬货打散工（高风险，回报高）</div>
+  <div class="b">街边摊贩：吃热汤 / 收摊洗碗</div>
+  <div class="b">赌场：看一晚场子（高风险）</div>
+  <div class="g"></div>
+  <div class="b red">高利贷默认 10 天后扣光现金 + 健康/压力</div>
+  <div class="b red">酒吧小赌欠账累积 → 后巷挨打</div>
+</div>
+
+<div class="sep"></div>
+
+<!-- ══════════ 第二章 ══════════ -->
+<div class="cl">
+  <span class="cl-num">第二章</span>
+  <span class="cl-name">旧码头的莱恩</span>
+  <span class="cl-day">Day 4–8</span>
+  <div class="cl-locs">
+    <span class="cl-loc">► 旧码头</span>
+    <span class="cl-loc">► 码头酒馆 / 莱恩老店铺 / 莱恩新店</span>
+  </div>
+</div>
+
+<div class="tc on">
+  <div class="b key">旧码头调查（填 <code>ryan_lead</code> 4/4）</div>
+  <div class="b loc">► 旧码头</div>
+  <div class="b">和码头工人搭话（敏锐 +1）</div>
+  <div class="b">在小店打听莱恩（魅力 +1）</div>
+  <div class="b">查看旧公告（一次性 +1）</div>
+  <div class="b note">3/4 时弹对话：「线索足够了」 → 解锁酒馆挑战</div>
+  <div class="g"></div>
+  <div class="b loc">► 码头酒馆</div>
+  <div class="ch">和码头人喝酒 <span class="t">拼酒</span></div>
+  <div class="b">成功 → 酒保递旧地址，<code>ryan_address_found = true</code></div>
+  <div class="b red">失败 → 只扣健康，地址没拿到（可再挑战）</div>
+  <div class="g"></div>
+  <div class="b loc">► 莱恩老店铺（地址获得后自动解锁）</div>
+  <div class="b">柜台被砸过，墙上贴着拆迁通知</div>
+  <div class="b note">发件人名字与首演赞助名单有交集</div>
+  <div class="b">检查店内 → 解锁莱恩新店</div>
+  <div class="g"></div>
+  <div class="b loc">► 莱恩新店</div>
+  <div class="b red key">与莱恩正面对峙</div>
+  <div class="b">"我不写恐吓信。查清楚旧街区是谁拆的，再回来跟我谈。"</div>
+  <div class="g"></div>
+  <div class="b red">5 天期限（<code>ryan_deadline</code> 5→0）</div>
+  <div class="b note">到期后夜莺信任每日 -1，7 和 2 时弹对话</div>
+</div>
+
+<div class="tc off">
+  <div class="b note">酒馆节点会渲染，金发女郎对话动作</div>
+  <div class="b note">挂在 <code>ryan_address_found</code> 之后，但具体对话流</div>
+  <div class="b note">还要求 <code>chapter_2_started</code> → 未接通</div>
+  <div class="b mrg">目前酒馆里金发女郎的「点酒累计 8 杯」功能</div>
+  <div class="b mrg">虽然代码挂在吧台动作上，但相关 react 链路靠 Vera 线</div>
+</div>
+
+<div class="tc off">
+  <div class="b note">赌徒线解锁条件同样依赖 <code>chapter_2_started</code></div>
+  <div class="b mrg">废弃区那条「碰撞赌徒」动作目前不可见</div>
+</div>
+
+<div class="tc on">
+  <div class="b key">继续撑住经济</div>
+  <div class="b">仓库搬货 / 赌场看场子（夜莺线期主要现金来源）</div>
+  <div class="b">黑市高利贷（紧急周转用，10 天倒计时）</div>
+  <div class="b">诊所康复训练（健康 3/4 → 满 → 3 点健康）</div>
+  <div class="b">简易康复（3 次，每次低收益）</div>
+  <div class="g"></div>
+  <div class="b mrg">这一章开始，钱与压力管理比第一章更紧</div>
+</div>
+
+<div class="sep"></div>
+
+<!-- ══════════ 待续 ══════════ -->
+<div class="cl">
+  <span class="cl-num">待续</span>
+  <span class="cl-name">Next…</span>
+  <span class="cl-day">Day 9+</span>
+  <div class="cl-locs">
+    <span class="cl-loc muted">► 待接通</span>
+  </div>
+</div>
+
+<div class="tc fade">
+  <div class="b mrg">莱恩否认写恐吓信</div>
+  <div class="b mrg">指向旧街区拆迁幕后（剧院赞助名单 · 城市更新利益链）</div>
+  <div class="b mrg">下一段需要补：<code>nightingale_second_letter_ready</code> 触发条件</div>
+  <div class="b mrg">以及莱恩之后是把线索推回剧院，还是推向真正的上层</div>
+</div>
+
+<div class="tc off"></div>
+<div class="tc off"></div>
+
+<div class="tc fade">
+  <div class="b mrg">这一段都还在 <code>nightingale_story.scm</code> 里</div>
+  <div class="b mrg">等主线结论定了，再决定是否需要单独的「后日谈」循环</div>
+</div>
+
+</div><!-- end .tl -->
+
+<div class="foot">
+  备注：<br>
+  · <b>夜莺主线</b>全流程（<code>intro_seen</code> → 剧院搜查 → 3 天送信 → 旧码头 → 莱恩对峙）在当前 SCM 中可跑通。<br>
+  · <b>金发女郎</b>和<b>赌徒与赌场</b>两条支线在 <code>world-tasks</code> 中已声明，但触发动作被 <code>vera_thread_unlocked</code> / <code>chapter_2_started</code> 卡住——这两者又依赖 <code>intrusion_seen</code>，而 <code>intrusion_seen</code> 当前没有任何 react 置 true。接通时只需要在 <code>city_1.scm</code> 里加一个 react 把 <code>intrusion_seen</code> 置上即可。<br>
+  · <b>第二封威胁信拦截</b>的 <code>nightingale_second_letter_ready</code> 同样未接通，<code>剧院后巷</code> 这个子节点目前渲染但不会真的出现。
+</div>
+
+</body>
+</html>

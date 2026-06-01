@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>故事时间线 · 贝城县调查档案</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#f7f7f5;
+  background-image:radial-gradient(circle,#c8c8c4 1px,transparent 1px);
+  background-size:24px 24px;
+  font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;
+  color:#1a1a1a;
+  padding:40px 32px 80px;
+  overflow-x:auto;
+}
+
+.page-title{text-align:center;margin-bottom:36px}
+.page-title h1{font-size:18px;font-weight:500;color:#333}
+.page-title p{font-size:12px;color:#bbb;margin-top:5px;letter-spacing:.04em}
+
+.tl{
+  min-width:1200px;
+  display:grid;
+  grid-template-columns:90px 1.2fr 1fr 0.8fr 0.7fr;
+}
+
+.th{margin:0 5px 14px}
+.thi{padding:11px 14px;border-radius:7px;text-align:center}
+.th-name{font-size:13px;font-weight:600;color:#fff;display:block}
+.th-sub{font-size:10px;color:rgba(255,255,255,.7);display:block;margin-top:2px}
+.cp{background:#7c5cf6}
+.cm{background:#2d6a8f}
+.cv{background:#9a3535}
+.cs1{background:#b07020}
+.ct{background:#2a7a5a}
+
+.cl{
+  display:flex;flex-direction:column;
+  align-items:flex-end;
+  padding:16px 10px 16px 0;
+  border-right:1.5px solid #ddd;
+}
+.cl-num{font-size:10px;color:#ccc;letter-spacing:.02em}
+.cl-name{font-size:13px;font-weight:500;color:#333;margin-top:2px}
+
+.tc{margin:5px;padding:14px 15px;border-radius:7px;align-self:stretch}
+.on{background:rgba(255,255,255,.78);border:1px solid #e2e2e2}
+.off{background:rgba(200,200,195,.06);border:1px dashed #e2e2e2;min-height:48px}
+.fade{background:rgba(124,92,246,.05);border:1px dashed #c0b0f0}
+
+.b{font-size:12px;color:#444;line-height:1.55;padding:3px 0 3px 9px;border-left:2px solid transparent}
+.b.key{font-weight:500;color:#1a1a1a;border-left-color:#333}
+.b.red{color:#b03030;border-left-color:#b03030}
+.b.note{font-size:11px;color:#999;padding-left:18px;border-left:none}
+.b.mrg{font-size:11px;color:#8060d0;font-style:italic;border-left:2px solid #9070e0;padding-left:9px}
+.b.loc{font-size:11px;color:#3a7a50;font-weight:500;border-left:2px solid #3a7a50;padding-left:9px}
+.g{height:7px}
+
+.ch{
+  display:inline-flex;align-items:center;gap:5px;
+  background:#e6c455;border-radius:5px;
+  padding:5px 10px;font-size:11px;font-weight:500;color:#5a3e00;
+  margin:6px 0;cursor:default;
+}
+.ch .t{font-size:10px;background:rgba(0,0,0,.1);border-radius:3px;padding:1px 5px;font-weight:400}
+
+.sep{grid-column:1/-1;height:1px;background:linear-gradient(to right,#eee 0,#d4d4d0 30%,#d4d4d0 70%,#eee);margin:0 5px}
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>故事时间线 · 贝城县调查档案</h1>
+  <p>各故事线并行推进 &nbsp;·&nbsp; 黄色标注挑战场景 &nbsp;·&nbsp; 绿色标注关键地点解锁</p>
+</div>
+
+<div class="tl">
+
+<!-- ── 列标题 ── -->
+<div class="corner"></div>
+<div class="th"><div class="thi cp"><span class="th-name">夜莺主线</span><span class="th-sub">威胁信 · 送信路线 · 莱恩</span></div></div>
+<div class="th"><div class="thi cm"><span class="th-name">金发女郎</span><span class="th-sub">酒吧暧昧 · 旧名字</span></div></div>
+<div class="th"><div class="thi ct"><span class="th-name">信任关系</span><span class="th-sub">夜莺信任 · 期限压力</span></div></div>
+<div class="th"><div class="thi cs1"><span class="th-name">生存底盘</span><span class="th-sub">工作 · 债务 · 恢复</span></div></div>
+
+<!-- ══════════ 第一节：剧院之夜 ══════════ -->
+<div class="cl"><span class="cl-num">第一节</span><span class="cl-name">剧院之夜</span></div>
+
+<div class="tc on">
+  <div class="b key">夜莺收第二封威胁信</div>
+  <div class="b loc">► 剧院解锁</div>
+  <div class="b">前门保安放行，舞台见到夜莺</div>
+  <div class="b">接手保护委托，3天倒计时开始</div>
+  <div class="g"></div>
+  <div class="b key">搜查剧院（填 theater_search 4/4）</div>
+  <div class="b">搜索入口和侧门（知识/敏锐 +2/1/0）</div>
+  <div class="b">检查第二封威胁信（+1）</div>
+  <div class="b">后台门找湿脚印（知识 +2/1/0）</div>
+  <div class="b note">搜查进度 ≥2 时解锁化妆间/后台通道子节点</div>
+  <div class="b">发现煤灰信纸、湿脚印 → 莱恩名字浮出</div>
+  <div class="g"></div>
+  <div class="b">剧院经理/宣传/工人对话 → lore 收集</div>
+  <div class="g"></div>
+  <div class="b red">搜查满4 → 可疑人影出现</div>
+  <div class="ch">追上那个鬼祟的人 <span class="t">剧院后巷交锋</span></div>
+  <div class="b red">被人从背后打晕</div>
+  <div class="b loc">► 摊贩 / 诊所 / 废弃区 解锁</div>
+</div>
+
+<div class="tc off"></div>
+
+<div class="tc on">
+  <div class="b key">信任建立：8/8</div>
+  <div class="b note">夜莺在床边守到天亮</div>
+  <div class="g"></div>
+  <div class="b">期限：3天内送回信路线</div>
+  <div class="b note">超期后每日信任 -1</div>
+</div>
+
+<div class="tc on">
+  <div class="b key">认识城市入口</div>
+  <div class="b loc">► 办公室</div>
+  <div class="b">睡觉推进时间 · 吃干粮</div>
+  <div class="b">雨夜闯入者（中枪男人）</div>
+  <div class="b note">神秘物品 · 警探上门</div>
+</div>
+
+<div class="sep"></div>
+
+<!-- ══════════ 第二节：城市追踪 ══════════ -->
+<div class="cl"><span class="cl-num">第二节</span><span class="cl-name">城市追踪</span></div>
+
+<div class="tc on">
+  <div class="b key">追查送信路线（3天窗口）</div>
+  <div class="b note">三项条件全部满足后解锁旧码头</div>
+  <div class="g"></div>
+  <div class="b loc">► 摊贩：打听跑信人（必要）</div>
+  <div class="b note">"有个湿透的小子拿着封信跑过这条街，鞋底全是黑泥。"</div>
+  <div class="b">→ 解锁黑市 | +1 调查进度</div>
+  <div class="g"></div>
+  <div class="b loc">► 黑市：100元买线索（必要）</div>
+  <div class="b note">"那小子不是一个人跑的，背后有人按段付钱。"</div>
+  <div class="b">→ 解锁酒吧 | +1 调查进度</div>
+  <div class="g"></div>
+  <div class="b loc">► 摊贩 ×6顿（必要，共36元）</div>
+  <div class="b">每碗热汤 +1 饭摊老板进度</div>
+  <div class="b note">"送信的小孩提到剧院后巷，还提到旧码头那边有人给钱。"</div>
+  <div class="b">→ +1 调查进度</div>
+  <div class="g"></div>
+  <div class="b key">三项集齐 → 送信路线查明 → 旧码头解锁</div>
+  <div class="b note">酒吧/废弃区对话不参与主线推进（仅补 lore）</div>
+  <div class="b">信任 +3</div>
+</div>
+
+<div class="tc off"></div>
+
+<div class="tc on">
+  <div class="b">每日信任 -1（超期后）</div>
+  <div class="b red">信任降至7 → 警告对话</div>
+  <div class="b red">信任降至2 → 二次警告</div>
+  <div class="b red">信任归零 → 委托失败</div>
+  <div class="g"></div>
+  <div class="b mrg">完成送信路线 → 信任 +3</div>
+</div>
+
+<div class="tc on">
+  <div class="b key">打工赚钱</div>
+  <div class="b loc">► 摊贩（低风险 6元）</div>
+  <div class="b loc">► 仓库（高风险 16元）</div>
+  <div class="b loc">► 赌场（高风险 18元）</div>
+  <div class="b loc">► 旧码头卸货（30元）</div>
+  <div class="g"></div>
+  <div class="b">黑市高利贷 / 赌债系统</div>
+  <div class="b note">借100 · 日息2 · 违约扣钱</div>
+</div>
+
+<div class="sep"></div>
+
+<!-- ══════════ 第三节：旧码头的莱恩 ══════════ -->
+<div class="cl"><span class="cl-num">第三节</span><span class="cl-name">旧码头的莱恩</span></div>
+
+<div class="tc on">
+  <div class="b key">调查旧码头（填 ryan_lead 4/4）</div>
+  <div class="b loc">► 旧码头</div>
+  <div class="b">和码头工人搭话（敏锐 +1）</div>
+  <div class="b">在小店打听莱恩（魅力 +1）</div>
+  <div class="b">查看旧公告（一次性 +1）</div>
+  <div class="b note">ryan_lead ≥ 3 → 线索足够，指向码头酒馆</div>
+  <div class="g"></div>
+  <div class="b loc">► 码头酒馆</div>
+  <div class="ch">喝酒交锋 <span class="t">拼酒</span></div>
+  <div class="b red">仅从该 encounter 获得莱恩地址</div>
+  <div class="b">无论胜负 → ryan_address_found = true</div>
+  <div class="b loc">► 莱恩老店铺</div>
+  <div class="b">检查店内 → 拆迁通知·赞助名单交集</div>
+  <div class="b loc">► 莱恩新店</div>
+  <div class="b red">与莱恩对峙</div>
+  <div class="b note">"我不写恐吓信。查清楚旧街区是谁拆的，再回来跟我谈。"</div>
+  <div class="g"></div>
+  <div class="b red">5天期限（ryan_deadline 5→0）</div>
+  <div class="b note">到期后夜间信任每日 -1，7和2时弹出对话</div>
+</div>
+
+<div class="tc on">
+  <div class="b key">金发女郎（酒馆内触发）</div>
+  <div class="b note">需 ryan_address_found 解锁</div>
+  <div class="b">1. 初次交谈 → 冷遇</div>
+  <div class="b">2. 点8杯酒 → 填满进度</div>
+  <div class="b red">需 chapter_2_started 才能触发下一步</div>
+  <div class="b">3. 调情（+1压力）</div>
+  <div class="b">4. 赶占便宜的客人</div>
+  <div class="ch">酒吧赶客人 <span class="t">冲突</span></div>
+  <div class="b">5. 暧昧奖励</div>
+  <div class="b">6. 旧名字——玛丽</div>
+  <div class="b key">"你要真在找薇拉，就去问问玛丽"</div>
+</div>
+
+<div class="tc on">
+  <div class="b">超期后信任每日 -1</div>
+  <div class="b note">旧码头5天窗口</div>
+  <div class="g"></div>
+  <div class="b mrg">对峙完成 → 信任稳定</div>
+</div>
+
+<div class="tc on">
+  <div class="b">废弃区赌徒支线</div>
+  <div class="b note">3天等待 → 地下赌场解锁</div>
+  <div class="g"></div>
+  <div class="b">医疗恢复</div>
+  <div class="b note">黑市医生 · 正规诊所 · 康复训练</div>
+</div>
+
+<div class="sep"></div>
+
+<!-- ══════════ 待续 ══════════ -->
+<div class="cl"><span class="cl-num">待续</span><span class="cl-name">Next…</span></div>
+
+<div class="tc fade">
+  <div class="b mrg">莱恩否认写恐吓信</div>
+  <div class="b mrg">指向旧街区拆迁幕后</div>
+  <div class="b note">剧院赞助名单 · 城市更新利益链</div>
+  <div class="g"></div>
+  <div class="b mrg">下一章：拆迁线 · 赞助人 · 慈善晚宴</div>
+</div>
+
+<div class="tc fade">
+  <div class="b mrg">玛丽线索 → 薇拉线入口</div>
+  <div class="b note">幸存者网络 · 红房间</div>
+</div>
+
+<div class="tc off"></div>
+
+<div class="tc fade">
+  <div class="b mrg">生存压力持续</div>
+  <div class="b mrg">赌场成为固定收入来源</div>
+</div>
+
+</div><!-- end .tl -->
+</body>
+</html>

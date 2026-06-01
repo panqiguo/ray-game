@@ -210,6 +210,8 @@ class ActionTemplate:
     effects: tuple[Effect, ...] = ()
     conditions: tuple[Any, ...] = ()
     check: CheckTemplate | None = None
+    reveal: Any = None
+    button_label: str = ""
 
 
 @dataclass(frozen=True)

@@ -158,6 +158,15 @@ class RenderCacheState:
 
 
 @dataclass
+class ActiveActionRevealState:
+    action_id: str
+    title: str
+    text: str
+    elapsed: float = 0.0
+    duration: float = 4.0
+
+
+@dataclass
 class NotificationState:
     id: int
     kind: str
@@ -193,6 +202,7 @@ class GameState:
     active_dialogue: ActiveDialogueState | None = None
     last_resolution: ActionResolution | None = None
     pending_resolution: PendingResolutionState | None = None
+    action_reveal: ActiveActionRevealState | None = None
     action_log: list[str] = field(default_factory=list)
     ending_id: str | None = None
     ending_title: str = ""

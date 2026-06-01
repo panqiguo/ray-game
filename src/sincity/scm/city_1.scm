@@ -133,6 +133,12 @@
         :conditions (list (has-item 'food 1 "需要干粮"))
         :inputs (list (item 'food 1 "干粮"))
         :effects (list (effect 'add energy 3)))
+      (action
+        :title "检查办公桌"
+        :desc "桌面上堆着文件、空咖啡杯和一只倒扣的相框。"
+        :button "检查"
+        :reveal (reveal
+          :text "相框里是一张黑白照片——一个女人的侧脸，背景是某个游乐园的摩天轮。照片边缘被反复摩挲过，但你还是看不出她是谁。"))
       (when (and intrusion_seen (not blood_cleaned))
         (action
           :title "清理地板上的血迹"

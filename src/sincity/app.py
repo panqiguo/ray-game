@@ -15,7 +15,7 @@ from sincity.dialogue_compile import compile_dialogues
 from sincity.content.validate import validate_content
 from sincity.rendering import configure_gui_theme, draw_text, load_ui_font, unload_ui_font
 from sincity.rules.notifications import advance_notifications
-from sincity.rules.progression import advance_pending_resolution, start_new_run
+from sincity.rules.progression import advance_action_reveal, advance_pending_resolution, start_new_run
 from sincity.screens import draw_current_screen
 from sincity.screens.debug_panel import draw_debug_panel
 from sincity.screens.input_regions import register_screen_input_regions
@@ -61,6 +61,7 @@ class GameApp:
             self.state.pending_restart = False
             self.reset_run()
         advance_pending_resolution(self.state, self.rng, get_frame_time())
+        advance_action_reveal(self.state, get_frame_time())
         advance_notifications(self.state, get_frame_time())
 
     def restart_process(self) -> None:

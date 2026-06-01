@@ -31,6 +31,7 @@ from sincity.encounters.lispy import Environment, Procedure, SpecialFormProcedur
 from sincity.labels import lookup_input_label
 from sincity.model.defs import (
     ActionDef,
+    ActionRevealDef,
     AddFieldPayload,
     CheckDef,
     CheckFactorDef,
@@ -95,6 +96,9 @@ def validate_scene_template(scene: SceneTemplate) -> None:
         validate_scene_template(child)
 
 
+_MODAL_EFFECTS = frozenset({"start_dialogue", "start_quick_dialogue", "start_encounter"})
+
+
 def validate_action_template(action: ActionTemplate) -> None:
     for condition in action.conditions:
         assert isinstance(condition, Condition), f"action contains non-condition value: {condition!r}"
@@ -106,6 +110,17 @@ def validate_action_template(action: ActionTemplate) -> None:
         assert isinstance(effect, Effect), f"action contains non-effect value: {effect!r}"
     if action.check is not None:
         build_check(action.check)
+    if action.reveal is not None:
+        assert action.check is None, "reveal action cannot have :check"
+        assert not action.inputs, "reveal action cannot have :inputs"
+        assert isinstance(action.reveal, ActionRevealDef), f"reveal must be an ActionRevealDef, got: {action.reveal!r}"
+        for effect in action.before:
+            assert effect.kind not in _MODAL_EFFECTS, f"reveal action cannot have modal effect: {effect.kind}"
+        for effect in action.effects:
+            assert effect.kind not in _MODAL_EFFECTS, f"reveal action cannot have modal effect: {effect.kind}"
+    if action.button_label:
+        assert action.check is None, "custom :button label is only allowed on instant/reveal actions"
+        assert action.button_label.strip(), ":button must not be empty"
 
 
 def validate_react_template(react: ReactTemplate) -> None:
@@ -157,6 +172,9 @@ def validate_schema_forms(
                 return
             assert isinstance(value, ActionTemplate), f"action form did not produce action template: {value!r}"
             validate_action_template(value)
+        elif head_name == "reveal":
+            value = evaluate(expr, env)
+            assert isinstance(value, ActionRevealDef), f"reveal form did not produce ActionRevealDef: {value!r}"
         elif head_name == "check":
             value = evaluate(expr, env)
             assert isinstance(value, CheckTemplate), f"check form did not produce check template: {value!r}"
@@ -322,6 +340,7 @@ def host_values(*, store_specs: dict[str, StoreFieldSpec], store: dict[str, Any]
         "node": lambda *args: builtin_scene(args),
         "scene": lambda *args: builtin_scene(args),
         "action": lambda *args: builtin_action(args),
+        "reveal": lambda *args: builtin_reveal(args),
         "check": lambda *args: builtin_check(args),
         "factor": lambda *args: builtin_check_factor(args),
         "outcome": lambda *args: builtin_outcome(args),
@@ -422,12 +441,28 @@ def builtin_scene(args: tuple[Any, ...]) -> SceneTemplate:
     )
 
 
+def builtin_reveal(args: tuple[Any, ...]) -> ActionRevealDef:
+    kwargs = keyword_args(list(args), allowed={":text", ":duration", ":title"})
+    text = keyword_string(kwargs, ":text")
+    duration = float(unwrap(kwargs.get(":duration", 3.0)))
+    title = keyword_string(kwargs, ":title", default="")
+    assert text.strip(), ":reveal :text must not be empty"
+    assert duration > 0, ":reveal :duration must be positive"
+    return ActionRevealDef(text=text, duration=duration, title=title)
+
+
 def builtin_action(args: tuple[Any, ...]) -> ActionTemplate:
-    kwargs = keyword_args(list(args), allowed={":title", ":desc", ":position", ":conditions", ":inputs", ":always", ":effects", ":check"})
+    kwargs = keyword_args(list(args), allowed={":title", ":desc", ":position", ":conditions", ":inputs", ":always", ":effects", ":check", ":reveal", ":button"})
     check = kwargs.get(":check")
     effects = as_effect_tuple(kwargs.get(":effects"))
     before = as_effect_tuple(kwargs.get(":always"))
+    reveal = kwargs.get(":reveal")
+    button = keyword_string(kwargs, ":button", default="")
     assert check is None or not effects, "Action cannot have both :check and :effects."
+    assert reveal is None or check is None, "Action cannot have both :check and :reveal."
+    assert reveal is None or not kwargs.get(":inputs"), "Reveal actions cannot have :inputs."
+    if button:
+        assert button.strip(), ":button must not be empty"
     return ActionTemplate(
         title=keyword_string(kwargs, ":title"),
         description=keyword_string(kwargs, ":desc", default=""),
@@ -437,6 +472,8 @@ def builtin_action(args: tuple[Any, ...]) -> ActionTemplate:
         effects=effects,
         conditions=tuple(item for item in as_list(kwargs.get(":conditions")) if item is not None),
         check=check,
+        reveal=reveal,
+        button_label=button,
     )
 
 
@@ -915,6 +952,8 @@ def _render_action(program: Any, action: ActionTemplate, *, scene_path: tuple[st
         effects=action.before if action.check is not None else (*action.before, *action.effects),
         conditions=tuple(action.conditions),
         check=build_check(action.check) if action.check is not None else None,
+        reveal=action.reveal,
+        button_label=action.button_label,
     )
     handle = ActionHandle(action_id=action_id, scene_path=scene_path, slot_index=source_index, action_key=action_key)
     return RenderedAction(handle=handle, action=replace(action_def, id=action_id))

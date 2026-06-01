@@ -28,8 +28,8 @@
   :meta (meta :key '码头酒馆喝酒交锋 :title "码头酒馆喝酒交锋" :desc "在不欢迎陌生人的酒桌上，喝倒他们，问出莱恩的旧地址。")
   :on-success (list
     (effect 'set 'ryan_address_found true)
-    (effect 'set 'ryan_old_shop_unlocked true)
-    (effect 'start-quick-dialogue "# 莱恩的旧地址\n\n# speaker: 酒保\n“东货栈后面的巷子。以前有间五金店，招牌早烂了。”\n\n# speaker: 科尔\n他说的是旧地址，不是现在的落脚点。但旧地址往往比新地址更诚实。"))
+    (effect 'set 'helen_boarding_unlocked true)
+    (effect 'start-quick-dialogue "# 老海伦的名字\n\n# speaker: 酒保\n“你想找莱恩以前的事，别直接去旧店。先找老海伦。她那栋寄宿公寓还没拆干净。”\n\n# speaker: 科尔\n他说的不是新地址，也不是完整答案。可旧码头这种地方，活人的嘴往往比门牌更难撬开。"))
   :on-fail (list
     (effect 'add 'health -1)
     (effect 'start-quick-dialogue "# 酒桌败退\n\n# speaker: 科尔\n你被灌得太狠，醒来时只记得几张笑脸和桌上的酒渍。\n\n莱恩的地址还没问出来。"))

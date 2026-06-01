@@ -248,6 +248,10 @@
       :steps (list
         (step :title "在旧码头打听莱恩" :completed ryan_tavern_challenge_unlocked)
         (step :title "在码头酒馆问出莱恩的地址" :completed ryan_address_found)
+        (step :title "找到老海伦的寄宿公寓" :completed helen_boarding_unlocked)
+        (step :title "让老海伦开口" :completed helen_asleep)
+        (step :title "偷偷搜索房间，拿到旧照片" :completed helen_room_searched)
+        (step :title "脱身，发现有人在跟踪你" :completed ryan_followed_after_helen)
         (step :title "调查莱恩的老店铺" :completed ryan_old_shop_checked)
         (step :title "去莱恩的新店找他" :completed ryan_new_shop_unlocked)
         (step :title "与莱恩第一次正面对峙" :completed ryan_confronted)))))

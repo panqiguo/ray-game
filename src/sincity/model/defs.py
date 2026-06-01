@@ -98,7 +98,7 @@ class CheckDef:
 @dataclass(frozen=True)
 class ActionRevealDef:
     text: str
-    duration: float = 4.0
+    duration: float = 3.0
     title: str = ""
 
 

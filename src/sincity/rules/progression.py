@@ -18,6 +18,7 @@ from sincity.model.state import (
     ActiveEncounterState,
     ActionAssemblyState,
     ActionResolution,
+    ActiveActionRevealState,
     AttributeState,
     CardHintFlashState,
     DeckState,
@@ -664,6 +665,7 @@ def open_action(state: GameState, action_id: str, modal_kind: str = "action") ->
 
 def open_modal(state: GameState, kind: str, primary_id: str | None = None) -> None:
     dismiss_pending_resolution(state)
+    clear_action_reveal(state)
     state.modal.stacked_frames.clear()
     state.modal.return_kind = ""
     state.modal.return_primary_id = None
@@ -678,6 +680,7 @@ def open_modal(state: GameState, kind: str, primary_id: str | None = None) -> No
 
 def open_overlay(state: GameState, kind: str, primary_id: str | None = None) -> None:
     dismiss_pending_resolution(state)
+    clear_action_reveal(state)
     assert state.modal.kind, "overlay requires an active base modal"
     state.modal.stacked_frames.append(ModalFrame(kind=state.modal.kind, primary_id=state.modal.primary_id))
     state.modal.return_kind = ""
@@ -687,6 +690,7 @@ def open_overlay(state: GameState, kind: str, primary_id: str | None = None) -> 
 
 
 def clear_assembly(state: GameState) -> None:
+    clear_action_reveal(state)
     state.assembly = ActionAssemblyState()
 
 
@@ -858,6 +862,7 @@ def end_game(state: GameState, *, title: str = "游戏结束", body: str = "") -
 def focus_action(state: GameState, action_id: str) -> None:
     if state.assembly.action_id == action_id:
         return
+    clear_action_reveal(state)
     state.assembly = ActionAssemblyState(action_id=action_id)
 
 
@@ -1013,7 +1018,7 @@ def requirement_is_slotted(state: GameState, requirement: InputRequirement) -> b
 def action_ready_to_execute(action: ActionDef, state: GameState) -> bool:
     if not action_is_available(action, state):
         return False
-    if action.check is None and not action.effects:
+    if action.check is None and not action.effects and action.reveal is None:
         return False
     for requirement in action.inputs:
         if not requirement_is_slotted(state, requirement):
@@ -1031,6 +1036,21 @@ def action_ready_to_execute(action: ActionDef, state: GameState) -> bool:
 
 def action_requires_energy_slot(action: ActionDef) -> bool:
     return action.check is not None
+
+
+def action_is_direct(action: ActionDef) -> bool:
+    """Action with no check, no inputs, no energy slot — just a button to execute."""
+    return action.check is None and not action.inputs
+
+
+def action_is_reveal(action: ActionDef) -> bool:
+    """Action that reveals a lightweight text on the card after execution."""
+    return action_is_direct(action) and action.reveal is not None
+
+
+def action_is_instant(action: ActionDef) -> bool:
+    """Direct action without reveal — just effects, no text feedback overlay."""
+    return action_is_direct(action) and action.reveal is None and bool(action.effects)
 
 
 def current_action(state: GameState) -> ActionDef | None:
@@ -1110,6 +1130,54 @@ def perform_current_action(state: GameState, rng: RandomSource) -> None:
             acting_actor_id=state.acting_actor_id,
         )
     clear_selected_input(state)
+
+
+def perform_instant_action(state: GameState, action: ActionDef, rng: RandomSource) -> None:
+    assert action_is_instant(action), f"Action is not an instant action: {action.id}"
+    assert action_is_available(action, state), f"Instant action not available: {action.id}"
+    clear_assembly(state)
+    clear_selected_input(state)
+    extra_lines: list[str] = []
+    _apply_effects(action.effects, state, rng, extra_lines)
+    log_text = action.title + ("：" + "，".join(extra_lines[:1]) if extra_lines else "")
+    _push_log(state, log_text)
+    _check_endings(state)
+
+
+def perform_reveal_action(state: GameState, action: ActionDef, rng: RandomSource) -> None:
+    assert action_is_reveal(action), f"Action is not a reveal action: {action.id}"
+    assert action_is_available(action, state), f"Reveal action not available: {action.id}"
+    clear_assembly(state)
+    clear_selected_input(state)
+    if action.effects:
+        extra_lines: list[str] = []
+        _apply_effects(action.effects, state, rng, extra_lines)
+        log_text = action.title + ("：" + "，".join(extra_lines[:1]) if extra_lines else "")
+        _push_log(state, log_text)
+    else:
+        _push_log(state, action.title)
+    reveal = action.reveal
+    assert reveal is not None
+    state.action_reveal = ActiveActionRevealState(
+        action_id=action.id,
+        title=reveal.title or action.title,
+        text=reveal.text,
+        duration=reveal.duration,
+    )
+    _check_endings(state)
+
+
+def advance_action_reveal(state: GameState, dt: float) -> None:
+    reveal = state.action_reveal
+    if reveal is None:
+        return
+    reveal.elapsed += dt
+    if reveal.elapsed >= reveal.duration:
+        clear_action_reveal(state)
+
+
+def clear_action_reveal(state: GameState) -> None:
+    state.action_reveal = None
 
 
 def advance_pending_resolution(state: GameState, rng: RandomSource, dt: float) -> None:

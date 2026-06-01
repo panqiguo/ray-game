@@ -3,7 +3,7 @@ from __future__ import annotations
 from pyray import *  # type: ignore
 
 from sincity.model.defs import ActionDef
-from sincity.model.state import GameState, PendingResolutionState
+from sincity.model.state import ActiveActionRevealState, GameState, PendingResolutionState
 from sincity.rendering import draw_text
 from sincity.rules.judgment import RESULT_TABLE, clamp_action_value
 from sincity.rules import (
@@ -13,6 +13,8 @@ from sincity.rules import (
     open_modal,
     open_overlay,
     perform_current_action,
+    perform_instant_action,
+    perform_reveal_action,
     toggle_action_energy_slot,
     toggle_action_requirement_slot,
 )
@@ -206,15 +208,26 @@ def draw_action_card(font: Font | None, state: GameState, presented: PresentedAc
     draw_table_card(font, rect, state, presented.card, scale=scale)
     draw_action_factor_sidebars(font, rect, presented, scale=scale)
 
-    button_rects: tuple[Rectangle, Rectangle] | None = None
+    mode = presented.attachment.mode if presented.attachment is not None else ""
+    is_direct = mode in ("instant_ready", "reveal_ready")
+    is_revealing = mode == "reveal"
+
+    button_rects: tuple[Rectangle, Rectangle] | tuple[Rectangle] | None = None
     button_z = current_layer_z() + 1
-    if presented.attachment is not None:
-        button_strip = Rectangle(rect.x + 18.0 * scale, rect.y + rect.height + 8.0 * scale, rect.width - 36.0 * scale, 24.0 * scale)
-        retract_rect = Rectangle(button_strip.x, button_strip.y, 78.0 * scale, 22.0 * scale)
-        execute_rect = Rectangle(button_strip.x + button_strip.width - 78.0 * scale, button_strip.y, 78.0 * scale, 22.0 * scale)
-        register_input_region("action_retract_button", retract_rect, z=button_z)
-        register_input_region("action_execute_button", execute_rect, z=button_z, interactive=presented.attachment.can_execute)
-        button_rects = (retract_rect, execute_rect)
+    if presented.attachment is not None and not is_revealing:
+        if is_direct:
+            btn_w = 78.0 * scale
+            btn_h = 22.0 * scale
+            execute_rect = Rectangle(rect.x + (rect.width - btn_w) * 0.5, rect.y + rect.height - 32.0 * scale, btn_w, btn_h)
+            register_input_region("action_execute_button", execute_rect, z=button_z, interactive=presented.attachment.can_execute)
+            button_rects = (execute_rect,)
+        else:
+            button_strip = Rectangle(rect.x + 18.0 * scale, rect.y + rect.height + 8.0 * scale, rect.width - 36.0 * scale, 24.0 * scale)
+            retract_rect = Rectangle(button_strip.x, button_strip.y, 78.0 * scale, 22.0 * scale)
+            execute_rect = Rectangle(button_strip.x + button_strip.width - 78.0 * scale, button_strip.y, 78.0 * scale, 22.0 * scale)
+            register_input_region("action_retract_button", retract_rect, z=button_z)
+            register_input_region("action_execute_button", execute_rect, z=button_z, interactive=presented.attachment.can_execute)
+            button_rects = (retract_rect, execute_rect)
 
     metadata_rows = max(0, len(presented.card.metadata) - 1)
     slot_y = rect.y + (124.0 + metadata_rows * 18.0) * scale
@@ -233,9 +246,22 @@ def draw_action_card(font: Font | None, state: GameState, presented: PresentedAc
         slot_y += 40.0 * scale
 
     if presented.attachment is not None:
-        preview_rect = Rectangle(rect.x + 14.0 * scale, rect.y + rect.height - 90.0 * scale, rect.width - 28.0 * scale, 68.0 * scale)
-        assert button_rects is not None
-        draw_action_attachment(font, state, action, presented, preview_rect, button_rects, rng, pending, scale=scale, button_z=button_z)
+        if is_revealing:
+            reveal_attachment_h = 14.0 * scale
+            preview_rect = Rectangle(rect.x + 2.0 * scale, rect.y + rect.height - reveal_attachment_h, rect.width - 4.0 * scale, reveal_attachment_h)
+            draw_reveal_progress_bar(font, preview_rect, state.action_reveal, scale=scale)
+        elif is_direct:
+            execute_rect = button_rects[0]
+            label = action.button_label or "执行"
+            if pill(font, execute_rect, label, False, disabled=not presented.attachment.can_execute, scale=scale, z=button_z):
+                if mode == "reveal_ready":
+                    perform_reveal_action(state, action, rng)
+                else:
+                    perform_instant_action(state, action, rng)
+        else:
+            preview_rect = Rectangle(rect.x + 14.0 * scale, rect.y + rect.height - 90.0 * scale, rect.width - 28.0 * scale, 68.0 * scale)
+            assert button_rects is not None
+            draw_action_attachment(font, state, action, presented, preview_rect, button_rects, rng, pending, scale=scale, button_z=button_z)
     elif presented.card.disabled:
         disabled_style = ui_text_style("body_sm", "subtle", scale=scale, minimum_size=10)
         draw_text(font, "条件未满足或当前资源不足。", int(rect.x + 14.0 * scale), int(rect.y + rect.height - 26.0 * scale), disabled_style.size, disabled_style.color)
@@ -289,7 +315,7 @@ def draw_action_attachment(
     action: ActionDef,
     presented: PresentedActionCard,
     rect: Rectangle,
-    button_rects: tuple[Rectangle, Rectangle],
+    button_rects: tuple[Rectangle, Rectangle] | tuple[Rectangle],
     rng,
     pending: PendingResolutionState | None,
     scale: float = 1.0,
@@ -300,9 +326,11 @@ def draw_action_attachment(
         draw_pending_attachment(font, state, rect, button_rects, pending, scale=scale, button_z=button_z)
         return
     assert presented.attachment is not None
+    mode = presented.attachment.mode
+
     title_style = ui_text_style(
         "body",
-        "warning" if presented.attachment.mode == "preview" and presented.attachment.row else "muted",
+        "warning" if mode == "preview" and presented.attachment.row else "muted",
         scale=scale,
         minimum_size=10,
     )
@@ -360,6 +388,18 @@ def draw_pending_attachment(font: Font | None, state: GameState, rect: Rectangle
         )
     else:
         draw_text(font, "结果会在这张卡下面落定。", int(rect.x + 10.0 * scale), int(rect.y + 44.0 * scale), body_style.size, title_style.color)
+
+
+def draw_reveal_progress_bar(font: Font | None, rect: Rectangle, reveal: ActiveActionRevealState | None, scale: float = 1.0) -> None:
+    if reveal is None:
+        return
+    progress = min(1.0, reveal.elapsed / reveal.duration) if reveal.duration > 0 else 0.0
+    filled_w = rect.width * progress
+    bar_color = Color(104, 122, 142, 200)
+    bg_color = Color(32, 36, 44, 200)
+    draw_frame(Rectangle(rect.x, rect.y, rect.width, rect.height), bg_color, Color(18, 20, 26, 255))
+    if filled_w > 2.0:
+        draw_frame(Rectangle(rect.x, rect.y, filled_w, rect.height), bar_color, Color(18, 20, 26, 255))
 
 
 def toggle_presented_slot(state: GameState, action: ActionDef, slot: ActionSlotModel) -> None:

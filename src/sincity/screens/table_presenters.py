@@ -7,10 +7,13 @@ from sincity.model.enums import ResultType, RISK_LABELS, SUIT_LABELS
 from sincity.model.state import GameState, PendingResolutionState
 from sincity.rules import (
     action_can_accept_selected_input,
-    action_requires_energy_slot,
     action_is_available,
+    action_is_direct,
+    action_is_instant,
+    action_is_reveal,
     action_is_visible,
     action_ready_to_execute,
+    action_requires_energy_slot,
     action_slot_ready,
     first_usable_energy_slot,
     location_is_available,
@@ -125,6 +128,9 @@ def present_action_card(state: GameState, action: ActionDef) -> PresentedActionC
     active = state.assembly.action_id == action.id
     available = action_is_available(action, state)
     pending = state.pending_resolution if state.pending_resolution and state.pending_resolution.resolution.action_id == action.id else None
+
+    is_revealing = state.action_reveal is not None and state.action_reveal.action_id == action.id
+
     metadata: tuple[str, ...] = ()
     if action.check is not None:
         suits = "通用" if not action.check.suits else " / ".join(SUIT_LABELS[suit] for suit in action.check.suits)
@@ -132,28 +138,29 @@ def present_action_card(state: GameState, action: ActionDef) -> PresentedActionC
     return PresentedActionCard(
         action=action,
         card=TableCardModel(
-            title=action.title,
-            body=action.description,
+            title=action.title if not is_revealing else (state.action_reveal.title or action.title),
+            body=action.description if not is_revealing else state.action_reveal.text,
             labels=action_corner_labels(action, state),
             clock_ids=(),
-            active=active,
+            active=active or is_revealing,
             disabled=not available,
             style=ACTION_CARD,
             metadata=metadata,
             interactive=False,
         ),
-        slots=_present_action_slots(state, action, pending is not None),
-        attachment=_present_action_attachment(state, action, pending),
+        slots=_present_action_slots(state, action, pending is not None, is_revealing=is_revealing),
+        attachment=_present_action_attachment(state, action, pending, is_revealing=is_revealing),
         actor_factors=_actor_factor_previews(state, action),
         environment_factors=_environment_factor_previews(action),
         position=action.position,
     )
 
 
-def _present_action_slots(state: GameState, action: ActionDef, has_pending: bool) -> tuple[ActionSlotModel, ...]:
+def _present_action_slots(state: GameState, action: ActionDef, has_pending: bool, *, is_revealing: bool = False) -> tuple[ActionSlotModel, ...]:
+    if is_revealing or action_is_direct(action):
+        return ()
     locked = state.pending_resolution is not None and not has_pending
     available = action_is_available(action, state)
-    executable = action.check is not None or bool(action.effects)
     slots: list[ActionSlotModel] = []
     if action_requires_energy_slot(action):
         slots.append(
@@ -178,17 +185,6 @@ def _present_action_slots(state: GameState, action: ActionDef, has_pending: bool
                 requirement=requirement,
             )
         )
-    if action.check is None and not action_requires_energy_slot(action) and not action.inputs and executable:
-        slots.append(
-            ActionSlotModel(
-                key="auto",
-                label="自动就绪",
-                filled=state.assembly.action_id == action.id,
-                receptive=available and (not state.assembly.action_id == action.id) and (not locked),
-                disabled=not available,
-                slot_kind="auto",
-            )
-        )
     return tuple(slots)
 
 
@@ -196,6 +192,8 @@ def _present_action_attachment(
     state: GameState,
     action: ActionDef,
     pending: PendingResolutionState | None,
+    *,
+    is_revealing: bool = False,
 ) -> ActionAttachmentModel | None:
     if pending is not None:
         resolution = pending.resolution
@@ -209,7 +207,23 @@ def _present_action_attachment(
             result_text=resolution.text if pending.settled else "",
             effect_text=" | ".join(resolution.effect_lines[:2]) if pending.settled and resolution.effect_lines else "",
         )
+    if is_revealing:
+        return ActionAttachmentModel(
+            mode="reveal",
+            title="",
+            hint="",
+        )
     if state.assembly.action_id != action.id:
+        if action_is_reveal(action):
+            return ActionAttachmentModel(
+                mode="reveal_ready", title="", hint="",
+                can_execute=action_is_available(action, state) and not is_resolving(state),
+            )
+        if action_is_instant(action):
+            return ActionAttachmentModel(
+                mode="instant_ready", title="", hint="",
+                can_execute=action_is_available(action, state) and not is_resolving(state),
+            )
         return None
     if action.check is None and not action.effects:
         return None

@@ -675,8 +675,14 @@ def _parse_atom(token: str) -> SexpNode:
         return True
     if token == "false":
         return False
-    if token.lstrip("-+").isdigit():
+    try:
         return int(token)
+    except ValueError:
+        pass
+    try:
+        return float(token)
+    except ValueError:
+        pass
     return token
 
 

@@ -6,7 +6,7 @@
     :title title
     :desc desc
     :check (check
-      :suits (list suit)
+      :suit suit
       :risk 'mid
       :ok (outcome (list (effect 'clock+ nightingale_theater_search 2)) "线索被你按回了正确的位置。")
       :partial (outcome (list (effect 'clock+ nightingale_theater_search 1) (effect 'add pressure 1)) "你找到了点东西，但剧院里的人和声音都在消耗注意力。")
@@ -98,6 +98,66 @@
           :effects (list
             (effect 'start-encounter '拦截第二封威胁信)))))))
 
+(define (坠落灯架)
+  (node
+    :title "坠落灯架"
+    :desc "绳索、灯架和碎木还没被清走。每多待一会儿，剧院的人就越急着把现场恢复成一场可以解释的意外。"
+    :show-clocks (list
+      (when (not theater_accident_clue_found) theater_accident_clue))
+    :actions (list
+      (when (not theater_accident_clue_found)
+        (action
+          :title "检查断裂吊绳"
+          :desc "绳口像被事故扯断，也像被人提前做过手脚。你得在工人收走它之前看清楚。"
+          :check (check
+            :suit 敏锐
+            :risk 'high
+            :ok (outcome (list (effect 'clock+ theater_accident_clue 2)) "你在断口里看见不自然的切痕。")
+            :partial (outcome (list (effect 'clock+ theater_accident_clue 1) (effect 'add pressure 1)) "你看出绳子不对，但剧院经理一直催你离开。")
+            :fail (outcome (list (effect 'add pressure 2)) "你刚碰到绳子，后台工人就围了上来，没人愿意让外人把事故说复杂。"))))
+      (when (not theater_accident_clue_found)
+        (action
+          :title "取出灯架下的金属楔片"
+          :desc "有个小东西卡在灯架和地板之间。它不该出现在这里，也不容易安全拿出来。"
+          :check (check
+            :suit 知识
+            :risk 'high
+            :ok (outcome (list (effect 'clock+ theater_accident_clue 2)) "你把楔片取出来，边缘的新痕和剧院的旧固定件对不上。")
+            :partial (outcome (list (effect 'clock+ theater_accident_clue 1) (effect 'add health -1)) "楔片被你撬松了，手背也被碎木划开。")
+            :fail (outcome (list (effect 'add health -1) (effect 'add pressure 1)) "灯架突然下沉半寸，你只能先抽手，血顺着指节往下滴。")))))))
+
+(define (后台道具间)
+  (node
+    :title "后台道具间"
+    :desc "道具箱翻倒，急救箱半开，备用工具散在地上。这里不一定有真相，但有今晚可能用得上的东西。"
+    :show-clocks (list
+      (when (not theater_accident_supplies_found) theater_accident_supplies)
+      (when (and theater_accident_cleanup_started
+                 (not theater_accident_supplies_found)
+                 (not (clock-filled? theater_accident_cleanup)))
+        theater_accident_cleanup))
+    :actions (list
+      (when (not theater_accident_supplies_found)
+        (action
+          :title "翻找散落的急救箱"
+          :desc "伤员被带走得太快，急救箱里可能还剩下一点能撑过今晚的东西。"
+          :check (check
+            :suit 敏锐
+            :risk 'mid
+            :ok (outcome (list (effect 'clock+ theater_accident_supplies 2)) "你找到绷带、止血粉和一小瓶醒神药。")
+            :partial (outcome (list (effect 'clock+ theater_accident_supplies 1) (effect 'add pressure 1)) "你翻到一点有用东西，也引来化妆师一句难听的质问。")
+            :fail (outcome (list (effect 'add pressure 1)) "箱子已经被人翻乱，你只听见外面又有人喊夜莺的名字。"))))
+      (when (not theater_accident_supplies_found)
+        (action
+          :title "从工具箱里拿走可用材料"
+          :desc "备用钳、细绳和小撬棍都能派上用场。问题是现在每个人都在盯着谁碰了现场。"
+          :check (check
+            :suit 知识
+            :risk 'high
+            :ok (outcome (list (effect 'clock+ theater_accident_supplies 2)) "你挑出几件真正能用的工具，动作快到没人来得及拦。")
+            :partial (outcome (list (effect 'clock+ theater_accident_supplies 1) (effect 'add pressure 1)) "你拿到一半就被后台工人盯上，只能装作是在帮忙收拾。")
+            :fail (outcome (list (effect 'add pressure 2)) "剧院经理看见你打开工具箱，立刻把事故和盗窃两个词放进同一句话里。")))))))
+
 (define (夜莺)
   (node
     :title "夜莺"
@@ -135,6 +195,22 @@
           "搜索剧院入口和侧门"
           "送信的人刚离开不久。门口、侧门和工作人员的视线里，应该还留着一条湿漉漉的路线。"
           敏锐))
+      (when (and helen_room_searched (not theater_accident_survived))
+        (action
+          :title "赶回剧院后台"
+          :desc "电话里的尖叫还没完全断掉。旧照片在口袋里发硬，后台那边已经有人在喊夜莺的名字。"
+          :effects (list
+            (effect 'set theater_accident_started true)
+            (effect 'start-encounter '后台坠落事故))))
+      (when (and theater_accident_clue_found (not theater_photo_discussed))
+        (action
+          :title "把旧照片和事故线索拿给夜莺看"
+          :desc "旧照片、断绳和金属楔片终于能放到同一张桌上。夜莺必须回答的，不只是莱恩是谁。"
+          :effects (list
+            (effect 'set theater_photo_discussed true)
+            (effect 'set press_angle_seen true)
+            (effect 'set newspaper_office_unlocked true)
+            (effect 'start-quick-dialogue "# 旧照片、断绳和报纸\n\n# speaker: 科尔\n我把照片放到夜莺面前。莱恩的五金店、老海伦、几个码头工人，还有照片边缘那个穿演出服的年轻女人。\n\n# speaker: 夜莺\n她先看照片，再看我手里的楔片。\n\n# speaker: 夜莺\n“你从哪儿弄到这些的？”\n\n# speaker: 科尔\n她问的是来源，不是东西是真是假。后台有人想把断绳收走，经理想让警方接手，记者却已经站在门口，笔记本翻到写好标题的那一页。\n\n# speaker: 科尔\n事故刚发生，报纸却像早就知道该怎么写莱恩、夜莺和旧码头。\n\n# speaker: 科尔\n这不是他来得快。是有人提前把故事喂给了报社。"))))
       (when (and nightingale_shadow_seen (not nightingale_first_confrontation_done))
         (action
          :title "追上那个鬼祟的人"
@@ -147,4 +223,10 @@
                (when nightingale_front_done (舞台))
                (when nightingale_search_half_seen (化妆间))
                (when nightingale_search_half_seen (后台通道))
+               (when (and theater_accident_survived (not theater_accident_clue_found)) (坠落灯架))
+               (when (and theater_accident_survived
+                          (not theater_accident_supplies_found)
+                          (or (not theater_accident_cleanup_started)
+                              (not (clock-filled? theater_accident_cleanup))))
+                 (后台道具间))
                (when (and nightingale_city_day_started nightingale_second_letter_ready) (剧院后巷)))))

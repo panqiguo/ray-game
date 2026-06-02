@@ -6,7 +6,7 @@
     :title "穿过雨里的人群"
     :desc "盯住那件沾雨的外套，别让街口的人潮把他整个吞下去。"
     :check (check
-      :suits (list 敏锐)
+      :suit 敏锐
       :risk 'mid
       :ok (outcome (list (effect 'clock+ distance 2)) "")
       :partial (outcome (list (effect 'clock+ distance 1) (effect 'clock+ panic 1)) "")
@@ -17,7 +17,7 @@
     :title "抄近巷堵前面"
     :desc "别跟着他的路线走，抢在他以为安全的出口等他。"
     :check (check
-      :suits (list 知识)
+      :suit 知识
       :risk 'mid
       :ok (outcome (list (effect 'clock+ distance 2)) "")
       :partial (outcome (list (effect 'clock+ distance 1) (effect 'add energy -1)) "")
@@ -28,7 +28,7 @@
     :title "亮身份逼他停下"
     :desc "有时候一句够冷的话，比冲刺更快。"
     :check (check
-      :suits (list 魅力)
+      :suit 魅力
       :risk 'high
       :ok (outcome (list (effect 'clock+ distance 2)) "")
       :partial (outcome (list (effect 'clock+ distance 1) (effect 'clock+ panic 1)) "")
@@ -54,7 +54,7 @@
     world-health-vars
     world-energy-vars
     (list
-      (var 'nightingale_second_letter_harder (world-value 'nightingale_second_letter_harder false))
+      (import-world-value 'nightingale_second_letter_harder false)
       (var 'distance (clock :title "追上递信人" :initial 0 :max 4))
       (var 'panic (clock :title "信件脱手风险" :initial 0 :max 4))))
   :root

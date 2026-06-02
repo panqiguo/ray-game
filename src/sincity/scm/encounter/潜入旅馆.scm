@@ -13,7 +13,7 @@
       :title title
       :desc desc
       :check (check
-        :suits (list suit)
+        :suit suit
         :risk 'low
         :ok (outcome (list (effect 'clock+ progress-clock ok-step)) ok-text)
         :partial (outcome (list (effect 'clock+ progress-clock 1) (effect 'add energy -1)) partial-text)
@@ -25,7 +25,7 @@
       :title title
       :desc desc
       :check (check
-        :suits (list suit)
+        :suit suit
         :risk 'mid
         :ok (outcome (list (effect 'clock+ progress-clock ok-step)) ok-text)
         :partial (outcome (append (list (effect 'clock+ progress-clock 1)) (trigger-watchman 1)) partial-text)
@@ -37,7 +37,7 @@
       :title title
       :desc desc
       :check (check
-        :suits (list suit)
+        :suit suit
         :risk 'high
         :ok (outcome (list (effect 'clock+ progress-clock ok-step)) ok-text)
         :partial (outcome (append (list (effect 'clock+ progress-clock 1)) (trigger-watchman 1)) partial-text)
@@ -74,7 +74,7 @@
         :title "等清洁工离开再进"
         :desc "这间房门没关严。你只需要等一个不会被撞见的空档。"
         :check (check
-          :suits (list 敏锐)
+          :suit 敏锐
           :risk 'low
           :ok (outcome (list (effect 'set resource_room_entered true)) "你从门缝里滑了进去。")
           :partial (outcome (list (effect 'set resource_room_entered true) (effect 'add energy -1)) "你进去了，只是多等了太久。")
@@ -83,7 +83,7 @@
         :title "撬开资源房门锁"
         :desc "旧锁比人可靠，但也比人更会出声。"
         :check (check
-          :suits (list 知识)
+          :suit 知识
           :risk 'mid
           :ok (outcome (list (effect 'set resource_room_entered true)) "锁芯松开了。")
           :partial (outcome (append (list (effect 'set resource_room_entered true)) (trigger-watchman 1)) "门是开了，但动静也传出去了。")
@@ -95,7 +95,7 @@
       :title title
       :desc desc
       :check (check
-        :suits (list 敏锐)
+        :suit 敏锐
         :risk 'low
         :ok (outcome effects ok-text)
         :partial (outcome (append effects (list (effect 'add energy -1))) partial-text)
@@ -149,7 +149,7 @@
         :title "等走廊空档再进"
         :desc "你盯着楼梯和转角，等所有能看见这扇门的人都移开视线。"
         :check (check
-          :suits (list 敏锐)
+          :suit 敏锐
           :risk 'low
           :ok (outcome (list (effect 'set target_room_entered true)) "你顺着空档溜进了门。")
           :partial (outcome (list (effect 'set target_room_entered true) (effect 'add energy -1)) "你是进去了，只是绷得太久。")
@@ -158,7 +158,7 @@
         :title "撬开目标房门"
         :desc "门锁不复杂，难的是别让它替你打招呼。"
         :check (check
-          :suits (list 知识)
+          :suit 知识
           :risk 'mid
           :ok (outcome (list (effect 'set target_room_entered true)) "门锁给了你面子。")
           :partial (outcome (append (list (effect 'set target_room_entered true)) (trigger-watchman 1)) "门开了，但这一层也更紧张了。")
@@ -192,7 +192,7 @@
       :title title
       :desc desc
       :check (check
-        :suits (list suit)
+        :suit suit
         :risk 'mid
         :ok (outcome (list (effect 'clock+ wife_patrol 2)) ok-text)
         :partial (outcome (list (effect 'clock+ wife_patrol 1) (effect 'add energy -1)) partial-text)
@@ -204,7 +204,7 @@
       :title title
       :desc desc
       :check (check
-        :suits (list suit)
+        :suit suit
         :risk 'mid
         :ok (outcome (list (effect 'clock+ husband_patrol 2)) ok-text)
         :partial (outcome (list (effect 'clock+ husband_patrol 1) (effect 'add energy -1)) partial-text)

@@ -7,7 +7,7 @@
     :title "翻看墙角的铁皮箱"
     :desc "铁皮箱上压着几件旧衣服。锁已经坏了，麻烦在于它响起来会像一只被踩住的罐头。"
     :check (check
-      :suits (list 敏锐)
+      :suit 敏锐
       :risk 'mid
       :ok (outcome (list (effect 'clock+ search_progress 2)) "箱底有一叠潮软的旧照片。")
       :partial (outcome (list (effect 'clock+ search_progress 1) (effect 'clock+ helen_stirring 1)) "你摸到了照片，也让箱盖发出一声轻响。")
@@ -18,7 +18,7 @@
     :title "稳住快倒的酒瓶"
     :desc "桌边的酒瓶慢慢滑向地面。让它安静下来，比继续翻找更要紧。"
     :check (check
-      :suits (list 敏锐 暴力)
+      :suit 敏锐
       :risk 'low
       :ok (outcome (list (effect 'clock- helen_stirring 1)) "瓶底停住了，老海伦的呼吸没有变。")
       :partial (outcome (list) "你接住了瓶子，但也浪费了一点时间。")
@@ -29,7 +29,7 @@
     :title "查看床头旧相框"
     :desc "相框背面夹着纸片。照片里的莱恩还年轻，五金店的招牌也还没有歪。"
     :check (check
-      :suits (list 知识 敏锐)
+      :suit 知识
       :risk 'mid
       :ok (outcome (list (effect 'clock+ search_progress 2)) "相框背后写着一个日期：改造说明会前夜。")
       :partial (outcome (list (effect 'clock+ search_progress 1)) "你看清了莱恩和那间店，没看清照片边缘那个女人。")
@@ -46,7 +46,7 @@
     :title "直接掀开箱底暗层"
     :desc "你看到了箱底不自然的缝。这里可能藏着东西，也可能藏着一声足够吵醒她的动静。"
     :check (check
-      :suits (list 敏锐)
+      :suit 敏锐
       :risk 'high
       :ok (outcome (list (effect 'clock+ search_progress 3)) "暗层下面就是那张照片，边角被酒渍染黄。")
       :partial (outcome (list (effect 'clock+ search_progress 2) (effect 'clock+ helen_stirring 1)) "照片到手了，木板也响了。")
@@ -61,7 +61,8 @@
     (effect 'set 'ryan_followed_after_helen true)
     (effect 'set 'docks_threat_escalated true)
     (effect 'set 'ryan_old_shop_unlocked true)
-    (effect 'start-quick-dialogue "# 旧照片\n\n# speaker: 科尔\n照片里是莱恩年轻时的五金店。门口站着老海伦、几个码头工人，还有一个穿演出服的年轻女人。\n\n背面写着：改造说明会前夜。\n\n# speaker: 科尔\n下楼时，我没有回头。到街口，我在橱窗倒影里看见一个人影停了下来。不是偶遇。"))
+    (effect 'set 'theater_accident_unlocked true)
+    (effect 'start-quick-dialogue "# 旧照片\n\n# speaker: 科尔\n照片里是莱恩年轻时的五金店。门口站着老海伦、几个码头工人，还有一个穿演出服的年轻女人。\n\n背面写着：改造说明会前夜。\n\n# speaker: 科尔\n下楼时，我没有回头。到街口，我在橱窗倒影里看见一个人影停了下来。不是偶遇。\n\n# 剧院来电\n\n# speaker: 剧院经理\n“后台出事了。夜莺在里面。你最好现在过来。”\n\n# speaker: 科尔\n旧照片还没在口袋里放稳，事故已经追到了剧院。"))
   :on-fail (list
     (effect 'set 'helen_room_searched true)
     (effect 'set 'helen_photo_damaged true)
@@ -69,8 +70,9 @@
     (effect 'set 'ryan_followed_after_helen true)
     (effect 'set 'docks_threat_escalated true)
     (effect 'set 'ryan_old_shop_unlocked true)
+    (effect 'set 'theater_accident_unlocked true)
     (effect 'add 'pressure 1)
-    (effect 'start-quick-dialogue "# 照片残片\n\n# speaker: 老海伦\n她醒来时第一件事就是抢那张照片。纸在你们手里裂开，只剩一角留在你掌心。\n\n# speaker: 科尔\n走到街口时，一个年轻码头人靠在电线杆旁，假装点烟。火柴亮起时，他正看着我的口袋。"))
+    (effect 'start-quick-dialogue "# 照片残片\n\n# speaker: 老海伦\n她醒来时第一件事就是抢那张照片。纸在你们手里裂开，只剩一角留在你掌心。\n\n# speaker: 科尔\n走到街口时，一个年轻码头人靠在电线杆旁，假装点烟。火柴亮起时，他正看着我的口袋。\n\n# 剧院来电\n\n# speaker: 剧院经理\n“后台出事了。夜莺在里面。你最好现在过来。”\n\n# speaker: 科尔\n残片还攥在手里，剧院的事故已经把下一步推到我面前。"))
   :reacts (list
     (react :when (clock-filled? search_progress) :then (list (effect 'end-encounter 'success)))
     (react :when (clock-filled? helen_stirring) :then (list (effect 'end-encounter 'fail))))

@@ -366,6 +366,8 @@ def draw_pending_attachment(font: Font | None, state: GameState, rect: Rectangle
         draw_inline_resolution_strip(font, Rectangle(rect.x + 10.0 * scale, rect.y + 26.0 * scale, rect.width - 20.0 * scale, 20.0 * scale), pending, scale=scale)
     else:
         draw_text(font, "执行中", int(rect.x + 10.0 * scale), int(rect.y + 6.0 * scale), title_style.size, title_style.color)
+        if not pending.settled:
+            draw_pending_progress_bar(font, Rectangle(rect.x + 10.0 * scale, rect.y + 30.0 * scale, rect.width - 20.0 * scale, 14.0 * scale), pending, scale=scale)
     if pending.settled:
         result_rect = pending_result_rect(font, rect, resolution)
         draw_frame(result_rect, Color(16, 18, 24, 248), Color(78, 84, 98, 220))
@@ -387,7 +389,16 @@ def draw_pending_attachment(font: Font | None, state: GameState, rect: Rectangle
             caption_style.color,
         )
     else:
-        draw_text(font, "结果会在这张卡下面落定。", int(rect.x + 10.0 * scale), int(rect.y + 44.0 * scale), body_style.size, title_style.color)
+        draw_text(font, "完成后生效。", int(rect.x + 10.0 * scale), int(rect.y + 50.0 * scale), body_style.size, title_style.color)
+
+
+def draw_pending_progress_bar(font: Font | None, rect: Rectangle, pending: PendingResolutionState, scale: float = 1.0) -> None:
+    del font, scale
+    progress = max(0.0, min(1.0, pending.progress))
+    draw_frame(rect, Color(32, 36, 44, 220), Color(18, 20, 26, 255))
+    fill_w = rect.width * progress
+    if fill_w > 2.0:
+        draw_frame(Rectangle(rect.x, rect.y, fill_w, rect.height), Color(180, 150, 84, 220), Color(18, 20, 26, 255))
 
 
 def draw_reveal_progress_bar(font: Font | None, rect: Rectangle, reveal: ActiveActionRevealState | None, scale: float = 1.0) -> None:

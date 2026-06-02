@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 
 from pyray import *  # type: ignore
 
@@ -67,28 +68,27 @@ def draw_debug_panel(font: Font | None, state: GameState, rng: RandomSource) -> 
     y += 34
 
     for slot_num in (2, 3, 4):
-        exists = os.path.exists(slot_path(slot_num))
-        label = f"{slot_num}  {SLOT_LABELS[slot_num]}  {'已保存' if exists else '空'}"
+        sp = slot_path(slot_num)
+        exists = os.path.exists(sp)
+        if exists:
+            lt = time.localtime(os.path.getmtime(sp))
+            label = f"{slot_num}  {lt.tm_mon}月{lt.tm_mday}日 {lt.tm_hour:02d}:{lt.tm_min:02d}"
+        else:
+            label = f"{slot_num}  空"
         is_selected = _selected_slot == slot_num
         if pill(font, Rectangle(1096, y, 298, 26), label, selected=is_selected):
             _selected_slot = slot_num
         y += 30
 
     selected_exists = os.path.exists(slot_path(_selected_slot))
+    slot_name = f"存档 {_selected_slot}"
     if text_button(font, Rectangle(1096, y, 145, 30), "保存", button_size):
         debug_save(state, rng, slot=_selected_slot)
-        push_notification(state, "success", f"存档 {SLOT_LABELS[_selected_slot]} 成功")
+        push_notification(state, "success", f"{slot_name} 保存成功")
     if text_button(font, Rectangle(1249, y, 145, 30), "加载", button_size, disabled=not selected_exists):
         debug_load(state, rng, slot=_selected_slot)
-        push_notification(state, "success", f"加载 {SLOT_LABELS[_selected_slot]} 完成")
+        push_notification(state, "success", f"{slot_name} 加载完成")
     end_layer("debug")
-
-
-SLOT_LABELS: dict[int, str] = {
-    2: "save_01",
-    3: "save_02",
-    4: "save_03",
-}
 
 
 def _companion_summary(state: GameState) -> str:

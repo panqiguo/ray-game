@@ -33,7 +33,7 @@
      :title title
      :desc desc
      :check (check
-              :suits (list 知识)
+              :suit 知识
               :risk 'mid
               :ok (outcome ok-text (list (effect 'clock+ progress-clock 1)))
               :partial (outcome partial-text (list (effect 'clock+ progress-clock 1) (effect 'clock+ alert_clock 1)))
@@ -46,7 +46,7 @@
      :title title
      :desc desc
      :check (check
-              :suits (list 敏锐)
+              :suit 敏锐
               :risk 'mid
               :ok (outcome ok-text (list (effect 'clock+ progress-clock 1)))
               :partial (outcome partial-text (list (effect 'clock+ progress-clock 1) (effect 'clock+ alert_clock 1)))
@@ -59,7 +59,7 @@
      :title title
      :desc desc
      :check (check
-              :suits (list 暴力)
+              :suit 暴力
               :risk 'high
               :ok (outcome ok-text (list (effect 'clock+ progress-clock 2)))
               :partial (outcome partial-text (list (effect 'clock+ progress-clock 1) (effect 'clock+ alert_clock 2)))
@@ -81,7 +81,7 @@
               :title "暴力挣脱"
               :desc "咬紧牙关，不顾手腕被勒出血痕，拼命对抗那些劣质皮带。"
               :check (check
-                       :suits (list 暴力)
+                       :suit 暴力
                        :risk 'high
                        :ok (outcome "粗糙的皮带被你硬生生崩开了一个扣子" (list (effect 'clock+ 挣脱束缚钟 2)))
                       :partial (outcome "你的手腕磨破了皮，铁椅摩擦地板弄出了点声响" (list (effect 'clock+ 挣脱束缚钟 1) (effect 'clock+ alert_clock 1)))
@@ -91,7 +91,7 @@
               :title "寻找尖锐物割裂"
               :desc "试着转动酸痛的脖子，寻找铁皮边缘或碎玻璃去磨蹭皮带。"
               :check (check
-                       :suits (list 敏锐)
+                       :suit 敏锐
                        :risk 'mid
                        :ok (outcome "你利用椅子底部的锋利铁片，成功割裂了部分皮带" (list (effect 'clock+ 挣脱束缚钟 2)))
                       :partial (outcome "进展缓慢，你的手指被铁片划破了" (list (effect 'clock+ 挣脱束缚钟 1) (effect 'clock+ alert_clock 1)))
@@ -101,7 +101,7 @@
               :title "分析搭扣结构"
               :desc "你盯住皮带扣和受力点，尝试用最小动作把它们一段段松开。"
               :check (check
-                       :suits (list 知识)
+                       :suit 知识
                        :risk 'mid
                        :ok (outcome "你抓到搭扣的薄弱点，连续松开了两段固定带" (list (effect 'clock+ 挣脱束缚钟 2)))
                       :partial (outcome "你拆开了一处受力点，但金属碰撞声让你心里一紧" (list (effect 'clock+ 挣脱束缚钟 1) (effect 'clock+ alert_clock 1)))

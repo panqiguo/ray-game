@@ -29,7 +29,7 @@
       :title action-title
       :desc "如果这是她当前想聊的话题：好关系 +2，中关系 +1，坏无收益。否则：好关系 +1，中无收益，坏关系 -1。"
       :check (check
-        :suits (list 魅力)
+        :suit 魅力
         :risk 'low
         :ok (outcome ok-text
           (if (topic-current? topic-key)
@@ -50,7 +50,7 @@
       :title "谈情报（获取情报）"
       :desc "如果她当前想聊 C：好情报 +3、关系 +1；中情报 +2；坏情报 +1、关系 -1。否则：好情报 +2、关系 -2；中情报 +1、关系 -2；坏关系 -3。"
       :check (check
-        :suits (list 知识)
+        :suit 知识
         :risk 'high
         :ok (outcome "你把问题放在她愿意靠近的地方，关键线索自然浮了出来。"
           (if (topic-current? 'clue)
@@ -71,7 +71,7 @@
       :title "缓一缓（修复关系）"
       :desc "暂时放弃推进情报，回到她舒服的话题。好：关系 +2；中：关系 +1；坏：时间 +1。"
       :check (check
-        :suits (list 魅力)
+        :suit 魅力
         :risk 'low
         :ok (outcome "你主动退了一步，她重新愿意把话接下去。"
           (list (effect 'clock+ relation 2)))

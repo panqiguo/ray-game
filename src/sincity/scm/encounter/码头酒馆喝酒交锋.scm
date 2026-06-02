@@ -7,7 +7,7 @@
     :title "跟他们一杯接一杯喝下去"
     :desc "这桌人不怕问题，只怕你先倒下。把酒喝完，话才会从牙缝里漏出来。"
     :check (check
-      :suits (list 暴力)
+      :suit 暴力
       :risk 'mid
       :ok (outcome (list (effect 'clock+ table_pressure 2)) "最吵的那个先把杯子扣在桌上。")
       :partial (outcome (list (effect 'clock+ table_pressure 1) (effect 'add 'health -1)) "你撑住了，但胃里像压着一块铁。")
@@ -18,7 +18,7 @@
     :title "趁乱逼酒保开口"
     :desc "酒保一直在听。现在桌上的人声够乱，足够让他假装自己什么也没说。"
     :check (check
-      :suits (list 魅力)
+      :suit 魅力
       :risk 'mid
       :ok (outcome (list (effect 'clock+ table_pressure 2)) "他把旧地址压在杯垫下面。")
       :partial (outcome (list (effect 'clock+ table_pressure 1) (effect 'clock+ drunkenness 1)) "他只说了一半，你得从醉话里把另一半拼出来。")
@@ -28,7 +28,7 @@
   :meta (meta :key '码头酒馆喝酒交锋 :title "码头酒馆喝酒交锋" :desc "在不欢迎陌生人的酒桌上，喝倒他们，问出莱恩的旧地址。")
   :on-success (list
     (effect 'set 'ryan_address_found true)
-    (effect 'set 'helen_boarding_unlocked true)
+    (effect 'set 'helen_boarding_search_unlocked true)
     (effect 'start-quick-dialogue "# 老海伦的名字\n\n# speaker: 酒保\n“你想找莱恩以前的事，别直接去旧店。先找老海伦。她那栋寄宿公寓还没拆干净。”\n\n# speaker: 科尔\n他说的不是新地址，也不是完整答案。可旧码头这种地方，活人的嘴往往比门牌更难撬开。"))
   :on-fail (list
     (effect 'add 'health -1)

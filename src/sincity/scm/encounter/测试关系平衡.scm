@@ -24,7 +24,7 @@
         :title "铺垫（推进关系）"
         :desc "把冷淡开局推向安全区。好：情报 +1、关系 +2；中：关系 +1；坏：关系 -1。"
         :check (check
-          :suits (list 魅力)
+          :suit 魅力
           :risk 'low
           :factors (charm-factors)
           :ok (outcome (list (effect 'clock+ intel 1) (effect 'clock+ tension 2)) "对方接住了你的话，顺口漏出一点信息。")
@@ -34,7 +34,7 @@
         :title "试探（套话）"
         :desc "主要获取情报。好：情报 +2；中：情报 +1、关系 -1；坏：关系 -2。"
         :check (check
-          :suits (list 魅力)
+          :suit 魅力
           :risk 'mid
           :factors (charm-factors)
           :ok (outcome (list (effect 'clock+ intel 2)) "你问得刚好，对方没有防备。")
@@ -44,7 +44,7 @@
         :title "追问（快速情报）"
         :desc "快速推进情报。好：情报 +3、关系 +1；中：情报 +2、关系 +2；坏：关系 -3。"
         :check (check
-          :suits (list 知识)
+          :suit 知识
           :risk 'high
           :factors (knowledge-factors)
           :ok (outcome (list (effect 'clock+ intel 3) (effect 'clock+ tension 1)) "你抓住了矛盾，她被迫多说了几句。")
@@ -54,7 +54,7 @@
         :title "后撤（拉开关系）"
         :desc "用于防止越界。好：关系 -2；中：关系 -1；坏：关系 +1。"
         :check (check
-          :suits (list 魅力)
+          :suit 魅力
           :risk 'low
           :ok (outcome (list (effect 'clock- tension 2)) "你及时收住，气氛重新松下来。")
           :partial (outcome (list (effect 'clock- tension 1)) "你让对方缓了一口气。")

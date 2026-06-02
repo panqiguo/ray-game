@@ -6,7 +6,7 @@
     :title title
     :desc desc
     :check (check
-      :suits (list suit)
+      :suit suit
       :risk risk
       :ok (outcome (list (effect 'add money ok-money)))
       :partial (if (= risk 'low)

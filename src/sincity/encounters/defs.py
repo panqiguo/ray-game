@@ -192,7 +192,7 @@ class OutcomeTemplate:
 
 @dataclass(frozen=True)
 class CheckTemplate:
-    suits: tuple[str, ...]
+    suit: str
     risk: str
     success: OutcomeTemplate
     cost: OutcomeTemplate

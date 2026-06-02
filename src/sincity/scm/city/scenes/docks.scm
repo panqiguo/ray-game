@@ -16,7 +16,14 @@
     (var 'ryan_deadline (clock :title "旧码头调查期限" :desc "警方正在关注旧码头，时间拖得越久夜莺的信任越低。" :initial 5 :max 5))
     (var 'ryan_deadline_checked_day 0)
     (var 'ryan_notice_checked false)
+    (var 'helen_boarding_search_unlocked false)
     (var 'helen_boarding_unlocked false)
+    (var 'helen_seamen_house_checked false)
+    (var 'helen_redbrick_house_checked false)
+    (var 'helen_east_warehouse_checked false)
+    (var 'helen_seamen_house_progress (clock :title "旧海员寄宿楼" :desc "排查这里是不是老海伦的住处。" :initial 0 :max 6))
+    (var 'helen_redbrick_house_progress (clock :title "红砖寄宿公寓" :desc "排查这里是不是老海伦的住处。" :initial 0 :max 6))
+    (var 'helen_east_warehouse_progress (clock :title "东栈房出租屋" :desc "排查这里是不是老海伦的住处。" :initial 0 :max 6))
     (var 'helen_met false)
     (var 'helen_loosened (clock :title "老海伦的醉意" :desc "酒精让老海伦的话越来越松，也让房间里的边界越来越模糊。" :initial 0 :max 3))
     (var 'helen_asleep false)
@@ -57,10 +64,30 @@
         (effect 'start-quick-dialogue "# 老海伦睡着了\n\n# speaker: 老海伦\n“莱恩……不是那样的。他以前会修门锁，修水管，什么都修……”\n\n# speaker: 科尔\n她的杯子歪在桌边，话也歪进梦里。可她的眼神最后落向墙角那个铁皮箱。\n\n她没把所有东西说完。也许东西在房间里。")))
     (react
       :when (and ryan_address_found
-                 (not helen_boarding_unlocked)
+                 (not helen_boarding_search_unlocked)
                  (not helen_room_searched))
       :then (list
-        (effect 'set helen_boarding_unlocked true)))
+        (effect 'set helen_boarding_search_unlocked true)))
+    (react
+      :when (and (clock-filled? helen_seamen_house_progress)
+                 (not helen_seamen_house_checked)
+                 (not helen_boarding_unlocked))
+      :then (list
+        (effect 'set helen_seamen_house_checked true)
+        (effect 'start-quick-dialogue "# 旧海员寄宿楼\n\n# speaker: 科尔\n门牌是真的旧，楼里也确实住过几个认识莱恩的人。\n\n但这里没人叫海伦。一个跛脚房东把我赶下楼，说我来晚了十年。")))
+    (react
+      :when (and (clock-filled? helen_redbrick_house_progress)
+                 (not helen_boarding_unlocked))
+      :then (list
+        (effect 'set helen_boarding_unlocked true)
+        (effect 'start-quick-dialogue "# 找到老海伦\n\n# speaker: 科尔\n红砖楼三层的门缝里有旧酒、潮木头和廉价汤的味道。\n\n门后有人咳了一声。一个女人问我是不是又来找莱恩。\n\n这次找对了。")))
+    (react
+      :when (and (clock-filled? helen_east_warehouse_progress)
+                 (not helen_east_warehouse_checked)
+                 (not helen_boarding_unlocked))
+      :then (list
+        (effect 'set helen_east_warehouse_checked true)
+        (effect 'start-quick-dialogue "# 东栈房出租屋\n\n# speaker: 科尔\n这里有海伦这个名字，却不是我要找的人。\n\n登记簿上的海伦已经搬走三年，留下的只有一张欠租单和一个不愿多说的管理员。")))
     (react
       :when (and ryan_docks_unlocked
                  (not ryan_confronted)
@@ -81,11 +108,11 @@
 (define (ryan-stage)
   (cond
     (ryan_confronted 'done)
-    (ryan_new_shop_unlocked 'new_shop)
-    (ryan_old_shop_checked 'new_shop_unlocking)
+    (ryan_old_shop_checked 'old_shop_checked)
     (ryan_old_shop_unlocked 'old_shop)
     (helen_room_searched 'old_shop)
-    (ryan_address_found 'helen_boarding)
+    (helen_boarding_unlocked 'helen_found)
+    (ryan_address_found 'helen_boarding_search)
     ((ryan-tavern-ready?) 'tavern_challenge)
     (else 'docks_investigation)))
 
@@ -117,18 +144,19 @@
     (list
       (action
         :title "点一杯酒"
-        :desc "八块钱一杯。酒不能解决问题，但能补一点精力。"
+        :desc "八块钱一瓶。你可以自己喝掉，也可以把它带去给更需要酒精开口的人。"
         :inputs (list (item 'money 8 "酒钱"))
-        :effects (list
-          (effect 'add energy 2)
-          (when (and blonde_intro_seen (not blonde_drinks_done)) (effect 'clock+ blonde_drink_progress 1))))
+          :effects (list
+            (effect 'add 'liquor 1)
+            (effect 'add energy 2)
+            (when (and blonde_intro_seen (not blonde_drinks_done)) (effect 'clock+ blonde_drink_progress 1))))
       (action
         :title "吧台小赌"
         :desc "把十块钱压在一局牌上。酒吧里的赌博更像消遣，但欠账会记在墙后。"
         :conditions (list (field-at-least 'money 10 "需要 10 元赌本"))
         :inputs (list (item 'money 10 "赌本"))
         :check (check
-          :suits (list 敏锐)
+          :suit 敏锐
           :risk 'high
           :ok (outcome (list (effect 'add money 24)) "你读懂了对面那点迟疑，今晚的酒钱有人替你付。")
           :partial (outcome (list (effect 'add money 8) (effect 'add pressure 1)) "你赢回一点，但坐得太久，头也开始发沉。")
@@ -187,7 +215,7 @@
         :title "和码头工人搭话"
         :desc "工人休息时最好说话。他们知道莱恩常去的地方，但不会跟陌生人细聊。"
         :check (check
-          :suits (list 敏锐)
+          :suit 敏锐
           :risk 'low
           :ok (outcome (list (effect 'clock+ ryan_lead 1)) "一个老工人朝酒馆方向努了努嘴。")
           :partial (outcome (list (effect 'clock+ ryan_lead 1)) "他没多说，但指了条路。")
@@ -196,7 +224,7 @@
         :title "在小店打听莱恩"
         :desc "码头小店老板认识所有人。他愿意说多少取决于你值不值得信任。"
         :check (check
-          :suits (list 魅力)
+          :suit 魅力
           :risk 'mid
           :ok (outcome (list (effect 'clock+ ryan_lead 1)) "老板低声说：「莱恩以前开过店……后来没了。」")
           :partial (outcome (list (effect 'clock+ ryan_lead 1)) "他话说到一半，被进门的客人打断了。")
@@ -213,8 +241,8 @@
     ((not helen_met)
       (list
         (action
-          :title "敲开老海伦的门"
-          :desc "酒馆里问出的名字指向这栋寄宿公寓。老海伦认识莱恩，也认识旧码头没被拆掉之前的样子。"
+          :title "叫老海伦开门"
+          :desc "门缝里有灯光。老海伦认识莱恩，也认识旧码头没被拆掉之前的样子。"
           :effects (list
             (effect 'set helen_met true)
             (effect 'start-quick-dialogue "# 老海伦\n\n# speaker: 老海伦\n门开了一条缝。酒味、旧汤味和潮木头的味道一起挤出来。\n\n# speaker: 老海伦\n“找莱恩？你们不是已经把他写成疯子了吗？”")))))
@@ -230,14 +258,15 @@
       (list
         (action
           :title "给老海伦带一瓶便宜酒"
-          :desc "她不愿意清醒着谈莱恩。酒会让她松口，也会让你离体面远一点。"
-          :inputs (list (item 'money 6 "酒钱"))
+          :desc "她不愿意清醒着谈莱恩。你带的酒会让她松口，也会让你离体面远一点。"
+          :conditions (list (has-item 'liquor 1 "需要一瓶便宜酒"))
+          :inputs (list (item 'liquor 1 "便宜酒"))
           :effects (list (effect 'clock+ helen_loosened 2)))
         (action
           :title "陪她聊莱恩"
           :desc "别急着问威胁信，先让她把莱恩当成一个活过的人，而不是报纸上的疯子。"
           :check (check
-            :suits (list 魅力)
+            :suit 魅力
             :risk 'low
             :ok (outcome (list (effect 'clock+ helen_loosened 1)) "她骂了莱恩几句，又开始替他说话。")
             :partial (outcome (list (effect 'clock+ helen_loosened 1) (effect 'add pressure 1)) "她说得断断续续，但名字开始从酒气里浮出来。")
@@ -246,11 +275,32 @@
           :title "顺着她的话问旧码头"
           :desc "她总把莱恩、旧店和一张照片混在一起。你可以不纠正她，只把错乱的地方记下来。"
           :check (check
-            :suits (list 敏锐 知识)
+            :suit 敏锐
             :risk 'mid
             :ok (outcome (list (effect 'clock+ helen_loosened 2)) "她提到一张照片，和一次改造说明会前夜。")
             :partial (outcome (list (effect 'clock+ helen_loosened 1)) "她没有说清楚，但眼神总往墙角飘。")
             :fail (outcome (list (effect 'add pressure 1)) "你问得太直，她忽然开始装糊涂。")))))))
+
+(define (helen-boarding-search-actions progress-clock)
+  (list
+    (action
+      :title "向住客打听老海伦"
+      :desc "寄宿公寓里的人不爱回答问题，尤其不爱回答关于邻居的问题。你得好处，就得先担风险。"
+      :check (check
+        :suit 魅力
+        :risk 'high
+        :ok (outcome (list (effect 'clock+ progress-clock 3)) "有人终于承认听过这个名字，还把楼层和门牌一起说了。")
+        :partial (outcome (list (effect 'clock+ progress-clock 1) (effect 'add pressure 2)) "他们给了你一点口风，也把你的脸记住了。")
+        :fail (outcome (list (effect 'add pressure 2)) "门缝一条接一条关上，有人开始大声抱怨有陌生人打听老住户。")))
+    (action
+      :title "翻看门牌和信箱"
+      :desc "旧楼的信箱比人诚实一点，但也更破。"
+      :check (check
+        :suit 敏锐
+        :risk 'low
+        :ok (outcome (list (effect 'clock+ progress-clock 2)) "你从褪色标签和旧账单里拼出一段住户变动。")
+        :partial (outcome (list (effect 'clock+ progress-clock 1)) "有几个名字对得上，但还不能确定。")
+        :fail (outcome (list) "信箱空得像被提前清理过。")))))
 
 (define (ryan-old-shop-check-action)
   (when (not ryan_old_shop_checked)
@@ -259,7 +309,6 @@
       :desc "柜台被砸过，货架空了。但墙上的痕迹说明这里曾经是正经生意。"
       :effects (list
         (effect 'set ryan_old_shop_checked true)
-        (effect 'set ryan_new_shop_unlocked true)
         (effect 'start-quick-dialogue "# 莱恩的老店铺\n\n# speaker: 科尔\n柜台被砸过，不是普通的偷窃——是被逼走的。\n\n拆迁通知还贴在墙上。发件人的名字和剧院慈善首演的赞助名单有交集。\n\n# speaker: 科尔\n这不是运气不好。有人把莱恩从这片街区清了出去。")))))
 
 (define (ryan-confrontation-action)
@@ -299,15 +348,46 @@
     :actions (list
       (ryan-confrontation-action))))
 
-(define (老海伦的寄宿公寓)
+(define (旧海员寄宿楼)
   (node
-    :title "老海伦的寄宿公寓"
+    :title "旧海员寄宿楼"
+    :desc "一栋靠近水边的长楼，墙上还挂着退色的船员牌。这里看起来像能藏下很多旧名字。"
+    :show-clocks (list (when (and (not helen_seamen_house_checked) (not helen_boarding_unlocked)) helen_seamen_house_progress))
+    :actions (if (and (not helen_seamen_house_checked) (not helen_boarding_unlocked))
+      (helen-boarding-search-actions helen_seamen_house_progress)
+      (list))))
+
+(define (红砖寄宿公寓)
+  (node
+    :title "红砖寄宿公寓"
+    :desc (if helen_boarding_unlocked
+      "红砖墙被雨泡得发黑。老海伦就住在这里三层楼道尽头——莱恩的老朋友，旧码头的活记忆。"
+      "红砖墙被雨泡得发黑，楼梯间有旧酒、潮木头和廉价汤的味道。酒保给的线索在这里变得更像真的。")
+    :show-clocks (list (when (not helen_boarding_unlocked) helen_redbrick_house_progress))
+    :actions (if (not helen_boarding_unlocked)
+      (helen-boarding-search-actions helen_redbrick_house_progress)
+      (list))
+    :children (list
+      (when helen_boarding_unlocked (海伦的房间)))))
+
+(define (东栈房出租屋)
+  (node
+    :title "东栈房出租屋"
+    :desc "旧仓库隔出来的出租屋，一排门后住着临时工、欠租的人和不愿登记的人。这里可能有海伦，也可能只有另一个同名的人。"
+    :show-clocks (list (when (and (not helen_east_warehouse_checked) (not helen_boarding_unlocked)) helen_east_warehouse_progress))
+    :actions (if (and (not helen_east_warehouse_checked) (not helen_boarding_unlocked))
+      (helen-boarding-search-actions helen_east_warehouse_progress)
+      (list))))
+
+(define (海伦的房间)
+  (node
+    :title "海伦的房间"
     :desc (cond
-      (helen_photo_found "旧照片已经在你口袋里。老海伦还在睡，像整栋楼都不愿意醒。")
+      (helen_photo_found "旧照片已经在你口袋里。老海伦还在睡，像整间房都不愿意醒。")
       (helen_photo_damaged "老海伦醒过一次，照片只剩残片。走廊里已经有人知道你来过。")
       ((helen-asleep?) "老海伦歪在椅子里睡着了。房间里堆满旧物，像一座没人愿意登记的小型废墟。")
       (helen_met "老海伦坐在桌边，酒杯离手很近，话离真相还差一点。")
-      (else "这栋楼像是被城市忘在雨里。走廊里有旧酒、潮木头和廉价汤的味道。"))
+      (else "门缝里有旧酒、潮木头和廉价汤的味道。这间房像是被城市忘在雨里。"))
     :show-clocks (list (when (and helen_met (not helen_asleep) (not helen_room_searched)) helen_loosened))
     :actions (helen-talk-actions)))
 
@@ -320,6 +400,7 @@
     :actions (ryan-docks-investigation-actions)
     :children (list
       (码头酒馆)
-      (when helen_boarding_unlocked (老海伦的寄宿公寓))
-      (when ryan_old_shop_unlocked (莱恩的老店铺))
-      (when ryan_new_shop_unlocked (莱恩的新店)))))
+      (when (and helen_boarding_search_unlocked (not helen_boarding_unlocked) (not helen_seamen_house_checked)) (旧海员寄宿楼))
+      (when helen_boarding_search_unlocked (红砖寄宿公寓))
+      (when (and helen_boarding_search_unlocked (not helen_boarding_unlocked) (not helen_east_warehouse_checked)) (东栈房出租屋))
+      (when ryan_old_shop_unlocked (莱恩的老店铺)))))

@@ -78,8 +78,8 @@ define-fragment  = 内容片段构造器，语法糖，等价于零参数函数
 字段作用域：
 
 - encounter `:state` → 局部字段
-- 读写世界状态需在 `:state` 导入：`(energy (world-attr 'energy))`、`(money (world-item 'money 0))`、`(case_done (world-value 'case_done false))`
-- 可 include `common_world_bindings.scm` 使用 `(use-world-basics)` 等 helper
+- 读写世界状态需在 `:vars` 导入：`(import-world-attr 'health)`、`(import-world-item 'money)`、`(import-world-value 'case_done false)`
+- 也可 include `common_world_bindings.scm` 使用 `world-basics-vars` 等 helper
 - 未导入的世界字段用 quoted key：`(effect 'add 'money 80)`
 - `day` 特例：只用 `(effect 'advance-day)`
 
@@ -122,7 +122,7 @@ define-fragment  = 内容片段构造器，语法糖，等价于零参数函数
 
 ```scheme
 (check
-  :suits (list 知识 敏锐)
+  :suit 知识
   :risk 'mid
   :factors (list
     (factor -1 :when security_online :label "监控")
@@ -133,10 +133,10 @@ define-fragment  = 内容片段构造器，语法糖，等价于零参数函数
 ```
 
 - `:risk`：`'low` `'mid` `'high`
-- `:suits`：`暴力` `魅力` `知识` `敏锐`（或英文 `force` `charm` `knowledge` `sense`）
+- `:suit`：`暴力` `魅力` `知识` `敏锐`（或英文 `force` `charm` `knowledge` `sense`）
 - `include` 了 `enum-symbols.scm` 后可使用中文符号：`暴力` `魅力` `知识` `敏锐`
-- 不写 `:suits` 或写空列表时，表示不使用人物属性加成
-- 写了 `:suits` 时，行动卡本身仍然无属性；最终值 = 行动卡点数 + 使用者对应属性 + 启用的 `:factors`
+- `:suit` 只写一个花色（不写时表示不使用人物属性加成）
+- 写了 `:suit` 时，行动卡本身仍然无属性；最终值 = 行动卡点数 + 使用者对应属性 + 启用的 `:factors`
 - `factor` 用于环境/场景状态修正，`:when` 为真时启用；会显示在行动卡上，例如 `监控 -1`
 
 `outcome`：

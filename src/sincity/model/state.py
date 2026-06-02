@@ -102,6 +102,10 @@ class PendingResolutionState:
     log_text: str
     location_id: str
     acting_actor_id: str = ""
+    completion_kind: str = ""
+    reveal_title: str = ""
+    reveal_text: str = ""
+    reveal_duration: float = 4.0
     progress: float = 0.0
     settled: bool = False
 
@@ -200,6 +204,7 @@ class GameState:
     modal: ModalState = field(default_factory=ModalState)
     active_encounter: ActiveEncounterState | None = None
     active_dialogue: ActiveDialogueState | None = None
+    dialogue_queue: list[ActiveDialogueState] = field(default_factory=list)
     last_resolution: ActionResolution | None = None
     pending_resolution: PendingResolutionState | None = None
     action_reveal: ActiveActionRevealState | None = None

@@ -8,7 +8,7 @@
       :title title
       :desc desc
       :check (check
-        :suits (list suit)
+        :suit suit
         :risk 'mid
         :ok (outcome (list (effect 'clock+ progress-clock 1)) "")
         :partial (outcome (list (effect 'clock+ progress-clock 1) (effect 'add energy -1)) "")
@@ -20,7 +20,7 @@
       :title title
       :desc desc
       :check (check
-        :suits (list suit)
+        :suit suit
         :risk 'low
         :ok (outcome (list (effect 'clock+ progress-clock 1)) "")
         :partial (outcome (list (effect 'clock+ progress-clock 1) (effect 'add energy -1)) "")
@@ -32,7 +32,7 @@
       :title title
       :desc desc
       :check (check
-        :suits (list suit)
+        :suit suit
         :risk 'high
         :ok (outcome (list (effect 'clock+ progress-clock 2)) "")
         :partial (outcome (list (effect 'clock+ progress-clock 1) (effect 'add health -1)) "")
@@ -194,8 +194,8 @@
     (var 'office_revealed false)
     (var 'truck_revealed false)
     (var 'truck_eliminated false)
-    (var 'wounded_man_lead (world-item 'wounded_man_lead 0))
-    (var 'police_knows_true_info (world-value 'police_knows_true_info false))
+    (import-world-item 'wounded_man_lead)
+    (import-world-value 'police_knows_true_info false)
     (var 'police_alert_applied false))
     )
   :root (recovery))

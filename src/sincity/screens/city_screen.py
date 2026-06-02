@@ -85,8 +85,13 @@ def _draw_world_table(font: Font | None, state: GameState, rect: Rectangle, rng)
 
 def _draw_location_table(font: Font | None, state: GameState, rng, *, depth: int = 0, location_id: str | None = None) -> None:
     lid = location_id if location_id is not None else state.modal.primary_id
-    assert lid is not None
+    if lid is None:
+        return
     snapshot = current_world_snapshot(state)
+    if lid not in snapshot.locations_by_id:
+        if location_id is None:
+            close_modal(state)
+        return
     location = snapshot.locations_by_id[lid]
     resolving = state.pending_resolution is not None and not state.pending_resolution.settled
     offset = depth * 15

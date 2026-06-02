@@ -54,7 +54,7 @@ def _task_rows(state: GameState) -> tuple[TaskRow, ...]:
     tasks = render_tasks(SCENARIO.get_program(), state)
     rows: list[TaskRow] = []
     for group in GROUP_ORDER:
-        group_tasks = tuple(task for task in tasks if task.kind == group and (task.active or task.failed))
+        group_tasks = tuple(task for task in tasks if task.kind == group and (task.active or task.completed or task.failed))
         if not group_tasks:
             continue
         rows.append(TaskRow(group, kind="group"))
@@ -66,15 +66,16 @@ def _task_rows(state: GameState) -> tuple[TaskRow, ...]:
 
 
 def _task_to_rows(task: RenderedTask) -> tuple[TaskRow, ...]:
-    rows = [
-        TaskRow(
-            task.title,
-            kind="task",
-            completed=task.completed,
-            active=task.active,
-            failed=task.failed,
-        )
-    ]
+    title_row = TaskRow(
+        task.title,
+        kind="task",
+        completed=task.completed,
+        active=task.active,
+        failed=task.failed,
+    )
+    if task.completed:
+        return (title_row,)
+    rows = [title_row]
     if task.description and (task.active or task.failed):
         rows.append(TaskRow(task.description, kind="desc"))
     for step in task.steps:
@@ -113,7 +114,7 @@ def _draw_task_row(font, content_rect: Rectangle, y: float, row: TaskRow) -> flo
     text_x = content_rect.x + indent + 20
     draw_text(font, marker, int(marker_x), int(y), style.size, style.color)
     next_y = _draw_wrapped(font, row.text, text_x, y, content_rect.width - indent - 20, style, marker=marker)
-    if row.kind == "step" and row.completed:
+    if row.completed:
         for index, part in enumerate(wrap_text_lines_any(font, row.text, content_rect.width - indent - 20, style.size)):
             _draw_strike(font, part, text_x, y + index * (style.line_height - 2), style.size, style.color)
     return next_y + (2 if row.kind == "step" else 5)

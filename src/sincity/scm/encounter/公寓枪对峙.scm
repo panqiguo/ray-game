@@ -8,7 +8,7 @@
       :title title
       :desc desc
       :check (check
-        :suits (list suit)
+        :suit suit
         :risk risk
         :ok (outcome ok-effects ok-text)
         :partial (outcome partial-effects partial-text)

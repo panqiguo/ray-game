@@ -14,7 +14,7 @@
           :title "套出后台名字"
           :desc "你装成替别人传话的人，慢慢摸清今晚管局的人。"
           :check (check
-            :suits (list 魅力)
+            :suit 魅力
             :risk 'low
             :ok (outcome (list (effect 'clock+ bartender 2)) "酒保把一个名字压在杯垫下面推给你。")
             :partial (outcome (list (effect 'clock+ bartender 1)) "他没明说，但眼神已经指向了后台门。")
@@ -32,7 +32,7 @@
           :title "翻后台账袋"
           :desc "你不是偷赌场的钱，你是在把他们偷来的那一枚拿回来。至少你这样告诉自己。"
           :check (check
-            :suits (list 知识)
+            :suit 知识
             :risk 'mid
             :ok (outcome (list (effect 'clock+ backstage 2)) "你摸到了被扣下的代币。")
             :partial (outcome (list (effect 'clock+ backstage 1) (effect 'clock+ presence 1)) "账袋被你翻开了一半，也留下了一点痕迹。")
@@ -50,7 +50,7 @@
           :title "读懂庄家的节奏"
           :desc "你盯的不是牌，是庄家什么时候不看牌。"
           :check (check
-            :suits (list 敏锐 知识)
+            :suit 敏锐
             :risk 'mid
             :ok (outcome (list (effect 'clock+ rule 2)) "你看懂了那套暗号。")
             :partial (outcome (list (effect 'clock+ rule 1) (effect 'clock+ presence 1)) "你看懂一半，也被人看见你在看。")
@@ -66,7 +66,7 @@
         :title "普通赌博"
         :desc "纯靠骰运，庄家占优。赢也能赢，只是你要先把命交给桌子。"
         :check (check
-          :suits (list 魅力)
+          :suit 魅力
           :risk 'high
           :ok (outcome (list (effect 'clock+ tokens 2)) "你押中了，代币滚到你面前。")
           :partial (outcome (list (effect 'clock+ tokens 1) (effect 'clock+ presence 1)) "你小赢一把，但时间也被吃掉了。")
@@ -76,7 +76,7 @@
           :title "利用规则赌博"
           :desc "你把行动骰当成下注前的预判工具，主动避开庄家的吃口。"
           :check (check
-            :suits (list 知识 敏锐)
+            :suit 知识
             :risk 'low
             :ok (outcome (list (effect 'clock+ tokens 2)) "你踩中了庄家换手前的一拍。")
             :partial (outcome (list (effect 'clock+ tokens 1)) "你稳稳吃下一点，不贪。")

@@ -87,7 +87,7 @@ class CheckFactorDef:
 
 @dataclass(frozen=True)
 class CheckDef:
-    suits: tuple[Suit, ...]
+    suit: Suit
     risk: Risk
     success: OutcomeDef
     cost: OutcomeDef

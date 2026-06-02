@@ -225,7 +225,7 @@ encounter 里改全局字段用 quoted symbol：`(effect 'add 'money 80)`。
 
 ```scheme
 (check
-  :suits (list 'force 'charm)
+  :suit 'force
   :risk 'mid
   :ok outcome
   :partial outcome
@@ -234,7 +234,7 @@ encounter 里改全局字段用 quoted symbol：`(effect 'add 'money 80)`。
 
 | 参数 | 必填 | 说明 |
 |------|------|------|
-| `:suits` | ✅ | 花色列表 |
+| `:suit` | ✅ | 花色（单个） |
 | `:risk` | ✅ | 风险等级 |
 | `:ok` | ✅ | 成功结果 |
 | `:partial` | ✅ | 中等结果 |
@@ -243,8 +243,8 @@ encounter 里改全局字段用 quoted symbol：`(effect 'add 'money 80)`。
 合法值：
 
 - `:risk`：`'low` / `'mid` / `'high`
-- `:suits`：`'force` / `'charm` / `'knowledge` / `'sense`（或中文 `暴力`/`魅力`/`知识`/`敏锐`，需 include `enum-symbols.scm`）
-- 不写 `:suits` 或写空列表时，不使用人物属性加成
+- `:suit`：`'force` / `'charm` / `'knowledge` / `'sense`（或中文 `暴力`/`魅力`/`知识`/`敏锐`，需 include `enum-symbols.scm`）
+- `:suit` 只写一个花色（不写时表示不使用人物属性加成）
 
 ---
 

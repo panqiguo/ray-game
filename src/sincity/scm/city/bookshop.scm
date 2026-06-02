@@ -15,7 +15,7 @@
     :title title
     :desc desc
     :check (check
-      :suits (list suit)
+      :suit suit
       :risk 'low
       :ok (outcome (list (effect 'clock+ clock 2)))
       :partial (outcome (list (effect 'clock+ clock 1) (effect 'add pressure 1)))

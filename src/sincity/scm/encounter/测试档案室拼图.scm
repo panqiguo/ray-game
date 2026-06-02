@@ -3,13 +3,13 @@
 (include "../common_world_bindings.scm")
 
 (define clue-action
-  (lambda (title desc clock-field flag suits)
+  (lambda (title desc clock-field flag suit)
     (when (not flag)
       (action
         :title title
         :desc desc
         :check (check
-          :suits suits
+          :suit suit
           :risk 'mid
           :ok (outcome (list (effect 'clock+ clock-field 2)) "线索快完整了。")
           :partial (outcome (list (effect 'clock+ clock-field 1)) "你抓到一点边。")
@@ -20,21 +20,21 @@
     :title "病历柜"
     :desc "旧病历上的签名，被人用墨水涂过。"
     :show-clocks (list clue_a)
-    :actions (list (clue-action "搜病历柜" "翻找同一晚的就诊记录。" clue_a clue_a_done (list 敏锐)))))
+    :actions (list (clue-action "搜病历柜" "翻找同一晚的就诊记录。" clue_a clue_a_done 敏锐))))
 
 (define (clue-b-scene)
   (scene
     :title "财务夹"
     :desc "真正的名字通常不会写在封面，而会写在报销人那一栏。"
     :show-clocks (list clue_b)
-    :actions (list (clue-action "搜财务夹" "从付款记录里找出谁在替谁遮账。" clue_b clue_b_done (list 知识)))))
+    :actions (list (clue-action "搜财务夹" "从付款记录里找出谁在替谁遮账。" clue_b clue_b_done 知识))))
 
 (define (clue-c-scene)
   (scene
     :title "人事盒"
     :desc "离职档案堆在最下面，像故意等人忘掉。"
     :show-clocks (list clue_c)
-    :actions (list (clue-action "搜人事盒" "查一份被撤掉的夜班名单。" clue_c clue_c_done (list 知识)))))
+    :actions (list (clue-action "搜人事盒" "查一份被撤掉的夜班名单。" clue_c clue_c_done 知识))))
 
 (define analysis-factors
   (lambda ()
@@ -62,7 +62,7 @@
         :title "开始拼图"
         :desc "停下搜索，把已有线索放到同一张纸上。"
         :check (check
-          :suits (list 知识)
+          :suit 知识
           :risk 'mid
           :factors (analysis-factors)
           :ok (outcome (list (effect 'clock+ analysis 2)) "你把两个看似无关的名字连到了一起。")

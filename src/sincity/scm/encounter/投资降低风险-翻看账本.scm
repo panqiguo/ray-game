@@ -16,7 +16,7 @@
         :desc "撞翻文件车，借一场小事故打开短暂窗口。"
         :conditions (list (field-equals 'guard_state "watching" "守门人正在坐着的时候可用"))
         :check (check
-          :suits (list 魅力 知识)
+          :suit 魅力
           :risk 'low
           :ok (outcome (list (effect 'clock+ disturbance 2)) "文件车倒了，纸页飞散。混乱够了。")
           :partial (outcome (list (effect 'clock+ disturbance 1)) "动静太小，律师只是抬头看了一眼。")
@@ -37,7 +37,7 @@
         :desc "混乱盖住了你的动作。现在看账本很安全。"
         :conditions (list (field-equals 'guard_state "checking" "守门人不在这儿的时候可用"))
         :check (check
-          :suits (list 敏锐 知识)
+          :suit 敏锐
           :risk 'mid
           :ok (outcome (list (effect 'clock+ ledger 1)) "你记下一笔关键流向。")
           :partial (outcome (list (effect 'clock+ ledger 1) (effect 'add energy -1)) "你看到了，但翻页慢了一点。")
@@ -47,7 +47,7 @@
         :desc "守门人在看着这边。每翻一页都可能被发现。"
         :conditions (list (field-equals 'guard_state "watching" ""))
         :check (check
-          :suits (list 敏锐 知识)
+          :suit 敏锐
           :risk 'high
           :ok (outcome (list (effect 'clock+ ledger 1) (effect 'clock+ exposure 1)) "你记下一笔关键流向，但翻页声引起了注意。")
           :partial (outcome (list (effect 'clock+ ledger 1) (effect 'clock+ exposure 1) (effect 'add energy -1)) "你看到了，但翻页慢了一点。")

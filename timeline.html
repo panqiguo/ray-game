@@ -65,6 +65,18 @@ body{
 }
 .ch .t{font-size:10px;background:rgba(0,0,0,.1);border-radius:3px;padding:1px 5px;font-weight:400}
 
+.pg{
+  margin:3px 0 8px 16px;
+  padding:6px 0 6px 14px;
+  border-left:2px solid #d8d8d4;
+  border-radius:0 5px 5px 0;
+  background:rgba(200,200,195,.06);
+}
+.pg .b{font-size:11px;padding:4px 0 4px 9px}
+.pg .loc{font-size:11px}
+.pg-label{font-size:10px;color:#999;letter-spacing:.03em;margin:0 0 5px 5px;font-style:italic}
+.pg-label::before{content:"—— ";white-space:pre}
+
 .sep{grid-column:1/-1;height:1px;background:linear-gradient(to right,#eee 0,#d4d4d0 30%,#d4d4d0 70%,#eee);margin:0 5px}
 </style>
 </head>
@@ -79,7 +91,7 @@ body{
 
 <!-- ── 列标题 ── -->
 <div class="corner"></div>
-<div class="th"><div class="thi cp"><span class="th-name">夜莺主线</span><span class="th-sub">威胁信 · 送信路线 · 莱恩</span></div></div>
+<div class="th"><div class="thi cp"><span class="th-name">夜莺主线</span><span class="th-sub">威胁信 · 送信路线 · 莱恩 · 坠落事故 · 报社</span></div></div>
 <div class="th"><div class="thi cm"><span class="th-name">金发女郎</span><span class="th-sub">酒吧暧昧 · 旧名字</span></div></div>
 <div class="th"><div class="thi ct"><span class="th-name">信任关系</span><span class="th-sub">夜莺信任 · 期限压力</span></div></div>
 <div class="th"><div class="thi cs1"><span class="th-name">生存底盘</span><span class="th-sub">工作 · 债务 · 恢复</span></div></div>
@@ -181,22 +193,40 @@ body{
 <div class="cl"><span class="cl-num">第三节</span><span class="cl-name">旧码头的莱恩</span></div>
 
 <div class="tc on">
-  <div class="b key">调查旧码头（填 ryan_lead 4/4）</div>
+  <div class="b key">打听莱恩（填 ryan_lead 4/4）</div>
   <div class="b loc">► 旧码头</div>
   <div class="b">和码头工人搭话（敏锐 +1）</div>
   <div class="b">在小店打听莱恩（魅力 +1）</div>
-  <div class="b">查看旧公告（一次性 +1）</div>
-  <div class="b note">ryan_lead ≥ 3 → 线索足够，指向码头酒馆</div>
+  <div class="b">查看码头旧公告（一次性 +1）</div>
+  <div class="b note">线索≥3 → 指向码头酒馆</div>
   <div class="g"></div>
   <div class="b loc">► 码头酒馆</div>
   <div class="ch">喝酒交锋 <span class="t">拼酒</span></div>
-  <div class="b red">仅从该 encounter 获得莱恩地址</div>
-  <div class="b">无论胜负 → ryan_address_found = true</div>
+  <div class="b red">无论胜负 → ryan_address_found</div>
+  <div class="b">酒保："找老海伦"</div>
+  <div class="g"></div>
+  <div class="b key">搜寻海伦住处</div>
+  <div class="pg">
+    <div class="pg-label">三处并列，逐处排查</div>
+    <div class="b loc">► 旧海员寄宿楼 ✗（死胡同）</div>
+    <div class="b loc">► 红砖寄宿公寓 ✓（正确）</div>
+    <div class="b loc">► 东栈房出租屋 ✗（死胡同）</div>
+    <div class="b note">各处填进度 6/6：向住客打听 · 翻看门牌信箱 · 等管理员</div>
+  </div>
+  <div class="g"></div>
+  <div class="b key">老海伦的寄宿公寓</div>
+  <div class="b">初次敲门 → 认识老海伦</div>
+  <div class="b">推进醉意（填 helen_loosened 3/3）</div>
+  <div class="b note">买酒 · 聊莱恩 · 问旧码头往事</div>
+  <div class="b red">醉满 → 海伦熟睡</div>
+  <div class="ch">搜查房间 <span class="t">潜行</span></div>
+  <div class="b red">照片被撕碎 / 成功找到 ✓</div>
+  <div class="b">→ 莱恩的过去 · 被人跟踪 · 事态升级</div>
+  <div class="g"></div>
   <div class="b loc">► 莱恩老店铺</div>
-  <div class="b">检查店内 → 拆迁通知·赞助名单交集</div>
-  <div class="b loc">► 莱恩新店</div>
-  <div class="b red">与莱恩对峙</div>
-  <div class="b note">"我不写恐吓信。查清楚旧街区是谁拆的，再回来跟我谈。"</div>
+  <div class="b">拆迁通知 · 赞助名单交集</div>
+  <div class="b key">✓ 任务完成：旧码头调查结束</div>
+  <div class="b note">（后续去莱恩新店是对峙剧情，非任务要求）</div>
   <div class="g"></div>
   <div class="b red">5天期限（ryan_deadline 5→0）</div>
   <div class="b note">到期后夜间信任每日 -1，7和2时弹出对话</div>
@@ -220,7 +250,7 @@ body{
   <div class="b">超期后信任每日 -1</div>
   <div class="b note">旧码头5天窗口</div>
   <div class="g"></div>
-  <div class="b mrg">对峙完成 → 信任稳定</div>
+  <div class="b mrg">老店铺调查完成 → 信任稳定</div>
 </div>
 
 <div class="tc on">
@@ -229,6 +259,98 @@ body{
   <div class="g"></div>
   <div class="b">医疗恢复</div>
   <div class="b note">黑市医生 · 正规诊所 · 康复训练</div>
+  <div class="g"></div>
+  <div class="b">黑市买酒（6元 → 给 liquor）</div>
+  <div class="b note">给老海伦买酒必需</div>
+</div>
+
+<div class="sep"></div>
+
+<!-- ══════════ 第四节：后台坠落事故 ══════════ -->
+<div class="cl"><span class="cl-num">第四节</span><span class="cl-name">后台坠落事故</span></div>
+
+<div class="tc on">
+  <div class="b key">返回剧院 → 后台事故</div>
+  <div class="b loc">► 剧院·后台</div>
+  <div class="ch">坠落事故 <span class="t">紧急救援</span></div>
+  <div class="b">保护夜莺躲开坠落灯架</div>
+  <div class="b note">无论胜负 → theater_accident_survived</div>
+  <div class="g"></div>
+  <div class="b key">调查事故现场</div>
+  <div class="pg">
+    <div class="pg-label">并行</div>
+    <div class="b loc">► 坠落灯架（关键线索）</div>
+    <div class="b">检查断裂绳索（知识 +1）</div>
+    <div class="b">提取金属楔子（敏锐 +1）</div>
+    <div class="b note">→ 人为破坏痕迹，填 clue 3/3</div>
+    <div class="g"></div>
+    <div class="b loc">► 后台道具间（额外资源）</div>
+    <div class="b">搜寻物资，填 supplies 3/3</div>
+    <div class="b note">cleanup 2/2 自动推进，到期关闭</div>
+  </div>
+  <div class="g"></div>
+  <div class="b key">向夜莺展示照片与线索</div>
+  <div class="b note">发现报纸已备好事故稿件</div>
+  <div class="b red">→ 报社解锁</div>
+</div>
+
+<div class="tc off"></div>
+
+<div class="tc on">
+  <div class="b key">信任验证</div>
+  <div class="b">事故中保护夜莺 → 信任 +2</div>
+  <div class="b note">夜莺开始怀疑内部有人配合</div>
+</div>
+
+<div class="tc on">
+  <div class="b">事故后恢复</div>
+  <div class="b note">若救援失败则 health -1</div>
+  <div class="g"></div>
+  <div class="b">物资搜刮</div>
+  <div class="b note">后台道具间补给</div>
+</div>
+
+<div class="sep"></div>
+
+<!-- ══════════ 第五节：报纸的速度 ══════════ -->
+<div class="cl"><span class="cl-num">第五节</span><span class="cl-name">报纸的速度</span></div>
+
+<div class="tc on">
+  <div class="b key">调查事故稿件来源</div>
+  <div class="b loc">► 贝城晚报</div>
+  <div class="b">初次进入报社</div>
+  <div class="b note">警惕值 press_alert 3/3（每日重置）</div>
+  <div class="pg">
+    <div class="pg-label">三处并列，可自由选择</div>
+    <div class="b loc">► 编辑室</div>
+    <div class="b">翻看事故稿修改痕迹 · 套问值班编辑</div>
+    <div class="b loc">► 排版间</div>
+    <div class="b">核对铅字排版时间 · 翻找废弃校样</div>
+    <div class="b loc">► 记者工位</div>
+    <div class="b">检查电话记录 · 搜笔记本夹层 → 预写稿件</div>
+    <div class="b note">source 填满 4/4 即可推进</div>
+  </div>
+  <div class="g"></div>
+  <div class="b loc">► 与记者对峙</div>
+  <div class="ch">报社谈判 <span class="t">交涉</span></div>
+  <div class="b">笔记拍桌 / 拆穿时间线 / 抛更大新闻</div>
+  <div class="b red">concession 4 vs backlash 3</div>
+  <div class="b">记者承认：笔迹像莱恩，幕后另有其人</div>
+  <div class="b key">✓ 任务完成：威胁信 → 事故 → 预写稿件 串连</div>
+</div>
+
+<div class="tc off"></div>
+
+<div class="tc on">
+  <div class="b key">真相逐渐清晰</div>
+  <div class="b">威胁信 · 坠落事故 · 预写新闻</div>
+  <div class="b red">三条线指向同一幕后</div>
+  <div class="b note">拆迁利益链 · 城市更新黑幕</div>
+</div>
+
+<div class="tc on">
+  <div class="b">调查开销</div>
+  <div class="b note">报社线索可持续追踪</div>
 </div>
 
 <div class="sep"></div>
@@ -237,15 +359,14 @@ body{
 <div class="cl"><span class="cl-num">待续</span><span class="cl-name">Next…</span></div>
 
 <div class="tc fade">
-  <div class="b mrg">莱恩否认写恐吓信</div>
-  <div class="b mrg">指向旧街区拆迁幕后</div>
+  <div class="b key">莱恩新店对峙（post-task）</div>
+  <div class="b mrg">"查清楚旧街区是谁拆的，再回来跟我谈。"</div>
   <div class="b note">剧院赞助名单 · 城市更新利益链</div>
-  <div class="g"></div>
-  <div class="b mrg">下一章：拆迁线 · 赞助人 · 慈善晚宴</div>
 </div>
 
 <div class="tc fade">
-  <div class="b mrg">玛丽线索 → 薇拉线入口</div>
+  <div class="b key">玛丽 → 薇拉线</div>
+  <div class="b mrg">海伦照片中穿演出服的年轻女人</div>
   <div class="b note">幸存者网络 · 红房间</div>
 </div>
 

@@ -15,7 +15,7 @@
       :title "工厂计件：组装螺丝"
       :desc (piecework-desc)
       :check (check
-        :suits (list 知识)
+        :suit 知识
         :risk 'mid
         :ok (outcome (list (effect 'clock+ piecework_part 1)) "这一半零件咬合得很顺，像是机器也终于肯帮你一次。")
         :partial (outcome (list (effect 'clock+ piecework_part 1) (effect 'add piecework_bad_halves 1) (effect 'add pressure 1)) "这一半勉强装上了，但已经算残次。")

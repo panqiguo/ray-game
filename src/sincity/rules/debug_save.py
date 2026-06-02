@@ -56,6 +56,7 @@ def _upgrade_dataclass(obj: object, _visited: set[int] | None = None) -> None:
 
 def debug_save(state: GameState, rng: RandomSource, slot: int = 1) -> None:
     assert state.active_dialogue is None, "不能对话中存档"
+    assert not state.dialogue_queue, "不能在对话队列未清空时存档"
     path = slot_path(slot)
     saved_revision = state.render_cache.revision
     state.render_cache = RenderCacheState()

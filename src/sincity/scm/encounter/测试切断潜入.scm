@@ -31,7 +31,7 @@
           (field-equals 'power_cut false "当前已经断电")
           (field-equals 'backup_power_active false "备用电源已经接管"))
         :check (check
-          :suits (list 知识)
+          :suit 知识
           :risk 'mid
           :factors (stealth-factors)
           :ok (outcome (list (effect 'clock+ power_progress 2)) "你切开一组主线，配电柜的嗡鸣低了一截。")
@@ -61,7 +61,7 @@
         :desc "切断监控主线。完成后警戒 +2，监控失效两回合。"
         :conditions (list (field-equals 'monitor_cut false "监控已经断开"))
         :check (check
-          :suits (list 知识)
+          :suit 知识
           :risk 'mid
           :factors (stealth-factors)
           :ok (outcome (list (effect 'clock+ camera_progress 2)) "你拔掉一组线路，屏幕墙抖了一下。")
@@ -87,7 +87,7 @@
         :desc "翻找能用于破坏或盗取行动的工具。"
         :conditions (list (field-equals 'tool_taken false "已经取得道具"))
         :check (check
-          :suits (list 敏锐)
+          :suit 敏锐
           :risk 'low
           :factors (stealth-factors)
           :ok (outcome (list (effect 'clock+ tool_progress 2)) "你找到一套薄撬片和短柄螺丝刀。")
@@ -98,7 +98,7 @@
         :desc "从抽屉和外套口袋里找一点现金。最多翻四次。"
         :conditions (list (field-below 'money_search 4 "零钱已经翻空"))
         :check (check
-          :suits (list 敏锐)
+          :suit 敏锐
           :risk 'low
           :factors (stealth-factors)
           :ok (outcome (list (effect 'clock+ money_search 1) (effect 'add money 4)) "你摸出几张皱巴巴的钞票。")
@@ -116,7 +116,7 @@
         :title "打开保险箱"
         :desc "主目标。监控和看守都会压低这次盗取行动。"
         :check (check
-          :suits (list 知识)
+          :suit 知识
           :risk 'high
           :factors (safe-factors)
           :ok (outcome (list (effect 'clock+ safe 2)) "锁舌松开了一大截。")
@@ -190,7 +190,7 @@
     (var 'monitor_cut false)
     (var 'guard_at_safe true)
     (var 'tool_taken false)
-    (var 'tools (world-item 'tools 0))
+    (import-world-item 'tools)
     (var 'alert (clock :title "警戒" :initial 0 :max 6))
     (var 'power_progress (clock :title "断电" :initial 0 :max 4))
     (var 'backup_power (clock :title "备用电源" :desc "填满后恢复供电，警戒 +4。" :initial 0 :max 2))

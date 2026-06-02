@@ -10,7 +10,7 @@
         :title "压住对方，把账册拿回来"
         :desc "你不用把事情闹大，只要让他明白这本账册不该继续留在他手里。"
         :check (check
-          :suits (list 魅力)
+          :suit 魅力
           :risk 'mid
           :ok (outcome "他退得很快，账册也交得很快。" (list (effect 'end-encounter 'success)))
           :partial (outcome "你拿到了账册，但手背被划开一道口子。" (list (effect 'add health -1) (effect 'end-encounter 'success)))
@@ -19,7 +19,7 @@
         :title "绕到后门堵他"
         :desc "你试着不靠拳头解决这件事。后门窄，脚步声会先出卖人。"
         :check (check
-          :suits (list 敏锐)
+          :suit 敏锐
           :risk 'mid
           :ok (outcome "你堵住了他，也堵住了他的侥幸。" (list (effect 'end-encounter 'success)))
           :partial (outcome "你追上了他，但这一跑耗掉不少力气。" (list (effect 'add energy -1) (effect 'end-encounter 'success)))

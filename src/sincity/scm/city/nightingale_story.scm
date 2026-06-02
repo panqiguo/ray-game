@@ -63,6 +63,9 @@
 (define nightingale-second-letter-fail-text
   "# 剧院绕过你\n\n# speaker: 剧院经理\n“信已经进来了，我们只能先交给警方。”\n\n# speaker: 科尔\n我慢了一步。现在剧院和警局之间，又多了一份不经过我的材料。")
 
+(define nightingale-accident-call-text
+  "# 剧院来电\n\n# speaker: 科尔\n旧照片还没在抽屉里躺稳，剧院那边的电话就打了进来。\n\n# speaker: 剧院经理\n“后台出事了。夜莺在里面。你最好现在过来。”\n\n# speaker: 科尔\n电话里没人说调查。那种语气只说明一件事：事故还没有结束。")
+
 (define nightingale-vars
   (list
     (var 'nightingale_theater_unlocked true)
@@ -93,6 +96,11 @@
     (var 'nightingale_deadline_checked_day 0)
     (var 'nightingale_first_letter_done false)
     (var 'nightingale_first_letter_due_day 0)
+    (var 'nightingale_second_letter_ready false)
+    (var 'nightingale_second_letter_harder false)
+    (var 'nightingale_second_letter_intercepted false)
+    (var 'nightingale_second_letter_failed false)
+    (var 'nightingale_second_letter_delivered false)
     (var 'nightingale_trust (clock :title "夜莺的信任" :desc "拖得越久，夜莺和剧院越会怀疑你是否还能保护她。降到 0 时委托失败。" :initial 8 :max 8))
     (var 'nightingale_trust_initialized false)
     (var 'nightingale_trust_checked_day 0)
@@ -102,7 +110,31 @@
     (var 'nightingale_docks_direction_known false)
     (var 'nightingale_side_job_clock (clock :title "旧码头卸货" :desc "临时招工，搬几趟箱子换工钱。" :initial 0 :max 4))
     (var 'nightingale_side_job_available false)
-    (var 'nightingale_side_job_done false)))
+    (var 'nightingale_side_job_done false)
+    (var 'theater_accident_unlocked false)
+    (var 'theater_accident_survived false)
+    (var 'theater_accident_started false)
+    (var 'nightingale_saved false)
+    (var 'nightingale_hurt false)
+    (var 'accident_sabotage_seen false)
+    (var 'theater_photo_discussed false)
+    (var 'theater_accident_clue (clock :title "事故现场线索" :desc "在坠落灯架和断绳里找到足以说明事故不是意外的东西。" :initial 0 :max 3))
+    (var 'theater_accident_clue_found false)
+    (var 'theater_accident_supplies (clock :title "后台可用物资" :desc "事故后散落的工具、药品和备用材料。可以冒险搜出一点有用东西。" :initial 0 :max 3))
+    (var 'theater_accident_supplies_found false)
+    (var 'theater_accident_cleanup (clock :title "现场清理" :desc "剧院的人正在把事故残骸清走。填满后，后台道具废墟不再能被搜刮。" :initial 0 :max 2))
+    (var 'theater_accident_cleanup_started false)
+    (var 'theater_accident_cleanup_checked_day 0)
+    (var 'press_angle_seen false)
+    (var 'newspaper_office_unlocked false)
+    (var 'newspaper_first_visit_done false)
+    (var 'press_source (clock :title "稿源线索" :desc "查清后台事故稿件的来源，以及报社为什么能提前拿到这套说法。" :initial 0 :max 9))
+    (var 'press_alert (clock :title "今日报社警觉" :desc "你越打扰编辑、排字工和记者，报社越会防着你。每天会重置。" :initial 0 :max 3))
+    (var 'press_source_found false)
+    (var 'press_note_found false)
+    (var 'reporter_negotiation_unlocked false)
+    (var 'reporter_negotiation_done false)
+    (var 'press_feed_confirmed false)))
 
 (define nightingale-reacts
   (list
@@ -181,6 +213,7 @@
       :when (and nightingale_stall_checked nightingale_market_checked nightingale_restaurant_done (not nightingale_first_letter_done))
       :then (list
         (effect 'set nightingale_first_letter_done true)
+        (effect 'set nightingale_second_letter_ready true)
         (effect 'set nightingale_docks_direction_known true)
         (effect 'clock+ nightingale_trust 3)
         (effect 'start-quick-dialogue nightingale-first-letter-done-text)))
@@ -209,7 +242,58 @@
         (effect 'set nightingale_side_job_done true)
         (effect 'set nightingale_side_job_available false)
         (effect 'add money 30)
-        (effect 'start-quick-dialogue "# 卸货工钱\n\n# speaker: 工头\n“干完了。这是你的工钱。”")))))
+        (effect 'start-quick-dialogue "# 卸货工钱\n\n# speaker: 工头\n“干完了。这是你的工钱。”")))
+    (react
+      :when (and helen_room_searched
+                 (not theater_accident_unlocked)
+                 (not theater_accident_survived))
+      :then (list
+        (effect 'set theater_accident_unlocked true)))
+    (react
+      :when (and (clock-filled? theater_accident_clue)
+                 (not theater_accident_clue_found))
+      :then (list
+        (effect 'set theater_accident_clue_found true)
+        (effect 'set theater_accident_cleanup_started true)
+        (effect 'set theater_accident_cleanup_checked_day day)
+        (effect 'start-quick-dialogue "# 断绳和楔片\n\n# speaker: 科尔\n断口太干净了，像有人提前咬过一口。灯架下还卡着一枚金属楔片，不属于剧院常用的固定件。\n\n# speaker: 科尔\n这不是单纯的意外。有人知道后台怎样运转，也知道该让事故看起来像莱恩那种粗暴破坏。")))
+    (react
+      :when (and theater_accident_clue_found
+                 (not theater_accident_supplies_found)
+                 (not theater_accident_cleanup_started))
+      :then (list
+        (effect 'set theater_accident_cleanup_started true)
+        (effect 'set theater_accident_cleanup_checked_day day)))
+    (react
+      :when (and theater_accident_cleanup_started
+                 (not theater_accident_supplies_found)
+                 (not (clock-filled? theater_accident_cleanup))
+                 (> day theater_accident_cleanup_checked_day))
+      :then (list
+        (effect 'clock+ theater_accident_cleanup (- day theater_accident_cleanup_checked_day))
+        (effect 'set theater_accident_cleanup_checked_day day)))
+    (react
+      :when (and (clock-filled? theater_accident_supplies)
+                 (not theater_accident_supplies_found))
+      :then (list
+        (effect 'set theater_accident_supplies_found true)
+        (effect 'add health 1)
+        (effect 'add energy 1)
+        (effect 'start-quick-dialogue "# 后台物资\n\n# speaker: 科尔\n急救箱里还剩一点绷带和醒神药。剧院的人忙着清场，没人顾得上这些小东西。\n\n# speaker: 科尔\n拿走它们不体面，但今晚已经没有多少体面的余地。")))
+    (react
+      :when (and (clock-filled? press_source)
+                 (not press_source_found))
+      :then (list
+        (effect 'set press_source_found true)
+        (effect 'set press_note_found true)
+        (effect 'set reporter_negotiation_unlocked true)
+        (effect 'start-quick-dialogue "# 提前送来的便条\n\n# speaker: 科尔\n记者工位的夹层里塞着一张便条。上面写着：莱恩、夜莺、旧码头、后台事故。顺序像一份标题提纲。\n\n# speaker: 科尔\n纸上的字迹粗暴，像莱恩会写出来的东西。可问题不在这里。\n\n# speaker: 科尔\n如果他真想威胁夜莺，为什么要把威胁送给报社？他是想吓她，还是想让整座城替他看见什么？")))
+    ))
+
+(define (nightingale-day-start-effects)
+  (list
+    (when newspaper_first_visit_done
+      (effect 'clock- press_alert (clock-value press_alert)))))
 
 (define nightingale-tasks
   (list
@@ -242,8 +326,8 @@
       :kind '主线
       :title "保护夜莺：旧码头的莱恩"
       :desc "第二封威胁信没有解释所有问题，但它把线索推向旧码头。莱恩的名字开始反复出现——醉话、闹事、旧怨，以及一间已经撑不住的新店。"
-      :active (and ryan_docks_unlocked (not ryan_confronted))
-      :completed ryan_confronted
+      :active (and ryan_docks_unlocked (not ryan_old_shop_checked))
+      :completed ryan_old_shop_checked
       :failed false
       :steps (list
         (step :title "在旧码头打听莱恩" :completed ryan_tavern_challenge_unlocked)
@@ -252,9 +336,147 @@
         (step :title "让老海伦开口" :completed helen_asleep)
         (step :title "偷偷搜索房间，拿到旧照片" :completed helen_room_searched)
         (step :title "脱身，发现有人在跟踪你" :completed ryan_followed_after_helen)
-        (step :title "调查莱恩的老店铺" :completed ryan_old_shop_checked)
-        (step :title "去莱恩的新店找他" :completed ryan_new_shop_unlocked)
-        (step :title "与莱恩第一次正面对峙" :completed ryan_confronted)))))
+        (step :title "调查莱恩的老店铺" :completed ryan_old_shop_checked)))
+    (task
+      :kind '主线
+      :title "保护夜莺：后台坠落事故"
+      :desc "老海伦房间里的旧照片还没给出答案，剧院后台就传来事故。你必须在混乱还没结束前赶回去。"
+      :active (and helen_room_searched (not press_angle_seen))
+      :completed press_angle_seen
+      :failed false
+      :steps (list
+        (step :title "回到剧院，处理后台事故" :completed theater_accident_survived)
+        (step :title "调查事故现场，找到关键线索" :completed theater_accident_clue_found)
+        (step :title "把旧照片和现场线索拿给夜莺看" :completed theater_photo_discussed)
+        (step :title "意识到报社提前知道事故叙事" :completed press_angle_seen)))
+    (task
+      :kind '主线
+      :title "保护夜莺：报纸的速度"
+      :desc "后台事故还没冷下来，报社已经像提前拿到了故事。去贝城晚报，查清谁在给记者喂料。"
+      :active (and newspaper_office_unlocked (not press_feed_confirmed))
+      :completed press_feed_confirmed
+      :failed false
+      :steps (list
+        (step :title "前往贝城晚报" :completed newspaper_first_visit_done)
+        (step :title "调查事故稿件的来源" :completed press_source_found)
+        (step :title "找到提前送来的事故口径便条" :completed press_note_found)
+        (step :title "在报社逼小报记者让步" :completed reporter_negotiation_done)
+        (step :title "确认莱恩与报社线索有关" :completed press_feed_confirmed)))))
+
+(define (press-alert-factors)
+  (list
+    (factor -1 :when (>= (clock-value press_alert) 1) :label "报社起疑")
+    (factor -1 :when (>= (clock-value press_alert) 2) :label "有人盯着你")
+    (factor -1 :when (>= (clock-value press_alert) 3) :label "快被赶出去")))
+
+(define (press-source-action title desc suit ok-text partial-text fail-text)
+  (when (not press_source_found)
+    (action
+      :title title
+      :desc desc
+      :check (check
+        :suit suit
+        :risk 'mid
+        :factors (press-alert-factors)
+        :ok (outcome (list (effect 'clock+ press_source 2)) ok-text)
+        :partial (outcome (list (effect 'clock+ press_source 1) (effect 'clock+ press_alert 1)) partial-text)
+        :fail (outcome (list (effect 'clock+ press_alert 1) (effect 'add pressure 1)) fail-text)))))
+
+(define (报社编辑室)
+  (node
+    :title "编辑室"
+    :desc "编辑们把烟灰弹在校样边上。这里的每一行字都像刚从事故现场跑回来，但有些标题跑得太早。"
+    :show-clocks (list
+      press_source
+      press_alert)
+    :actions (list
+      (press-source-action
+        "翻看事故稿的修改痕迹"
+        "标题从“后台意外”改成“旧情人威胁”，改得太熟练，像有人早就知道该往哪个方向写。"
+        敏锐
+        "你在校样边缘找到旧标题，改稿时间早得不合常理。"
+        "你看见一处改稿时间，但编辑开始问你是哪家报社的人。"
+        "编辑把校样从你手下抽走，声音冷得像铅字。")
+      (press-source-action
+        "套问值班编辑的口风"
+        "他不会承认稿源，但会记得谁把这篇稿子催得最急。"
+        魅力
+        "他漏出一句：事故发生前，记者已经在等“旧码头那条线”。"
+        "他多说了半句，也立刻意识到自己说多了。"
+        "他让你离稿桌远点，整个编辑室都听见了。"))))
+
+(define (报社排版间)
+  (node
+    :title "排版间"
+    :desc "铅字、油墨和机器声把话压得很低。排版时间不会撒谎，除非有人提前把谎话排好了。"
+    :show-clocks (list
+      press_source
+      press_alert)
+    :actions (list
+      (press-source-action
+        "核对铅字排版时间"
+        "版面上有事故稿的位置。真正的问题是，这块位置是什么时候被空出来的。"
+        知识
+        "排字工的记录显示，事故稿的版位在电话打来前就预留好了。"
+        "你找到一条时间记录，但排字工已经开始收本子。"
+        "机器声盖过你的问题，排字工只当你在找麻烦。")
+      (press-source-action
+        "翻找废弃校样"
+        "废纸篓里的早版校样可能比记者嘴里的解释更诚实。"
+        敏锐
+        "一张废样上已经写着莱恩的名字，旁边还圈了旧码头。"
+        "你捡到半张废样，手指上沾满油墨，也被人看见了。"
+        "废纸篓被人一脚踢远，你只抓到一手油墨。"))))
+
+(define (记者工位)
+  (node
+    :title "记者工位"
+    :desc "桌上摊着笔记本、电话记录和没喝完的咖啡。记者本人不在，但他的稿子已经替他占好了位置。"
+    :show-clocks (list
+      press_source
+      press_alert)
+    :actions (list
+      (press-source-action
+        "检查记者的电话记录"
+        "如果事故消息来得太快，电话铃一定比事故先响过。"
+        知识
+        "电话记录里有一个没有署名的号码，时间早于剧院正式通报。"
+        "你抄下一段号码，报社职员也记住了你的脸。"
+        "电话簿被人合上，你只看见几个断开的数字。")
+      (press-source-action
+        "搜记者笔记本夹层"
+        "记者写得很快，但真正危险的东西通常不会写在明面上。"
+        敏锐
+        "夹层里有一角便条，关键词和事故稿完全对得上。"
+        "你摸到夹层，却不得不先把本子放回原位。"
+        "抽屉响得太大，隔壁桌的打字声停了一拍。"))))
+
+(define (贝城晚报)
+  (node
+    :title "贝城晚报"
+    :desc "印刷机在楼后震动，编辑室里全是烟味和铅字味。这里不生产真相，只生产能赶上明早的版本。"
+    :position '(1080 500)
+    :show-clocks (list
+      (when (and newspaper_first_visit_done (not press_source_found)) press_source)
+      (when (and newspaper_first_visit_done (not press_source_found)) press_alert))
+    :actions (list
+      (when (not newspaper_first_visit_done)
+        (action
+          :title "走进贝城晚报"
+          :desc "后台事故还没冷下来，报社已经把铅字烧热。你得先看清这台机器在印什么。"
+          :effects (list
+            (effect 'set newspaper_first_visit_done true)
+            (effect 'start-quick-dialogue "# 贝城晚报\n\n# speaker: 科尔\n印刷机在楼后震动。后台事故的稿子已经排进版面，标题里有莱恩，有夜莺，也有旧码头。\n\n# speaker: 科尔\n报社不是跑得快。它像是提前知道该往哪里跑。"))))
+      (when (and reporter_negotiation_unlocked (not reporter_negotiation_done))
+        (action
+          :title "逼小报记者说出便条来路"
+          :desc "便条给了你谈判的筹码。现在问题不是问他知不知道，而是让他承认自己知道多少。"
+          :effects (list
+            (effect 'start-encounter "报社谈判交锋")))))
+    :children (list
+      (when (and newspaper_first_visit_done (not press_source_found)) (报社编辑室))
+      (when (and newspaper_first_visit_done (not press_source_found)) (报社排版间))
+      (when (and newspaper_first_visit_done (not press_source_found)) (记者工位)))))
 
 (define (nightingale-stall-investigation-action)
   (when (and nightingale_commission_taken
@@ -264,7 +486,7 @@
       :title "打听谁替剧院跑过信"
       :desc "摊贩看街的时间比警察还久。送信的人如果匆忙经过，这里最容易留下口风。"
       :check (check
-        :suits (list 敏锐)
+        :suit 敏锐
         :risk 'low
         :ok (outcome (list
           (effect 'set nightingale_stall_checked true)
@@ -314,7 +536,7 @@
         :title "帮忙卸货"
         :desc "搬几趟箱子，出点力气换工钱。"
         :check (check
-          :suits (list 暴力)
+          :suit 暴力
           :risk 'low
           :ok (outcome (list (effect 'clock+ nightingale_side_job_clock 1)) "你干得利索，工头点头记了一工。")
           :partial (outcome (list (effect 'clock+ nightingale_side_job_clock 1)) "活不算重，你勉强跟上了节奏。")

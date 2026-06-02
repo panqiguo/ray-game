@@ -7,7 +7,7 @@ from sincity.constants import HAND_SIZE, MAX_LOG_LINES
 from sincity.content import DEBUG_COMPANION_ORDER, GROWTH_DEFS, INITIAL_COMPANION_ID, PLAYER_ACTOR_ID, SCENARIO, build_initial_party
 from sincity.content.runtime import next_react_rule as next_world_react_rule
 from sincity.content.runtime import react_rule_matches as world_react_rule_matches
-from sincity.content.runtime import evaluate_world_expr, evaluate_world_react_effects, render_tasks, render_world
+from sincity.content.runtime import evaluate_world_day_start_effects, evaluate_world_expr, evaluate_world_react_effects, render_tasks, render_world
 from sincity.dialogues import choose_dialogue_option as choose_runtime_dialogue_option
 from sincity.dialogues import continue_dialogue_session, create_dialogue_session, create_quick_dialogue_session, get_dialogue
 from sincity.encounters import MAX_REACT_STEPS, evaluate_cycle_effects, evaluate_effect_expr, evaluate_fail_effects, evaluate_react_rules, evaluate_reaction_die, evaluate_success_effects, get_encounter, initial_store, next_react_rule, react_rule_matches, render_encounter
@@ -481,12 +481,7 @@ def slot_effective_value(state: GameState, slot_id: str, check) -> int:
 def slot_value_breakdown(state: GameState, slot_id: str, check) -> CheckValueBreakdown:
     base_value = slot_current_value(state, slot_id)
     owner_id = state.deck.action_card_owners.get(slot_id, slot_owner(slot_id))
-    attribute_parts = tuple(
-        CheckValuePart(label=f"{actor_name(state, owner_id)} {_suit_label(suit)}", value=_actor_attribute_value(state, owner_id, suit), source="actor", actor_id=owner_id)
-        for suit in check.suits
-    )
-    active_attribute = max(attribute_parts, key=lambda item: item.value, default=None)
-    actor_part = active_attribute if active_attribute is not None else None
+    actor_part = CheckValuePart(label=f"{actor_name(state, owner_id)} {_suit_label(check.suit)}", value=_actor_attribute_value(state, owner_id, check.suit), source="actor", actor_id=owner_id)
     environment_parts = tuple(
         CheckValuePart(label=item.label, value=item.value, source="environment")
         for item in getattr(check, "factors", ())
@@ -771,6 +766,9 @@ def start_quick_dialogue(state: GameState, raw_text: str) -> None:
 
 def _open_dialogue_session(state: GameState, session, *, primary_id: str) -> None:
     del primary_id
+    if state.active_dialogue is not None:
+        state.dialogue_queue.append(session)
+        return
     state.active_dialogue = session
     clear_assembly(state)
     clear_selected_input(state)
@@ -790,9 +788,12 @@ def continue_dialogue(state: GameState) -> None:
 def fast_forward_dialogue(state: GameState) -> bool:
     if state.active_dialogue is None:
         return False
-    while state.active_dialogue is not None and state.active_dialogue.can_continue and not state.active_dialogue.choices:
+    initial_dialogue = state.active_dialogue
+    while state.active_dialogue is initial_dialogue and state.active_dialogue.can_continue and not state.active_dialogue.choices:
         continue_dialogue(state)
     if state.active_dialogue is None:
+        return True
+    if state.active_dialogue is not initial_dialogue:
         return True
     if state.active_dialogue.choices:
         return True
@@ -829,6 +830,11 @@ def finish_dialogue(state: GameState) -> None:
 
 def _clear_dialogue_modal(state: GameState) -> None:
     state.active_dialogue = None
+    if state.dialogue_queue:
+        state.active_dialogue = state.dialogue_queue.pop(0)
+        clear_assembly(state)
+        clear_selected_input(state)
+        return
     clear_assembly(state)
     clear_selected_input(state)
 
@@ -843,6 +849,7 @@ def _apply_game_over(state: GameState, *, title: str, body: str) -> None:
     state.screen = ScreenName.ENDING
     state.active_encounter = None
     state.active_dialogue = None
+    state.dialogue_queue.clear()
     state.pending_resolution = None
     state.modal = ModalState()
     clear_assembly(state)
@@ -1133,38 +1140,62 @@ def perform_current_action(state: GameState, rng: RandomSource) -> None:
 
 
 def perform_instant_action(state: GameState, action: ActionDef, rng: RandomSource) -> None:
+    del rng
     assert action_is_instant(action), f"Action is not an instant action: {action.id}"
     assert action_is_available(action, state), f"Instant action not available: {action.id}"
     clear_assembly(state)
     clear_selected_input(state)
-    extra_lines: list[str] = []
-    _apply_effects(action.effects, state, rng, extra_lines)
-    log_text = action.title + ("：" + "，".join(extra_lines[:1]) if extra_lines else "")
-    _push_log(state, log_text)
-    _check_endings(state)
+    location_id = location_for_action(action.id, state)
+    effect_lines = _describe_effects(action.effects, action.id, state)
+    resolution = ActionResolution(
+        action_id=action.id,
+        card_id=None,
+        result=None,
+        die_roll=None,
+        value=None,
+        text=action.description,
+        effect_lines=effect_lines,
+    )
+    log_text = action.title + ("：" + "，".join(effect_lines[:1]) if effect_lines else "")
+    state.pending_resolution = PendingResolutionState(
+        resolution=resolution,
+        effects=action.effects,
+        log_text=log_text,
+        location_id=location_id or "",
+        completion_kind="instant",
+    )
 
 
 def perform_reveal_action(state: GameState, action: ActionDef, rng: RandomSource) -> None:
+    del rng
     assert action_is_reveal(action), f"Action is not a reveal action: {action.id}"
     assert action_is_available(action, state), f"Reveal action not available: {action.id}"
     clear_assembly(state)
     clear_selected_input(state)
-    if action.effects:
-        extra_lines: list[str] = []
-        _apply_effects(action.effects, state, rng, extra_lines)
-        log_text = action.title + ("：" + "，".join(extra_lines[:1]) if extra_lines else "")
-        _push_log(state, log_text)
-    else:
-        _push_log(state, action.title)
     reveal = action.reveal
     assert reveal is not None
-    state.action_reveal = ActiveActionRevealState(
+    location_id = location_for_action(action.id, state)
+    effect_lines = _describe_effects(action.effects, action.id, state)
+    resolution = ActionResolution(
         action_id=action.id,
-        title=reveal.title or action.title,
-        text=reveal.text,
-        duration=reveal.duration,
+        card_id=None,
+        result=None,
+        die_roll=None,
+        value=None,
+        text=action.description,
+        effect_lines=effect_lines,
     )
-    _check_endings(state)
+    log_text = action.title + ("：" + "，".join(effect_lines[:1]) if effect_lines else "")
+    state.pending_resolution = PendingResolutionState(
+        resolution=resolution,
+        effects=action.effects,
+        log_text=log_text,
+        location_id=location_id or "",
+        completion_kind="reveal",
+        reveal_title=reveal.title or action.title,
+        reveal_text=reveal.text,
+        reveal_duration=reveal.duration,
+    )
 
 
 def advance_action_reveal(state: GameState, dt: float) -> None:
@@ -1206,6 +1237,15 @@ def advance_pending_resolution(state: GameState, rng: RandomSource, dt: float) -
                 pending.resolution.effect_lines = tuple(merged[:6])
             state.last_resolution = pending.resolution
             _check_endings(state)
+            if pending.completion_kind == "reveal" and state.screen == previous_screen:
+                state.action_reveal = ActiveActionRevealState(
+                    action_id=pending.resolution.action_id,
+                    title=pending.reveal_title,
+                    text=pending.reveal_text,
+                    duration=pending.reveal_duration,
+                )
+                state.pending_resolution = None
+                return
             if state.modal.kind == "location" and state.modal.primary_id is not None and not location_is_visible(state.modal.primary_id, state):
                 close_modal(state)
             pending.settled = True
@@ -1504,6 +1544,7 @@ def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines
         remaining = state.world.values.get("gang_days_remaining", 0)
         if isinstance(remaining, int) and remaining > 0:
             state.world.values["gang_days_remaining"] = remaining - 1
+        _apply_effects(evaluate_world_day_start_effects(SCENARIO, state), state, rng, extra_lines, resolve_encounter_reacts=False)
         _mark_content_dirty(state)
         return
     if item.kind == "end_game":

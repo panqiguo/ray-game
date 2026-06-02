@@ -6,7 +6,7 @@
     :title "插进去替他解围"
     :desc "你像个刚好路过、又刚好不爱看热闹的人一样插进他们中间。"
     :check (check
-      :suits (list 敏锐)
+      :suit 敏锐
       :risk 'low
       :ok (outcome (list (effect 'clock+ advantage 2)) "")
       :partial (outcome (list (effect 'clock+ advantage 1) (effect 'add 'energy -1)) "")
@@ -17,7 +17,7 @@
     :title "狠狠干翻一个追债人"
     :desc "最快的说服方式通常都很粗糙。"
     :check (check
-      :suits (list 暴力)
+      :suit 暴力
       :risk 'mid
       :ok (outcome (list (effect 'clock+ advantage 2)) "")
       :partial (outcome (list (effect 'clock+ advantage 1) (effect 'add 'health -1)) "")

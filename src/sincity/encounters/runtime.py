@@ -21,6 +21,7 @@ from sincity.content_lang.runtime_core import (
     runtime_value as _runtime_value,
     unwrap as _unwrap,
     validate_action_template as _validate_action_template,
+    validate_effect_target_symbols as _validate_effect_target_symbols_generic,
     validate_reaction_table as _validate_reaction_table,
     validate_react_template as _validate_react_template,
     validate_schema_forms as _validate_schema_forms_generic,
@@ -266,6 +267,7 @@ def evaluate_effect_expr(program: CompiledEncounterProgram, store: dict[str, Any
 def validate_encounter_program(program: CompiledEncounterProgram) -> None:
     assert program.store_specs, f"{program.id}: encounter missing state."
     env = _runtime_env(definitions=program.definitions, store=initial_store(program), store_specs=program.store_specs)
+    _validate_all_effect_target_symbols(program, env)
     _validate_all_schema_forms(program, env)
     for name, value in program.definitions.items():
         try:
@@ -313,6 +315,21 @@ def _validate_all_schema_forms(program: CompiledEncounterProgram, env: Environme
         _validate_schema_forms(rule.condition.body, env, context=f"{program.id}: react `{rule.source}` condition")
         for effect in rule.effects:
             assert isinstance(effect, Effect), f"{program.id}: react `{rule.source}` contains non-effect value: {effect!r}"
+
+
+def _validate_all_effect_target_symbols(program: CompiledEncounterProgram, env: Environment) -> None:
+    for name, value in program.definitions.items():
+        if isinstance(value, Procedure):
+            _validate_effect_target_symbols_generic(value.body, env, context=f"{program.id}: definition `{name}`", local_symbols=frozenset(value.params))
+    _validate_effect_target_symbols_generic(program.view_expr, env, context=f"{program.id}: root scene")
+    if program.reaction_die_expr is not None:
+        _validate_effect_target_symbols_generic(program.reaction_die_expr, env, context=f"{program.id}: reaction-die")
+    if program.cycle_effects_expr is not None:
+        _validate_effect_target_symbols_generic(program.cycle_effects_expr, env, context=f"{program.id}: on-cycle")
+    if program.rewards_expr is not None:
+        _validate_effect_target_symbols_generic(program.rewards_expr, env, context=f"{program.id}: on-success")
+    if program.fail_effects_expr is not None:
+        _validate_effect_target_symbols_generic(program.fail_effects_expr, env, context=f"{program.id}: on-fail")
 
 
 def _validate_schema_forms(expr: Any, env: Environment, *, context: str) -> None:

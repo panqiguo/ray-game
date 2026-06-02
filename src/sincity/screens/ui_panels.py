@@ -21,6 +21,7 @@ from sincity.rules import (
     claim_growth,
     close_modal,
     count_spirit_cards,
+    current_world_snapshot,
     encounter_action_cards,
     endure_pressure_during_encounter,
     open_modal,
@@ -123,6 +124,13 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
     else:
         subtitle = "灰掉表示今天已经使用。行动卡本身无属性，点数受健康影响。"
         draw_text(font, subtitle, int(hand.x) + 166, int(hand.y) + 17, subtitle_style.size, subtitle_style.color)
+        rest_rect = Rectangle(hand.x + hand.width - INVENTORY_PANEL_RIGHT_OFFSET - 104, hand.y + 12, 84, 30)
+        if text_button(font, rest_rect, "休整", ui_text_size("body")):
+            snapshot = current_world_snapshot(state)
+            for loc_id, loc in snapshot.locations_by_id.items():
+                if loc.title == "办公室":
+                    open_modal(state, "location", loc_id)
+                    break
     x = int(hand.x) + 18
     y = int(hand.y) + 50
     cards_right_limit = _inventory_panel_rect().x - 12

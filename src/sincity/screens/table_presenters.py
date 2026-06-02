@@ -133,8 +133,8 @@ def present_action_card(state: GameState, action: ActionDef) -> PresentedActionC
 
     metadata: tuple[str, ...] = ()
     if action.check is not None:
-        suits = "通用" if not action.check.suits else " / ".join(SUIT_LABELS[suit] for suit in action.check.suits)
-        metadata = (suits, RISK_LABELS[action.check.risk])
+        suit_label = SUIT_LABELS.get(action.check.suit, "通用")
+        metadata = (suit_label, RISK_LABELS[action.check.risk])
     return PresentedActionCard(
         action=action,
         card=TableCardModel(
@@ -263,13 +263,13 @@ def _actor_factor_previews(state: GameState, action: ActionDef) -> tuple[ActionF
         return ()
     previews: list[ActionFactorPreview] = []
     actor_ids = [state.player_actor_id, *state.companion_actor_ids] if state.active_encounter is None else [state.player_actor_id]
-    for suit in action.check.suits:
-        for actor_id in actor_ids:
-            actor = party_actor(state, actor_id)
-            if not actor.can_act:
-                continue
-            value = getattr(actor, suit.value)
-            previews.append(ActionFactorPreview(label=f"{actor.name} {SUIT_LABELS[suit]}", value=value, source="actor", actor_id=actor_id))
+    suit = action.check.suit
+    for actor_id in actor_ids:
+        actor = party_actor(state, actor_id)
+        if not actor.can_act:
+            continue
+        value = getattr(actor, suit.value)
+        previews.append(ActionFactorPreview(label=f"{actor.name} {SUIT_LABELS[suit]}", value=value, source="actor", actor_id=actor_id))
     return tuple(previews)
 
 

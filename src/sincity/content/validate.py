@@ -3,6 +3,7 @@ from __future__ import annotations
 from sincity.dialogues import DIALOGUES_BY_ID
 from sincity.content.runtime import render_world
 from sincity.encounters import ENCOUNTERS_BY_ID, initial_store, render_encounter, validate_encounter_program
+from sincity.encounters.lispy import StringAtom, expand_includes
 from sincity.content.cards import CARD_DEFS
 from sincity.content.growth import GROWTH_DEFS
 from sincity.content.city_1 import SCENARIO
@@ -149,6 +150,7 @@ def validate_content() -> None:
             _validate_condition(condition)
         for effect in growth.effects:
             _validate_effect(effect, context="encounter_completion")
+    _validate_static_world_start_encounter_targets()
     snapshot = render_world(SCENARIO, _validation_state())
     for location_id, location in snapshot.locations_by_id.items():
         assert location.id == location_id
@@ -181,6 +183,40 @@ def validate_content() -> None:
 def _validate_location(location: LocationNode) -> None:
     for condition in location.conditions:
         _validate_condition(condition)
+
+
+def _validate_static_world_start_encounter_targets() -> None:
+    source_path = SCENARIO.source_path
+    assert source_path is not None, "Scenario source path is required for static validation"
+    forms = expand_includes(source_path.read_text(encoding="utf-8"), source_path=source_path)
+    for target in _iter_literal_start_encounter_targets(forms):
+        assert target in ENCOUNTERS_BY_ID, f"Unknown start-encounter target in world SCM: {target!r}"
+
+
+def _iter_literal_start_encounter_targets(expr) -> tuple[str, ...]:
+    targets: list[str] = []
+
+    def walk(item) -> None:
+        if not isinstance(item, list):
+            return
+        if len(item) >= 3 and item[0] == "effect" and _literal_atom(item[1]) == "start-encounter":
+            target = _literal_atom(item[2])
+            if target is not None:
+                targets.append(target)
+        for child in item:
+            walk(child)
+
+    for form in expr:
+        walk(form)
+    return tuple(targets)
+
+
+def _literal_atom(expr) -> str | None:
+    if isinstance(expr, StringAtom):
+        return expr.value
+    if isinstance(expr, list) and len(expr) == 2 and expr[0] == "quote" and isinstance(expr[1], str):
+        return expr[1]
+    return None
 
 
 def _validation_state():

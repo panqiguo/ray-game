@@ -10,7 +10,7 @@
           :title "解释"
           :desc "你把弗雷德里克、旅馆和她正在逃的东西连成一条线。她已经能听完整句话。"
           :check (check
-            :suits (list 知识)
+            :suit 知识
             :risk 'low
             :ok (outcome (list (effect 'clock+ calm 2)) "她的眼神终于从枪口后面抬起来。")
             :partial (outcome (list (effect 'clock+ calm 1)) "她没有完全相信，但至少没有打断你。")
@@ -20,7 +20,7 @@
           :title "解释"
           :desc "你开始讲证据，而不是讲道理。她仍然警惕，但已经给了你几句话的空间。"
           :check (check
-            :suits (list 知识)
+            :suit 知识
             :risk 'mid
             :ok (outcome (list (effect 'clock+ calm 2)) "一个名字让她动摇了一下。")
             :partial (outcome (list (effect 'clock+ calm 1) (effect 'clock+ pressure 1)) "她听进去半句，枪口却没有松。")
@@ -30,7 +30,7 @@
           :title "解释"
           :desc "你试着先把事情讲清楚。问题是她现在只相信枪。"
           :check (check
-            :suits (list 知识)
+            :suit 知识
             :risk 'high
             :ok (outcome (list (effect 'clock+ calm 1)) "她抓住了你话里那个不该外人知道的细节。")
             :partial (outcome (list (effect 'clock+ pressure 1)) "她听见了，但没有相信。")
@@ -44,7 +44,7 @@
           :title "安抚"
           :desc "你不再追问，只让她知道现在还可以不扣扳机。"
           :check (check
-            :suits (list 魅力)
+            :suit 魅力
             :risk 'low
             :ok (outcome (list (effect 'clock+ calm 1)) "她的呼吸慢下来，枪口低了一点。")
             :partial (outcome (list (effect 'clock+ calm 1)) "她还握着枪，但眼神不再那么硬。")
@@ -54,7 +54,7 @@
           :title "安抚"
           :desc "你放低声音，先处理她的恐惧，而不是你自己的答案。"
           :check (check
-            :suits (list 魅力)
+            :suit 魅力
             :risk 'low
             :ok (outcome (list (effect 'clock+ calm 1)) "她的手仍然抖，但已经不是完全冲着你。")
             :partial (outcome (list) "她沉默着，至少这份沉默没有变得更坏。")
@@ -64,7 +64,7 @@
           :title "安抚"
           :desc "你先让她听见一个不带命令的声音。"
           :check (check
-            :suits (list 魅力)
+            :suit 魅力
             :risk 'mid
             :ok (outcome (list (effect 'clock+ calm 1)) "她没有回应，但枪口慢了半拍。")
             :partial (outcome (list) "她盯着你，像在确认你下一秒会不会扑上来。")
@@ -78,7 +78,7 @@
           :title "靠近一点"
           :desc "你把一步藏进谈话停顿里。她看见了，但没有立刻把它当成攻击。"
           :check (check
-            :suits (list 敏锐)
+            :suit 敏锐
             :risk 'low
             :ok (outcome (list (effect 'clock+ approach 2) (effect 'clock+ pressure 1)) "你离枪近了很多，代价只是她重新看了你一眼。")
             :partial (outcome (list (effect 'clock+ approach 1) (effect 'clock+ pressure 1)) "你挪近了半步，她也重新握紧了枪。")
@@ -88,7 +88,7 @@
           :title "靠近一点"
           :desc "她愿意听，但还不愿意让你靠近。每一步都会让压力上升。"
           :check (check
-            :suits (list 敏锐)
+            :suit 敏锐
             :risk 'mid
             :ok (outcome (list (effect 'clock+ approach 2) (effect 'clock+ pressure 1)) "你绕过桌角，枪口跟着你，但慢了。")
             :partial (outcome (list (effect 'clock+ approach 1) (effect 'clock+ pressure 2)) "距离缩短了，危险也缩短了。")
@@ -98,7 +98,7 @@
           :title "靠近一点"
           :desc "她还没有把你当成能谈的人。现在移动，几乎就是拿身体压枪口。"
           :check (check
-            :suits (list 敏锐)
+            :suit 敏锐
             :risk 'high
             :ok (outcome (list (effect 'clock+ approach 1) (effect 'clock+ pressure 2)) "你抢到了一点距离，但她已经被逼到边缘。")
             :partial (outcome (list (effect 'clock+ pressure 2)) "你刚动，她就把枪口顶回来了。")
@@ -121,7 +121,7 @@
               :title "夺下枪支"
               :desc "她已经有一瞬间不想开枪。你要把这一瞬变成结果。"
               :check (check
-                :suits (list 暴力)
+                :suit 暴力
                 :risk 'mid
                 :ok (outcome (list (effect 'set armed false) (effect 'end-encounter 'success)) "你扣住她的手腕，把枪压向地面。她终于松开了。")
                 :partial (outcome (list (effect 'set disarm_failed true) (effect 'add health -1) (effect 'clock+ pressure 2)) "你碰到了枪，但没能夺下。枪口擦过你，疼痛逼你退开。")
@@ -131,7 +131,7 @@
               :title "夺下枪支"
               :desc "距离够了，但她还没有冷静。你可以赌速度，也可能把这条路彻底赌没。"
               :check (check
-                :suits (list 暴力)
+                :suit 暴力
                 :risk 'high
                 :ok (outcome (list (effect 'set armed false) (effect 'end-encounter 'success)) "你压住枪身，膝盖撞开她的重心，枪从她手里掉下去。")
                 :partial (outcome (list (effect 'set disarm_failed true) (effect 'add health -1) (effect 'clock+ pressure 3)) "你抓到枪，又被她抢回去。子弹没有打中要害，但这条路关上了。")

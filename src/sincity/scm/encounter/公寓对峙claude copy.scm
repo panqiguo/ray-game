@@ -47,7 +47,7 @@
         :title "放低姿态"
         :desc "你把自己变得没有威胁。不急着解释，先让她的呼吸跟上你的节奏。"
         :check (check
-          :suits (list 魅力)
+          :suit 魅力
           :risk 'low
           :ok      (outcome (list (effect 'clock+ calm 1)) "")
           :partial (outcome (list) "")
@@ -57,7 +57,7 @@
         :title "解释立场"
         :desc "你说出你为什么在这里，以及你知道什么。信息量更大，风险也更大。"
         :check (check
-          :suits (list 魅力)
+          :suit 魅力
           :risk 'mid
           :ok      (outcome (list (effect 'clock+ calm 2)) "")
           :partial (outcome (list (effect 'clock+ calm 1) (effect 'clock+ danger 1)) "")
@@ -67,7 +67,7 @@
         :title "反问她"
         :desc "你不解释，而是问一个她没想到你会问的问题。"
         :check (check
-          :suits (list 敏锐)
+          :suit 敏锐
           :risk 'mid
           :ok      (outcome (list (effect 'clock+ calm 2) (effect 'clock- danger 1)) "")
           :partial (outcome (list (effect 'clock+ calm 1)) "")
@@ -82,7 +82,7 @@
           :title "缓慢靠近"
           :desc "你用她注意力的间隙缩短距离。只有她足够冷静时才有机会移动。"
           :check (check
-          :suits (list 敏锐)
+          :suit 敏锐
           :risk 'mid
           :ok      (outcome (list (effect 'clock+ distance 2)) "")
             :partial (outcome (list (effect 'clock+ distance 1) (effect 'clock+ danger 2)) "")
@@ -96,7 +96,7 @@
           :title "压制手腕"
           :desc "你不夺枪，只压住她持枪手的角度，把枪口从你身上挪开。"
           :check (check
-          :suits (list 暴力)
+          :suit 暴力
           :risk 'high
           :ok      (outcome (list (effect 'clock+ distance 2) (effect 'clock+ danger 1)) "")
             :partial (outcome (list (effect 'clock+ distance 1) (effect 'clock+ danger 3) (effect 'add health -1)) "")
@@ -107,7 +107,7 @@
           :title "夺枪"
           :desc "距离够了。剩下的只有速度。"
           :check (check
-          :suits (list 暴力)
+          :suit 暴力
           :risk 'high
           :ok      (outcome (list (effect 'clock+ calm 8)) "")   ; 直接填满 calm = 物理路径胜利
             :partial (outcome (list (effect 'clock+ danger 3) (effect 'add health -1)) "")

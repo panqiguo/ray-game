@@ -27,7 +27,7 @@ from sincity.encounters.defs import (
     TaskStepTemplate,
     TaskTemplate,
 )
-from sincity.encounters.lispy import Environment, Procedure, SpecialFormProcedure, evaluate, truthy
+from sincity.encounters.lispy import Environment, Procedure, SpecialFormProcedure, StringAtom, evaluate, truthy
 from sincity.labels import lookup_input_label
 from sincity.model.defs import (
     ActionDef,
@@ -64,9 +64,9 @@ SUIT_BY_NAME = {
 
 def build_check(check: CheckTemplate) -> CheckDef:
     assert check.risk in RISK_BY_NAME, f"Unknown risk: {check.risk}"
-    suits = tuple(dict.fromkeys(SUIT_BY_NAME[item] for item in check.suits))
+    suit = SUIT_BY_NAME[check.suit]
     return CheckDef(
-        suits=suits,
+        suit=suit,
         risk=RISK_BY_NAME[check.risk],
         success=OutcomeDef(text=check.success.text, effects=check.success.effects),
         cost=OutcomeDef(text=check.cost.text, effects=check.cost.effects),
@@ -216,6 +216,80 @@ def validate_schema_forms(
         )
 
 
+def validate_effect_target_symbols(expr: Any, env: Environment, *, context: str, local_symbols: frozenset[str] = frozenset()) -> None:
+    try:
+        _validate_effect_target_symbols(expr, env, local_symbols=local_symbols)
+    except EncounterSchemeError as exc:
+        raise EncounterSchemeError(f"{context}: {exc}") from exc
+
+
+def _validate_effect_target_symbols(expr: Any, env: Environment, *, local_symbols: frozenset[str]) -> None:
+    if not isinstance(expr, list) or not expr:
+        return
+    head = expr[0]
+    if head == "quote":
+        return
+    if head == "lambda":
+        assert len(expr) == 3, "`lambda` expects parameters and body."
+        params = expr[1]
+        assert isinstance(params, list) and all(isinstance(param, str) for param in params), "`lambda` parameters must be symbols."
+        _validate_effect_target_symbols(expr[2], env, local_symbols=local_symbols | frozenset(params))
+        return
+    if head == "effect":
+        _validate_effect_targets(expr, env, local_symbols=local_symbols)
+    for item in expr:
+        _validate_effect_target_symbols(item, env, local_symbols=local_symbols)
+
+
+def _validate_effect_targets(expr: list[Any], env: Environment, *, local_symbols: frozenset[str]) -> None:
+    if len(expr) < 2:
+        return
+    kind = _static_effect_kind(expr[1])
+    if kind in {"set", "add"} and len(expr) >= 3:
+        _validate_effect_target_expr(expr[2], env, local_symbols=local_symbols, require_clock=False)
+    elif kind in {"clock+", "clock-"} and len(expr) >= 3:
+        _validate_effect_target_expr(expr[2], env, local_symbols=local_symbols, require_clock=True)
+    elif kind == "copy" and len(expr) >= 4:
+        _validate_effect_target_expr(expr[2], env, local_symbols=local_symbols, require_clock=False)
+        _validate_effect_target_expr(expr[3], env, local_symbols=local_symbols, require_clock=False)
+
+
+def _static_effect_kind(expr: Any) -> str | None:
+    if isinstance(expr, list) and len(expr) == 2 and expr[0] == "quote":
+        raw = expr[1]
+        return raw if isinstance(raw, str) else None
+    if isinstance(expr, StringAtom):
+        return expr.value
+    return None
+
+
+def _validate_effect_target_expr(expr: Any, env: Environment, *, local_symbols: frozenset[str], require_clock: bool) -> None:
+    if isinstance(expr, list) and len(expr) == 2 and expr[0] == "quote":
+        if require_clock:
+            raise EncounterSchemeError("Clock effect targets must be clock bindings, not quoted keys.")
+        return
+    if isinstance(expr, StringAtom):
+        return
+    if not isinstance(expr, str):
+        return
+    if expr in local_symbols:
+        return
+    try:
+        value = env.lookup(expr)
+    except EncounterSchemeError as exc:
+        raise EncounterSchemeError(
+            f"Unknown effect target symbol `{expr}`. If `{expr}` is an inventory or dynamic world key, quote it as `'{expr}`."
+        ) from exc
+    if isinstance(value, StateBindingValue):
+        if require_clock:
+            if value.spec.kind != "clock":
+                raise EncounterSchemeError(f"Effect target `{expr}` must be a clock binding.")
+        return
+    raise EncounterSchemeError(
+        f"Effect target `{expr}` resolves to a non-state value. Use a state binding, a function parameter, or quote inventory/dynamic keys as `'{expr}`."
+    )
+
+
 def render_scene(program: Any, scene: SceneTemplate, *, scene_path: tuple[str, ...], source_index: int = 0) -> RenderedScene:
     scene_key = _hash_key(scene.title, (*scene_path, f"slot:{source_index}"), "scene")
     path = (*scene_path, scene_key)
@@ -335,6 +409,9 @@ def host_values(*, store_specs: dict[str, StoreFieldSpec], store: dict[str, Any]
         "world-attr": builtin_world_attr,
         "world-value": builtin_world_value,
         "world-item": builtin_world_item,
+        "import-world-attr": lambda key: [binding_name(key), builtin_world_attr(key)],
+        "import-world-value": lambda key, initial=False: [binding_name(key), builtin_world_value(key, initial)],
+        "import-world-item": lambda key, initial=0: [binding_name(key), builtin_world_item(key, initial)],
         "task": SpecialFormProcedure(builtin_task),
         "step": SpecialFormProcedure(builtin_task_step),
         "node": lambda *args: builtin_scene(args),
@@ -478,8 +555,8 @@ def builtin_action(args: tuple[Any, ...]) -> ActionTemplate:
 
 
 def builtin_check(args: tuple[Any, ...]) -> CheckTemplate:
-    kwargs = keyword_args(list(args), allowed={":suits", ":risk", ":factors", ":ok", ":partial", ":fail"})
-    suits = tuple(unwrap(item) for item in as_list(kwargs.get(":suits")))
+    kwargs = keyword_args(list(args), allowed={":suit", ":risk", ":factors", ":ok", ":partial", ":fail"})
+    suit = unwrap(kwargs.get(":suit"))
     risk = keyword_string(kwargs, ":risk", allow_symbol=True)
     factors = tuple(item for item in as_list(kwargs.get(":factors")) if item is not None)
     for item in factors:
@@ -488,7 +565,7 @@ def builtin_check(args: tuple[Any, ...]) -> CheckTemplate:
     cost = kwargs.get(":partial")
     fail = kwargs.get(":fail")
     assert isinstance(success, OutcomeTemplate) and isinstance(cost, OutcomeTemplate) and isinstance(fail, OutcomeTemplate), "Check outcomes must be outcome forms."
-    return CheckTemplate(suits=suits, risk=risk, success=success, cost=cost, fail=fail, factors=factors)
+    return CheckTemplate(suit=suit, risk=risk, success=success, cost=cost, fail=fail, factors=factors)
 
 
 def builtin_check_factor(args: tuple[Any, ...]) -> CheckFactorDef:

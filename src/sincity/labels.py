@@ -10,6 +10,7 @@ ITEM_LABELS = {
     "repair_case_item": "任务道具",
     "gun": "枪",
     "food": "干粮",
+    "liquor": "便宜酒",
     "fake_id": "假证件",
     "passage_ticket": "船票",
     "first_aid": "药品",

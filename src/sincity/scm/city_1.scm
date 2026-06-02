@@ -104,7 +104,7 @@
     :title title
     :desc desc
     :check (check
-      :suits (list suit)
+      :suit suit
       :risk 'mid
       :ok (outcome (list (effect 'clock+ clock 2)) "线索露出了一小截。你把它按在纸上。")
       :partial (outcome (list (effect 'clock+ clock 1) (effect 'add pressure 1)) "你得到了一点碎片，足够继续往下问。")
@@ -115,18 +115,18 @@
     :title "办公室"
     :desc "办公桌、沙发、电话和一块还没完全褪色的地板。这里既是工作地点，也是你暂时能睡下的地方。"
     :position '(40 280)
-    :show-clocks (list (when (not blood_cleaned) blood_clean_progress) (when (and item_recovered item_auth_sent (not auth_done)) auth_wait_progress))
+    :show-clocks (list (when (and intrusion_seen (not blood_cleaned)) blood_clean_progress) (when (and item_recovered item_auth_sent (not auth_done)) auth_wait_progress))
     :actions (list
       (action
         :title "在沙发上睡一晚"
-        :desc (if (not blood_cleaned)
+        :desc (if (and intrusion_seen (not blood_cleaned))
           "睡觉 → 天数+1，精力-1，重抽行动卡。地板上有血迹时额外增加一点压力。精力不足时转为压力。"
           "睡觉 → 天数+1，精力-1，重抽行动卡。精力不足时转为压力。")
         :effects (list
           (effect 'advance-day)
           (effect 'reset-hand)
           (effect 'set bookshop_entered_today false)
-          (when (not blood_cleaned) (effect 'add pressure 1))))
+          (when (and intrusion_seen (not blood_cleaned)) (effect 'add pressure 1))))
       (action
         :title "吃一包随身干粮"
         :desc "不用找摊贩，也不用花今天的钱。吃掉 1 份干粮，立刻恢复 3 点精力。"
@@ -144,7 +144,7 @@
           :title "清理地板上的血迹"
           :desc "不是为了骗过鉴识科，是为了让自己还能在这里闭眼。"
           :check (check
-            :suits (list 暴力 敏锐)
+            :suit 暴力
             :risk 'low
             :ok (outcome (list (effect 'clock+ blood_clean_progress 2)))
             :partial (outcome  (list (effect 'clock+ blood_clean_progress 1)))
@@ -194,7 +194,7 @@
           :title "向摊贩打听中枪男人"
           :desc "饭点时人群最杂。有人也许见过那个捂着腹部从雨里穿过去的男人。"
           :check (check
-            :suits (list 敏锐)
+            :suit 敏锐
             :risk 'mid
             :ok (outcome "你从摊贩的闲谈里拼出了一个方向。" (list (effect 'clock+ investigation_progress 1) (effect 'set stall_investigated true)))
             :partial (outcome "碎片不多，但足够让你继续往前走。" (list (effect 'clock+ investigation_progress 1) (effect 'set stall_investigated true) (effect 'add pressure 1)))
@@ -214,11 +214,16 @@
         :desc "便宜，不报警。坏处是你最好别仔细看他的器械。"
         :inputs (list (item 'money 12 "诊费"))
         :check (check
-          :suits (list 魅力)
+          :suit 魅力
           :risk 'mid
           :ok (outcome (list (effect 'add health 3)))
           :partial (outcome (list (effect 'add health 2)))
           :fail (outcome (list (effect 'add health 2) (effect 'add pressure 1)))))
+      (action
+        :title "买一瓶便宜酒"
+        :desc "黑市柜台下面压着几瓶没标签的烈酒。味道粗糙，但足够让人开口。"
+        :inputs (list (item 'money 6 "酒钱"))
+        :effects (list (effect 'add 'liquor 1)))
       (when (not black_loan_active)
         (action
           :title "借黑市高利贷"
@@ -247,7 +252,7 @@
           :title "问枪伤药品的去向"
           :desc "正规诊所会登记，黑市不会。不会登记的地方，反而更容易留下口风。"
           :check (check
-            :suits (list 知识)
+            :suit 知识
             :risk 'mid
             :ok (outcome "黑市的人记性比诊所好。他记得那个买绷带的人。" (list (effect 'clock+ investigation_progress 1) (effect 'set market_investigated true)))
             :partial (outcome "他半遮半掩地说了几个细节，够你接着查。" (list (effect 'clock+ investigation_progress 1) (effect 'set market_investigated true) (effect 'add pressure 1)))
@@ -280,7 +285,7 @@
           :title "进行康复训练"
           :desc "动作不大，但每天坚持会有用。低风险，失败没有惩罚。"
           :check (check
-            :suits (list 暴力)
+            :suit 暴力
             :risk 'low
             :ok (outcome (list (effect 'clock+ rehab_progress 2)))
             :partial (outcome (list (effect 'clock+ rehab_progress 1)))
@@ -299,7 +304,7 @@
           :title "进行简易康复训练"
           :desc "投入行动卡训练一次。效果看发挥，次数用完为止。"
           :check (check
-            :suits (list 暴力)
+            :suit 暴力
             :risk 'low
             :ok (outcome (list (effect 'clock+ rehab2_progress 1) (effect 'add health 1)))
             :partial (outcome (list (effect 'clock+ rehab2_progress 1) (effect 'add health 1) (effect 'add pressure 1)))
@@ -319,7 +324,7 @@
           :title "查急诊登记"
           :desc "中枪的人不一定敢进诊室，但附近总有人看见过他。"
           :check (check
-            :suits (list 知识)
+            :suit 知识
             :risk 'mid
             :ok (outcome "登记簿上没有他，但护士记得那件血衣。" (list (effect 'clock+ investigation_progress 1) (effect 'set clinic_investigated true)))
             :partial (outcome "你翻到了一些记录，不全，但有用。" (list (effect 'clock+ investigation_progress 1) (effect 'set clinic_investigated true) (effect 'add pressure 1)))
@@ -353,7 +358,7 @@
           :title "问码头装卸工"
           :desc "死者鞋底带着码头泥。仓库的人也许见过他从哪条路上来。"
           :check (check
-            :suits (list 敏锐)
+            :suit 敏锐
             :risk 'mid
             :ok (outcome (list (effect 'clock+ investigation_progress 1) (effect 'set warehouse_investigated true)) "装卸工见过那个方向有车急刹的声音。")
             :partial (outcome (list (effect 'clock+ investigation_progress 1) (effect 'set warehouse_investigated true)) "他不能确定，但给你指了可能的方向。")
@@ -388,7 +393,7 @@
         :conditions (list (field-at-least 'money 10 "需要 10 元赌本"))
         :inputs (list (item 'money 10 "赌本"))
         :check (check
-          :suits (list 敏锐)
+          :suit 敏锐
           :risk 'high
           :ok (outcome (list (effect 'add money 24)) "你读懂了对面那点迟疑，今晚的酒钱有人替你付。")
           :partial (outcome (list (effect 'add money 8) (effect 'add pressure 1)) "你赢回一点，但坐得太久，头也开始发沉。")
@@ -784,6 +789,10 @@
     waste-reacts
     docks-reacts))
 
+(define (world-day-start-effects)
+  (append
+    (nightingale-day-start-effects)))
+
 (define world-tasks
   (append
     nightingale-tasks
@@ -819,6 +828,7 @@
   :vars world-vars
   :reacts world-reacts
   :tasks world-tasks
+  :on-day-start (world-day-start-effects)
   :root
   (node
     :title "贝城县"
@@ -835,6 +845,7 @@
       (when nightingale_clinic_unlocked (正规诊所))
       (when false (书店))
       (when nightingale_theater_unlocked (剧院))
+      (when newspaper_office_unlocked (贝城晚报))
       (when intrusion_seen (警局))
       (when (or intrusion_seen nightingale_city_day_started) (仓库))
       (when nightingale_side_job_available (旧码头卸货))

@@ -15,7 +15,7 @@ __all__ = [
     "initial_store",
     "evaluate_reaction_die",
     "evaluate_effect_expr",
-    "evaluate_cycle_effects",
+    "evaluate_cycle_start_effects",
     "evaluate_fail_effects",
     "evaluate_react_rules",
     "evaluate_success_effects",
@@ -37,7 +37,7 @@ def __getattr__(name: str):
         "initial_store",
         "evaluate_reaction_die",
         "evaluate_effect_expr",
-        "evaluate_cycle_effects",
+        "evaluate_cycle_start_effects",
         "evaluate_fail_effects",
         "evaluate_react_rules",
         "evaluate_success_effects",
@@ -46,11 +46,11 @@ def __getattr__(name: str):
         "render_encounter",
         "validate_encounter_program",
     }:
-        from .runtime import MAX_REACT_STEPS, evaluate_cycle_effects, evaluate_effect_expr, evaluate_fail_effects, evaluate_react_rules, evaluate_reaction_die, evaluate_success_effects, initial_store, next_react_rule, react_rule_matches, render_encounter, validate_encounter_program
+        from .runtime import MAX_REACT_STEPS, evaluate_cycle_start_effects, evaluate_effect_expr, evaluate_fail_effects, evaluate_react_rules, evaluate_reaction_die, evaluate_success_effects, initial_store, next_react_rule, react_rule_matches, render_encounter, validate_encounter_program
 
         values = {
             "MAX_REACT_STEPS": MAX_REACT_STEPS,
-            "evaluate_cycle_effects": evaluate_cycle_effects,
+            "evaluate_cycle_start_effects": evaluate_cycle_start_effects,
             "evaluate_effect_expr": evaluate_effect_expr,
             "evaluate_fail_effects": evaluate_fail_effects,
             "evaluate_react_rules": evaluate_react_rules,

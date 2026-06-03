@@ -48,7 +48,7 @@ from .progression import (
     perform_reveal_action,
     choose_dialogue_option,
     requirement_is_slotted,
-    rest_during_encounter,
+    advance_cycle,
     remove_companions_for_debug,
     can_endure_pressure_during_encounter,
     select_card_input,

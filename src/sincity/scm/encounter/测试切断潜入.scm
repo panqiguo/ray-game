@@ -140,7 +140,7 @@
   :meta (meta :key '测试切断潜入 :title "不错:切断与潜入" :desc "测试监控关注、断电窗口、监控断开窗口、工具和看守状态。")
   :on-success (list (effect 'set 'test_infiltration_done true))
   :on-fail (list (effect 'set 'test_infiltration_failed true) (effect 'add health -1))
-  :on-cycle (list
+  :on-cycle-start (list
              ;; (when (not power_cut)
              ;;   (effect 'clock+ alert 1))
              (when power_cut

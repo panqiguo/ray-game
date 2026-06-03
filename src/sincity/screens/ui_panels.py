@@ -24,9 +24,9 @@ from sincity.rules import (
     current_world_snapshot,
     encounter_action_cards,
     endure_pressure_during_encounter,
+    advance_cycle,
     open_modal,
     requirement_is_slotted,
-    rest_during_encounter,
     clear_selected_input,
     select_card_input,
     select_item_input,
@@ -120,7 +120,7 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
             endure_pressure_during_encounter(state, rng if rng is not None else RandomSource(state.seed))
         rest_disabled = action_locked
         if text_button(font, rest_rect, "休整", ui_text_size("body"), disabled=rest_disabled):
-            rest_during_encounter(state, rng if rng is not None else RandomSource(state.seed))
+            advance_cycle(state, rng if rng is not None else RandomSource(state.seed))
     else:
         subtitle = "灰掉表示今天已经使用。行动卡本身无属性，点数受健康影响。"
         draw_text(font, subtitle, int(hand.x) + 166, int(hand.y) + 17, subtitle_style.size, subtitle_style.color)

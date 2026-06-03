@@ -100,11 +100,11 @@ class CompiledEncounterProgram:
     view_expr: Any
     rewards: tuple[Effect, ...]
     fail_effects: tuple[Effect, ...]
-    cycle_effects: tuple[Effect, ...] = ()
+    cycle_start_effects: tuple[Effect, ...] = ()
     reacts_expr: Any | None = None
     rewards_expr: Any | None = None
     fail_effects_expr: Any | None = None
-    cycle_effects_expr: Any | None = None
+    cycle_start_effects_expr: Any | None = None
     reaction_die_expr: Any | None = None
 
 
@@ -257,5 +257,5 @@ class ModuleState:
     react_rules: list[ReactRule] = field(default_factory=list)
     rewards: tuple[Effect, ...] = ()
     fail_effects: tuple[Effect, ...] = ()
-    cycle_effects: tuple[Effect, ...] = ()
+    cycle_start_effects: tuple[Effect, ...] = ()
     root_expr: Any | None = None

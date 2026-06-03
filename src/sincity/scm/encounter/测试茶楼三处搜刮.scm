@@ -133,7 +133,7 @@
   :meta (meta :key '测试茶楼三处搜刮 :title "测试茶楼三处搜刮" :desc "测试守卫转移与多区域搜刮。")
   :on-success (list (effect 'set 'test_teahouse_scavenge_done true))
   :on-fail (list (effect 'set 'test_teahouse_scavenge_failed true))
-  :on-cycle (list)
+  :on-cycle-start (list)
   :reacts (list
     (react :when (clock-filled? hall_distract) :then (list
       (effect 'set hall_distracted true)

@@ -24,7 +24,7 @@
    :title "原地喘口气"
    :desc "靠在墙上深呼吸，试图把肺里的药味和眩晕感排出去。"
    :always (list
-            (effect 'reset-hand)
+            (effect 'advance-cycle)
             (effect 'clock+ alert_clock 1))))
 
 (define make_knowledge_path_action

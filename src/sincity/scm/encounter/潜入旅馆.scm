@@ -321,7 +321,7 @@
     (effect 'set 'hotel_infiltrated true))
   :on-fail (list
     (effect 'add energy -2))
-  :on-cycle (list
+  :on-cycle-start (list
     (effect 'clock+ wife_patrol_tick 1)
     (effect 'clock+ husband_patrol_tick 1))
   :reacts (list

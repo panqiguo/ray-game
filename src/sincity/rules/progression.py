@@ -7,10 +7,10 @@ from sincity.constants import HAND_SIZE, MAX_LOG_LINES
 from sincity.content import DEBUG_COMPANION_ORDER, GROWTH_DEFS, INITIAL_COMPANION_ID, PLAYER_ACTOR_ID, SCENARIO, build_initial_party
 from sincity.content.runtime import next_react_rule as next_world_react_rule
 from sincity.content.runtime import react_rule_matches as world_react_rule_matches
-from sincity.content.runtime import evaluate_world_day_start_effects, evaluate_world_expr, evaluate_world_react_effects, render_tasks, render_world
+from sincity.content.runtime import evaluate_world_cycle_start_effects, evaluate_world_expr, evaluate_world_react_effects, render_tasks, render_world
 from sincity.dialogues import choose_dialogue_option as choose_runtime_dialogue_option
 from sincity.dialogues import continue_dialogue_session, create_dialogue_session, create_quick_dialogue_session, get_dialogue
-from sincity.encounters import MAX_REACT_STEPS, evaluate_cycle_effects, evaluate_effect_expr, evaluate_fail_effects, evaluate_react_rules, evaluate_reaction_die, evaluate_success_effects, get_encounter, initial_store, next_react_rule, react_rule_matches, render_encounter
+from sincity.encounters import MAX_REACT_STEPS, evaluate_cycle_start_effects, evaluate_effect_expr, evaluate_fail_effects, evaluate_react_rules, evaluate_reaction_die, evaluate_success_effects, get_encounter, initial_store, next_react_rule, react_rule_matches, render_encounter
 from sincity.encounters.defs import CompiledEncounterProgram
 from sincity.model.defs import ActionDef, AddFieldPayload, DynamicValue, Effect, FieldRef, InputRequirement, ProgressClockSpec, SetFieldPayload, ShiftClockPayload
 from sincity.model.enums import ResultType, ScreenName, Suit
@@ -1531,21 +1531,8 @@ def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines
         assert isinstance(value, str)
         _add_spirit_slot(state, value, extra_lines)
         return
-    if item.kind == "reset_hand":
-        reset_hand(state, rng)
-        return
-    if item.kind == "advance_day":
-        state.day += 1
-        change_energy(state, -1, extra_lines)
-        for actor_id in [state.player_actor_id, *state.companion_actor_ids]:
-            actor = state.party.get(actor_id)
-            if actor is not None:
-                change_actor_pressure(state, -1, actor_id, extra_lines)
-        remaining = state.world.values.get("gang_days_remaining", 0)
-        if isinstance(remaining, int) and remaining > 0:
-            state.world.values["gang_days_remaining"] = remaining - 1
-        _apply_effects(evaluate_world_day_start_effects(SCENARIO, state), state, rng, extra_lines, resolve_encounter_reacts=False)
-        _mark_content_dirty(state)
+    if item.kind == "advance_cycle":
+        advance_cycle(state, rng)
         return
     if item.kind == "end_game":
         if isinstance(value, tuple):
@@ -1623,21 +1610,54 @@ def reset_hand(state: GameState, rng: RandomSource) -> None:
     _mark_content_dirty(state)
 
 
-def rest_during_encounter(state: GameState, rng: RandomSource) -> None:
-    assert state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None, "Encounter rest is only available during encounters."
-    encounter = _encounter(state)
-    clear_assembly(state)
-    clear_selected_input(state)
+def advance_cycle(state: GameState, rng: RandomSource) -> None:
     extra_lines: list[str] = []
-    change_energy(state, -1)
-    if state.screen == ScreenName.ENCOUNTER:
-        _apply_effects(evaluate_cycle_effects(encounter, state.active_encounter.store), state, rng, extra_lines)
+    from_effect = state.pending_resolution is not None
+
+    # ── screen-specific prelude ──
+    if state.screen == ScreenName.CITY:
+        state.day += 1
+        change_energy(state, -1, extra_lines)
+        for actor_id in [state.player_actor_id, *state.companion_actor_ids]:
+            actor = state.party.get(actor_id)
+            if actor is not None:
+                change_actor_pressure(state, -1, actor_id, extra_lines)
+    elif state.screen == ScreenName.ENCOUNTER:
+        assert state.active_encounter is not None
+        clear_assembly(state)
+        clear_selected_input(state)
+        change_energy(state, -1, extra_lines)
+    else:
+        return
+
+    # ── shared :on-cycle-start ──
+    if state.screen == ScreenName.CITY:
+        cycle_effects = evaluate_world_cycle_start_effects(SCENARIO, state)
+    else:
+        cycle_effects = evaluate_cycle_start_effects(_encounter(state), state.active_encounter.store)
+    _apply_effects(cycle_effects, state, rng, extra_lines, resolve_encounter_reacts=False)
+
+    # ── screen-specific midstep ──
     if state.screen == ScreenName.ENCOUNTER:
         _resolve_encounter_reaction_die(state, rng, extra_lines)
-    if state.screen == ScreenName.ENCOUNTER:
+
+    # ── shared reset (guard: cycle-start may have ended the encounter) ──
+    if state.screen in (ScreenName.CITY, ScreenName.ENCOUNTER):
         reset_hand(state, rng)
-    cycle_text = f"；{'，'.join(extra_lines[:2])}" if extra_lines else ""
-    _push_log(state, f"你短暂休整了一下：精力 -1，重抽行动卡{cycle_text}。")
+
+    # ── encounter log (only for UI "休整" button, not action-initiated) ──
+    if not from_effect and state.screen == ScreenName.ENCOUNTER:
+        cycle_text = f"；{'，'.join(extra_lines[:2])}" if extra_lines else ""
+        _push_log(state, f"你短暂休整了一下：精力 -1，重抽行动卡{cycle_text}。")
+
+    # ── shared reacts (only when called directly, not from inside _apply_effects) ──
+    if not from_effect:
+        if state.screen == ScreenName.CITY:
+            _resolve_world_reacts(state, rng, extra_lines)
+        elif state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None:
+            _resolve_encounter_reacts(state, rng, extra_lines)
+
+    _mark_content_dirty(state)
 
 
 def _resolve_encounter_reaction_die(state: GameState, rng: RandomSource, extra_lines: list[str]) -> None:
@@ -1955,10 +1975,11 @@ def _describe_effects(effects: tuple[Effect, ...], action_id: str, state: GameSt
             assert isinstance(value, str)
             target = get_dialogue(value)
             lines.append(f"进入对话：{target.title}")
-        elif item.kind == "reset_hand":
-            lines.append("抽取行动卡")
-        elif item.kind == "advance_day":
-            lines.append("进入下一天，精力 -1")
+        elif item.kind == "advance_cycle":
+            if state.screen == ScreenName.CITY:
+                lines.append("进入新的一天，精力 -1")
+            else:
+                lines.append("进入新的行动周期，精力 -1")
         elif item.kind == "end_game":
             if isinstance(value, tuple):
                 lines.append(str(value[0]))

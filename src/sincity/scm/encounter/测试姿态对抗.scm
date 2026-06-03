@@ -59,7 +59,7 @@
   :meta (meta :key '测试姿态对抗 :title "测试姿态对抗" :desc "固定三行动对两姿态的对抗系统。")
   :on-success (list (effect 'set 'test_stance_done true))
   :on-fail (list (effect 'set 'test_stance_failed true))
-  :on-cycle (list (effect 'clock+ stance_timer 1))
+  :on-cycle-start (list (effect 'clock+ stance_timer 1))
   :reaction-die
     (reaction-die
       (if (= stance 'guard)

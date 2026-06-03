@@ -290,7 +290,7 @@
         (effect 'start-quick-dialogue "# 提前送来的便条\n\n# speaker: 科尔\n记者工位的夹层里塞着一张便条。上面写着：莱恩、夜莺、旧码头、后台事故。顺序像一份标题提纲。\n\n# speaker: 科尔\n纸上的字迹粗暴，像莱恩会写出来的东西。可问题不在这里。\n\n# speaker: 科尔\n如果他真想威胁夜莺，为什么要把威胁送给报社？他是想吓她，还是想让整座城替他看见什么？")))
     ))
 
-(define (nightingale-day-start-effects)
+(define (nightingale-cycle-start-effects)
   (list
     (when newspaper_first_visit_done
       (effect 'clock- press_alert (clock-value press_alert)))))
@@ -361,7 +361,21 @@
         (step :title "调查事故稿件的来源" :completed press_source_found)
         (step :title "找到提前送来的事故口径便条" :completed press_note_found)
         (step :title "在报社逼小报记者让步" :completed reporter_negotiation_done)
-        (step :title "确认莱恩与报社线索有关" :completed press_feed_confirmed)))))
+        (step :title "确认莱恩与报社线索有关" :completed press_feed_confirmed)))
+    (task
+      :kind '主线
+      :title "保护夜莺：拆迁废墟里的莱恩"
+      :desc "报社便条把莱恩重新推回旧码头。拆迁封锁线内藏着首演夜真正的背景：庆功、剪彩、游行和一个被需要的疯子。"
+      :active (and ryan_ruins_unlocked (not premiere_night_unlocked))
+      :completed premiere_night_unlocked
+      :failed false
+      :steps (list
+        (step :title "进入旧码头拆迁封锁线" :completed ryan_ruins_unlocked)
+        (step :title "收集两条拆迁和首演相关线索" :completed ryan_found_in_ruins)
+        (step :title "在废墟里发现莱恩" :completed ryan_found_in_ruins)
+        (step :title "与莱恩在拆迁废墟中对峙" :completed ryan_ruins_confronted)
+        (step :title "被干涉调查的警察带走" :completed ryan_police_interfered)
+        (step :title "熬过警局审问，赶往首演夜" :completed premiere_night_unlocked)))))
 
 (define (press-alert-factors)
   (list

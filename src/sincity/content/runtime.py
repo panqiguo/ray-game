@@ -40,8 +40,8 @@ class CompiledWorldProgram:
     definitions: dict[str, Any]
     react_rules: tuple[ReactRule, ...]
     task_templates: tuple[TaskTemplate, ...]
-    day_start_effects: tuple[Effect, ...]
-    day_start_effects_expr: Any | None
+    cycle_start_effects: tuple[Effect, ...]
+    cycle_start_effects_expr: Any | None
     view_expr: Any
     initial_health: int
     initial_energy: int
@@ -75,8 +75,7 @@ WORLD_EFFECTS = frozenset({
     "add_field",
     "copy_field",
     "shift_clock",
-    "reset_hand",
-    "advance_day",
+    "advance_cycle",
     "end_game",
     "upgrade_spirit_value",
     "add_spirit_slot",
@@ -112,15 +111,15 @@ def compile_world_program(
             content_form = form
             continue
     assert isinstance(content_form, list) and content_form and content_form[0] == "content", "World module must end with a `(content ...)` form."
-    kwargs = _keyword_args(content_form[1:], allowed={":meta", ":vars", ":reacts", ":tasks", ":on-day-start", ":root"})
+    kwargs = _keyword_args(content_form[1:], allowed={":meta", ":vars", ":reacts", ":tasks", ":on-cycle-start", ":root"})
     clocks, state_values = _resolve_state_specs(kwargs.get(":vars"), raw_definitions)
     env = _world_schema_env(definitions={}, clocks_by_id=clocks, initial_values=state_values, initial_inventory=dict(initial_inventory or {}))
     definitions = _eval_top_level_definitions(forms, env)
     metadata = _resolve_meta(kwargs.get(":meta"), env, path)
     react_rules = _resolve_reacts(kwargs.get(":reacts"), env)
     task_templates = _resolve_tasks(kwargs.get(":tasks"), env)
-    day_start_effects_expr = kwargs.get(":on-day-start")
-    day_start_effects = _eval_effect_list(day_start_effects_expr, env) if day_start_effects_expr is not None else ()
+    cycle_start_effects_expr = kwargs.get(":on-cycle-start")
+    cycle_start_effects = _eval_effect_list(cycle_start_effects_expr, env) if cycle_start_effects_expr is not None else ()
     root_expr = kwargs.get(":root")
     assert root_expr is not None, "Content is missing required field: :root"
     program = CompiledWorldProgram(
@@ -133,8 +132,8 @@ def compile_world_program(
         definitions=definitions,
         react_rules=tuple(react_rules),
         task_templates=task_templates,
-        day_start_effects=day_start_effects,
-        day_start_effects_expr=day_start_effects_expr,
+        cycle_start_effects=cycle_start_effects,
+        cycle_start_effects_expr=cycle_start_effects_expr,
         view_expr=root_expr,
         initial_health=initial_health,
         initial_energy=initial_energy,
@@ -224,10 +223,10 @@ def evaluate_world_react_effects(program: CompiledWorldProgram, state: GameState
     return _eval_effect_list(rule.effects_expr, _world_env(program, state))
 
 
-def evaluate_world_day_start_effects(program: CompiledWorldProgram, state: GameState) -> tuple[Effect, ...]:
-    if program.day_start_effects_expr is None:
-        return program.day_start_effects
-    return _eval_effect_list(program.day_start_effects_expr, _world_env(program, state))
+def evaluate_world_cycle_start_effects(program: CompiledWorldProgram, state: GameState) -> tuple[Effect, ...]:
+    if program.cycle_start_effects_expr is None:
+        return program.cycle_start_effects
+    return _eval_effect_list(program.cycle_start_effects_expr, _world_env(program, state))
 
 
 def _render_task_steps(steps: tuple[TaskStepTemplate, ...], env: Environment) -> tuple[RenderedTaskStep, ...]:
@@ -267,9 +266,9 @@ def validate_world_program(program: CompiledWorldProgram) -> None:
         _validate_world_schema_forms(rule.condition.body, env, context=f"{program.id}: react `{rule.source}` condition")
         for effect in rule.effects:
             assert isinstance(effect, Effect), f"{program.id}: react `{rule.source}` contains non-effect value: {effect!r}"
-    if program.day_start_effects_expr is not None:
-        _validate_effect_target_symbols_generic(program.day_start_effects_expr, env, context=f"{program.id}: on-day-start")
-        _validate_world_schema_forms(program.day_start_effects_expr, env, context=f"{program.id}: on-day-start")
+    if program.cycle_start_effects_expr is not None:
+        _validate_effect_target_symbols_generic(program.cycle_start_effects_expr, env, context=f"{program.id}: on-cycle-start")
+        _validate_world_schema_forms(program.cycle_start_effects_expr, env, context=f"{program.id}: on-cycle-start")
     snapshot = render_world(program, dummy_state)
     assert snapshot.root_child_location_ids, f"{program.id}: world root must expose at least one child node."
     for location in snapshot.locations_by_id.values():
@@ -283,7 +282,9 @@ def validate_world_program(program: CompiledWorldProgram) -> None:
             assert condition.kind, f"{program.id}: action contains malformed condition: {condition!r}"
     for rule in program.react_rules:
         _assert_effects_allowed(rule.effects, context=f"{program.id}: react `{rule.source}`")
-    _assert_day_start_effects_allowed(program.day_start_effects, context=f"{program.id}: on-day-start")
+    _assert_cycle_start_effects_allowed(program.cycle_start_effects, context=f"{program.id}: on-cycle-start")
+    if program.cycle_start_effects_expr is not None:
+        _assert_cycle_start_expr_allowed(program.cycle_start_effects_expr, allowed=WORLD_EFFECTS, context=f"{program.id}: on-cycle-start")
     for task in program.task_templates:
         _validate_task_template(program, task, env)
 
@@ -292,10 +293,27 @@ def _validate_world_schema_forms(expr: Any, env: Environment, *, context: str) -
     _validate_schema_forms_generic(expr, env, context=context, allow_nil_templates=True)
 
 
-def _assert_day_start_effects_allowed(effects: tuple[Effect, ...], *, context: str) -> None:
+def _assert_cycle_start_effects_allowed(effects: tuple[Effect, ...], *, context: str) -> None:
     for effect in effects:
-        assert effect.kind in WORLD_EFFECTS, f"{context}: effect `{effect.kind}` is not allowed in world on-day-start"
-        assert effect.kind != "advance_day", f"{context}: on-day-start cannot advance the day"
+        assert effect.kind in WORLD_EFFECTS, f"{context}: on-cycle-start contains disallowed effect `{effect.kind}`"
+        assert effect.kind != "advance_cycle", f"{context}: on-cycle-start cannot advance the cycle"
+
+
+def _assert_cycle_start_expr_allowed(expr: Any, *, allowed: frozenset[str], context: str) -> None:
+    """Walk the :on-cycle-start expression tree and validate effect kinds in all branches."""
+    if not isinstance(expr, list):
+        return
+    head = expr[0] if expr else None
+    if head == "effect" and len(expr) >= 2:
+        kind_expr = expr[1]
+        if isinstance(kind_expr, list) and len(kind_expr) == 2 and kind_expr[0] == "quote":
+            kind = kind_expr[1]
+            if isinstance(kind, str):
+                assert kind in allowed, f"{context}: on-cycle-start contains disallowed effect `{kind}`"
+                assert kind != "advance_cycle", f"{context}: on-cycle-start cannot advance the cycle"
+        return
+    for child in expr:
+        _assert_cycle_start_expr_allowed(child, allowed=allowed, context=context)
 
 
 def react_rule_matches(program: CompiledWorldProgram, state: GameState, rule: ReactRule) -> bool:

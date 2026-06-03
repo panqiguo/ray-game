@@ -81,7 +81,7 @@ define-fragment  = 内容片段构造器，语法糖，等价于零参数函数
 - 读写世界状态需在 `:vars` 导入：`(import-world-attr 'health)`、`(import-world-item 'money)`、`(import-world-value 'case_done false)`
 - 也可 include `common_world_bindings.scm` 使用 `world-basics-vars` 等 helper
 - 未导入的世界字段用 quoted key：`(effect 'add 'money 80)`
-- `day` 特例：只用 `(effect 'advance-day)`
+- Cycle 统一：`advance-cycle` 是唯一周期推进 effect，替代旧的 `advance-day` + `reset-hand`；`:on-cycle-start` 统一替代 `:on-day-start`（world）和 `:on-cycle`（encounter）
 
 `node` / `scene`：
 
@@ -197,14 +197,12 @@ define-fragment  = 内容片段构造器，语法糖，等价于零参数函数
 (effect 'end-encounter 'success)
 (effect 'end-encounter 'fail)
 (effect 'end-encounter 'abort)
-(effect 'advance-day)
+(effect 'advance-cycle)
 (effect 'end-game)
 (effect 'end-game "结局标题" "结局正文")
-(effect 'reset-hand)
 ```
 
-- `(effect 'reset-hand)` 现在的语义是“按健康状态抽取新的行动卡”
-- `(effect 'advance-day)` 会推进一天，并使精力 -1
+- `(effect 'advance-cycle)` 是统一的周期推进：CITY 中 +1 天、精力 -1、角色压力 -1；ENCOUNTER 中清除手牌选择、精力 -1。共享 `:on-cycle-start` 钩子。自动处理手牌重置。
 - `(effect 'set field value)` 支持字面值、字段引用和表达式。比如 `(effect 'set checked_day day)` 会在效果执行时读取当前 `day`，`(effect 'set due_day (+ day 6))` 会在效果执行时计算当前日期 +6。
 - `(effect 'copy target source)` 仍可用，但新内容优先直接写 `(effect 'set target source)`，语义更接近 Scheme。
 - 已废弃短名效果：不要写 `(effect 'health -1)` / `(effect 'stress 1)`

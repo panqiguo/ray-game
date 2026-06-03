@@ -147,7 +147,7 @@
   :meta (meta :key '测试仓库撤退 :title "测试仓库撤退" :desc "测试持续涌现敌人与撤退进度的分诊。")
   :on-success (list (effect 'set 'test_warehouse_escape_done true))
   :on-fail (list (effect 'set 'test_warehouse_escape_failed true) (effect 'add health -1))
-  :on-cycle (list
+  :on-cycle-start (list
     (effect 'clock+ spawn 1)
     (effect-expr
       (set! enemies (map enemies enemy-tick))))

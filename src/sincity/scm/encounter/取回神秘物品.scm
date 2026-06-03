@@ -150,7 +150,7 @@
     (effect 'set 'item_recovery_started false)
     (effect 'add 'police_relation -1)
     (effect 'add 'health -1))
-  :on-cycle (list)
+  :on-cycle-start (list)
   :reacts (list
     (react
       :when (and police_knows_true_info (not police_alert_applied))

@@ -64,7 +64,7 @@
   :meta (meta :key '投资降低风险-翻看账本 :title "投资降低风险-翻看账本" :desc "测试守门人状态与混乱窗口。")
   :on-success (list (effect 'set 'test_law_office_done true))
   :on-fail (list (effect 'set 'test_law_office_failed true) (effect 'add 'police_relation -1))
-  :on-cycle (list
+  :on-cycle-start (list
     (effect 'clock+ exposure 1)
     (when (= guard_state "checking")
       (effect 'clock+ guard_check 1)))

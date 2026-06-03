@@ -783,15 +783,13 @@ def builtin_effect(args: list[Any], env: Environment) -> Effect:
         return Effect(kind="start_encounter", value=str(unwrap(evaluate(args[1], env))))
     if kind == "end-encounter":
         return Effect(kind="end_encounter", value=str(unwrap(evaluate(args[1], env))))
-    if kind == "advance-day":
-        return Effect(kind="advance_day", value=True)
+    if kind == "advance-cycle":
+        return Effect(kind="advance_cycle", value=True)
     if kind == "end-game":
         assert len(args) in {1, 3}, "`end-game` takes zero parameters, or title and body."
         if len(args) == 3:
             return Effect(kind="end_game", value=(str(unwrap(evaluate(args[1], env))), str(unwrap(evaluate(args[2], env)))))
         return Effect(kind="end_game", value=True)
-    if kind == "reset-hand":
-        return Effect(kind="reset_hand", value=True)
     raise EncounterSchemaError(f"Unsupported encounter effect kind: {kind}")
 
 

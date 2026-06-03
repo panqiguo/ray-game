@@ -65,7 +65,7 @@
   :meta (meta :key '测试关系平衡 :title "测试关系平衡" :desc "测试4个 cycle 内的关系区间管理与情报获取。")
   :on-success (list (effect 'set 'test_relation_tension_done true))
   :on-fail (list (effect 'set 'test_relation_tension_failed true))
-  :on-cycle (list (effect 'clock+ time 1))
+  :on-cycle-start (list (effect 'clock+ time 1))
   :reacts (list
     (react :when (clock-filled? intel) :then (list
       (effect 'end-encounter 'success)))

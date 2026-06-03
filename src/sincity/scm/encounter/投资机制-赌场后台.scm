@@ -97,7 +97,7 @@
   :meta (meta :key '投资机制-赌场后台 :title "投资机制-赌场后台" :desc "测试准备时间与赌博期望值的选择。")
   :on-success (list (effect 'set 'test_casino_done true) (effect 'add money 20))
   :on-fail (list (effect 'set 'test_casino_failed true) (effect 'add money -8))
-  :on-cycle (list (effect 'clock+ presence 1))
+  :on-cycle-start (list (effect 'clock+ presence 1))
   :reacts (list
     (react :when (and (clock-filled? backstage) (not backstage_claimed)) :then (list (effect 'clock+ tokens 1) (effect 'set backstage_claimed true)))
     (react :when (clock-filled? tokens) :then (list (effect 'end-encounter 'success)))

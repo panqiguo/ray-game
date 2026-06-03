@@ -58,6 +58,7 @@
   :meta meta-expr
   :state state-expr
   :reacts reacts-expr
+  :on-cycle-start (list effect...)
   :on-success (list effect...)
   :on-fail (list effect...)
   :root node-expr)
@@ -71,6 +72,7 @@
 | `:root` | ✅ | 根节点表达式 |
 | `:state` | ❌ | 局部状态 |
 | `:reacts` | ❌ | 自动规则 |
+| `:on-cycle-start` | ❌ | 每 cycle 开始触发（CITY/ENCOUNTER 均可） |
 | `:on-success` | ❌ | encounter 成功后追加效果 |
 | `:on-fail` | ❌ | encounter 失败后追加效果 |
 
@@ -151,7 +153,7 @@
 - encounter `:state` → 仅当前任务可见
 
 encounter 里改全局字段用 quoted symbol：`(effect 'add 'money 80)`。  
-`day` 特例：只用 `(effect 'advance-day)`，不要直接 `add/set`。
+周期推进统一用 `(effect 'advance-cycle)`，不要写旧名 `advance-day` / `reset-hand`，也不要用 `add/set` 直接改 `day`。
 
 ---
 
@@ -329,13 +331,15 @@ encounter 里改全局字段用 quoted symbol：`(effect 'add 'money 80)`。
 (effect 'end-encounter 'success)
 (effect 'end-encounter 'fail)
 (effect 'end-encounter 'abort)
-(effect 'advance-day)
+(effect 'advance-cycle)
 (effect 'end-game)
-(effect 'reset-hand)
 ```
 
 说明：
 
+- `advance-cycle` 是统一的周期推进 effect（CITY/ENCOUNTER 通用），替代旧的 `advance-day` + `reset-hand`；自动处理手牌重置
+- `:on-cycle-start` 是统一钩子，替代旧的 `:on-day-start`（world）和 `:on-cycle`（encounter）
+- 旧名不再兼容：不要写 `advance-day`、`reset-hand`、`:on-day-start`、`:on-cycle`、`rest_during_encounter`
 - 统一使用最准确的 effect 名称
 - 修改字段统一用 `(effect 'set field value)` / `(effect 'add field amount)`
 - 不再使用旧短名（`effect 'health`、`effect 'stress`）、`resource`、`start-content`

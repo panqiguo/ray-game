@@ -5,7 +5,7 @@
   (action
     :title "喘息一下"
     :desc "你强行拉开半口气，重新整理手里的节奏，但也会挨上一下。"
-    :always (list (effect 'reset-hand) (effect 'add health -1))
+    :always (list (effect 'advance-cycle) (effect 'add health -1))
   ))
 
 (define-fragment counter

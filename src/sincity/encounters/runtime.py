@@ -10,6 +10,7 @@ from sincity.content_lang.module_runtime import (
     resolve_definition_ref as _resolve_definition_ref,
     schema_definition_values as _schema_definition_values,
 )
+from sincity.content.runtime import _assert_cycle_start_expr_allowed
 from sincity.content_lang.runtime_core import (
     build_check as _build_check,
     eval_react_condition as _eval_react_condition,
@@ -58,7 +59,7 @@ ENCOUNTER_ACTION_EFFECTS = frozenset({
     "copy_field",
     "shift_clock",
     "expr",
-    "reset_hand",
+    "advance_cycle",
     "start_dialogue",
     "start_quick_dialogue",
     "end_encounter",
@@ -68,14 +69,24 @@ ENCOUNTER_COMPLETION_EFFECTS = frozenset({
     "add_field",
     "shift_clock",
     "expr",
-    "reset_hand",
-    "advance_day",
+    "advance_cycle",
     "end_game",
     "start_encounter",
     "start_dialogue",
     "start_quick_dialogue",
 })
-ENCOUNTER_CYCLE_EFFECTS = ENCOUNTER_ACTION_EFFECTS
+ENCOUNTER_CYCLE_EFFECTS = frozenset({
+    "set_field",
+    "add_field",
+    "copy_field",
+    "shift_clock",
+    "clock+",
+    "clock-",
+    "expr",
+    "start_dialogue",
+    "start_quick_dialogue",
+    "end_encounter",
+})
 
 
 def compile_encounter_program(source: str, *, source_path: str | Path | None = None) -> CompiledEncounterProgram:
@@ -94,7 +105,7 @@ def compile_encounter_program(source: str, *, source_path: str | Path | None = N
             content_form = form
             continue
     assert content_form is not None, "Encounter module must contain a `(content ...)` form."
-    kwargs = _keyword_args(content_form[1:], allowed={":meta", ":vars", ":reacts", ":reaction-die", ":on-success", ":on-fail", ":on-cycle", ":root"})
+    kwargs = _keyword_args(content_form[1:], allowed={":meta", ":vars", ":reacts", ":reaction-die", ":on-success", ":on-fail", ":on-cycle-start", ":root"})
     root_expr = kwargs.get(":root")
     assert root_expr is not None, "Encounter content is missing required field: :root"
     module = ModuleState(root_expr=root_expr)
@@ -123,10 +134,10 @@ def compile_encounter_program(source: str, *, source_path: str | Path | None = N
     reaction_die_expr = _reaction_die_body(kwargs.get(":reaction-die"))
     rewards_expr = kwargs.get(":on-success")
     fail_effects_expr = kwargs.get(":on-fail")
-    cycle_effects_expr = kwargs.get(":on-cycle")
+    cycle_start_effects_expr = kwargs.get(":on-cycle-start")
     module.rewards = _eval_effect_list(rewards_expr, validation_env)
     module.fail_effects = _eval_effect_list(fail_effects_expr, validation_env)
-    module.cycle_effects = _eval_effect_list(cycle_effects_expr, validation_env)
+    module.cycle_start_effects = _eval_effect_list(cycle_start_effects_expr, validation_env)
     metadata = module.metadata or EncounterMeta(key=(path.stem if path is not None else "encounter"), title=(path.stem if path is not None else "Encounter"), description="")
     program = CompiledEncounterProgram(
         id=metadata.key,
@@ -140,11 +151,11 @@ def compile_encounter_program(source: str, *, source_path: str | Path | None = N
         view_expr=root_expr,
         rewards=module.rewards,
         fail_effects=module.fail_effects,
-        cycle_effects=module.cycle_effects,
+        cycle_start_effects=module.cycle_start_effects,
         reacts_expr=reacts_expr,
         rewards_expr=rewards_expr,
         fail_effects_expr=fail_effects_expr,
-        cycle_effects_expr=cycle_effects_expr,
+        cycle_start_effects_expr=cycle_start_effects_expr,
         reaction_die_expr=reaction_die_expr,
     )
     validate_encounter_program(program)
@@ -235,11 +246,11 @@ def evaluate_react_rules(program: CompiledEncounterProgram, store: dict[str, Any
     return tuple(module.react_rules)
 
 
-def evaluate_cycle_effects(program: CompiledEncounterProgram, store: dict[str, Any]) -> tuple[Effect, ...]:
-    if program.cycle_effects_expr is None:
+def evaluate_cycle_start_effects(program: CompiledEncounterProgram, store: dict[str, Any]) -> tuple[Effect, ...]:
+    if program.cycle_start_effects_expr is None:
         return ()
     env = _runtime_env(definitions=program.definitions, store=store, store_specs=program.store_specs)
-    return _eval_effect_list(program.cycle_effects_expr, env)
+    return _eval_effect_list(program.cycle_start_effects_expr, env)
 
 
 def evaluate_success_effects(program: CompiledEncounterProgram, store: dict[str, Any]) -> tuple[Effect, ...]:
@@ -289,8 +300,8 @@ def validate_encounter_program(program: CompiledEncounterProgram) -> None:
         _assert_effects_allowed(rule.effects, allowed=ENCOUNTER_ACTION_EFFECTS, context=f"{program.id}: react `{rule.source}`")
     if program.reaction_die_expr is not None:
         _validate_schema_forms(program.reaction_die_expr, env, context=f"{program.id}: reaction-die")
-    if program.cycle_effects_expr is not None:
-        _validate_schema_forms(program.cycle_effects_expr, env, context=f"{program.id}: on-cycle")
+    if program.cycle_start_effects_expr is not None:
+        _validate_schema_forms(program.cycle_start_effects_expr, env, context=f"{program.id}: on-cycle-start")
     if program.rewards_expr is not None:
         _validate_schema_forms(program.rewards_expr, env, context=f"{program.id}: on-success")
     if program.fail_effects_expr is not None:
@@ -299,7 +310,9 @@ def validate_encounter_program(program: CompiledEncounterProgram) -> None:
         if table is not None:
             for face in table.faces:
                 _assert_effects_allowed(face.effects, allowed=ENCOUNTER_CYCLE_EFFECTS, context=f"{program.id}: reaction face `{face.title}`")
-    _assert_effects_allowed(program.cycle_effects, allowed=ENCOUNTER_CYCLE_EFFECTS, context=f"{program.id}: on-cycle")
+    _assert_effects_allowed(program.cycle_start_effects, allowed=ENCOUNTER_CYCLE_EFFECTS, context=f"{program.id}: on-cycle-start")
+    if program.cycle_start_effects_expr is not None:
+        _assert_cycle_start_expr_allowed(program.cycle_start_effects_expr, allowed=ENCOUNTER_CYCLE_EFFECTS, context=f"{program.id}: on-cycle-start")
     for clock_id, spec in program.clocks_by_id.items():
         assert clock_id in program.store_specs, f"{program.id}: clock missing store spec: {clock_id}"
         assert spec.segments >= 1, f"{program.id}: invalid clock segments: {clock_id}"
@@ -324,8 +337,8 @@ def _validate_all_effect_target_symbols(program: CompiledEncounterProgram, env: 
     _validate_effect_target_symbols_generic(program.view_expr, env, context=f"{program.id}: root scene")
     if program.reaction_die_expr is not None:
         _validate_effect_target_symbols_generic(program.reaction_die_expr, env, context=f"{program.id}: reaction-die")
-    if program.cycle_effects_expr is not None:
-        _validate_effect_target_symbols_generic(program.cycle_effects_expr, env, context=f"{program.id}: on-cycle")
+    if program.cycle_start_effects_expr is not None:
+        _validate_effect_target_symbols_generic(program.cycle_start_effects_expr, env, context=f"{program.id}: on-cycle-start")
     if program.rewards_expr is not None:
         _validate_effect_target_symbols_generic(program.rewards_expr, env, context=f"{program.id}: on-success")
     if program.fail_effects_expr is not None:

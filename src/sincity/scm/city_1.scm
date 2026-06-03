@@ -123,9 +123,7 @@
           "睡觉 → 天数+1，精力-1，重抽行动卡。地板上有血迹时额外增加一点压力。精力不足时转为压力。"
           "睡觉 → 天数+1，精力-1，重抽行动卡。精力不足时转为压力。")
         :effects (list
-          (effect 'advance-day)
-          (effect 'reset-hand)
-          (effect 'set bookshop_entered_today false)
+          (effect 'advance-cycle)
           (when (and intrusion_seen (not blood_cleaned)) (effect 'add pressure 1))))
       (action
         :title "吃一包随身干粮"
@@ -232,7 +230,6 @@
             (effect 'add money 100)
             (effect 'set black_loan_active true)
             (effect 'set black_loan_debt 100)
-            (effect 'set black_loan_last_day day)
             (effect-reset-clock black_loan_due)
             (effect 'start-quick-dialogue black-loan-borrow-text))))
       (when black_loan_active
@@ -336,6 +333,31 @@
     :desc "铁柜、烟味和一排不愿回答问题的人。警察想要报告，不一定想要真相。"
     :position '(1065 280)
     :actions (list
+      (when (and ryan_police_interfered (not ryan_police_questioned))
+        (action
+          :title "熬过旧码头审问"
+          :desc "他们不急着问真相，只急着让你承认自己不该出现在封锁线里。你得把今晚还给自己。"
+          :check (check
+            :suit 魅力
+            :risk 'mid
+            :ok (outcome (list
+              (effect 'set ryan_police_questioned true)
+              (effect 'set premiere_night_unlocked true)
+              (effect 'start-quick-dialogue "# 警局审问\n\n# speaker: 警探\n“莱恩袭击你，你擅闯封锁线。很简单。”\n\n# speaker: 科尔\n“不简单的是，你们为什么正好知道他在那里。”\n\n# speaker: 警探\n他把笔放下，像终于决定不再演给我看。\n\n# speaker: 警探\n“今晚剧院首演。你要是还想保住执照，就站在该站的位置上。”\n\n# speaker: 科尔\n他们放我走，不是因为我清白，是因为今晚需要每个人都到自己的位置上。"))
+              "你咬住时间线，没有让他们把废墟里的事写成一场普通斗殴。")
+            :partial (outcome (list
+              (effect 'set ryan_police_questioned true)
+              (effect 'set premiere_night_unlocked true)
+              (effect 'add pressure 1)
+              (effect 'start-quick-dialogue "# 警局审问\n\n# speaker: 警探\n“你今晚最好只看舞台，别看别人不想让你看的地方。”\n\n# speaker: 科尔\n我带着一份写坏的笔录离开。莱恩、拆迁蓝图、工会游行和夜莺的首演，全都挤进同一个晚上。"))
+              "你保住了关键线索，但警局把你的名字记得更清楚。")
+            :fail (outcome (list
+              (effect 'set ryan_police_questioned true)
+              (effect 'set premiere_night_unlocked true)
+              (effect 'add pressure 2)
+              (effect 'add police_relation -1)
+              (effect 'start-quick-dialogue "# 警局审问\n\n# speaker: 科尔\n他们把问题反复倒回来，像想把我磨成他们需要的形状。\n\n# speaker: 警探\n“莱恩是疯子。你是被他骗进去的。照这个说，对你最好。”\n\n# speaker: 科尔\n走出警局时，天已经黑透。首演夜开始了，而我比任何时候都更像一个不该出现的人。"))
+              "你被审得筋疲力尽，但他们还是必须在首演前把你放出去。"))))
       (when (and intrusion_seen (not police_interview_started))
         (action
           :title "去警局配合调查"
@@ -582,9 +604,9 @@
       (var 'main_resolved false)
       (var 'black_loan_active false)
       (var 'black_loan_debt 0)
-      (var 'black_loan_last_day 0)
       (var 'black_loan_due (clock :title "高利贷倒计时" :desc "黑市借款每天涨 10 元。满 10 天还不上，就会有人替账本动手。" :initial 0 :max 10))
       (var 'black_loan_defaulted false)
+      (var 'gang_days_remaining 15)
 
       (var 'recovery_deadline_day 5)
       (var 'police_interview_started false)
@@ -669,13 +691,6 @@
         (effect 'set intro_seen true)
         (effect 'set nightingale_theater_unlocked true)
         (effect 'start-quick-dialogue nightingale-opening-text)))
-
-    (react
-      :when (and black_loan_active (> day black_loan_last_day))
-      :then (list
-        (effect 'clock+ black_loan_due 1)
-        (effect 'add black_loan_debt 2)
-        (effect 'set black_loan_last_day day)))
 
     (react
       :when (and black_loan_active (clock-filled? black_loan_due))
@@ -789,9 +804,19 @@
     waste-reacts
     docks-reacts))
 
-(define (world-day-start-effects)
-  (append
-    (nightingale-day-start-effects)))
+(define (world-cycle-start-effects)
+  (apply append
+    (list
+      (nightingale-cycle-start-effects)
+      (if black_loan_active
+          (list
+            (effect 'clock+ black_loan_due 1)
+            (effect 'add black_loan_debt 2))
+          (list))
+      (list (effect 'set bookshop_entered_today false))
+      (if (> gang_days_remaining 0)
+          (list (effect 'add gang_days_remaining -1))
+          (list)))))
 
 (define world-tasks
   (append
@@ -828,7 +853,7 @@
   :vars world-vars
   :reacts world-reacts
   :tasks world-tasks
-  :on-day-start (world-day-start-effects)
+  :on-cycle-start (world-cycle-start-effects)
   :root
   (node
     :title "贝城县"
@@ -846,7 +871,7 @@
       (when false (书店))
       (when nightingale_theater_unlocked (剧院))
       (when newspaper_office_unlocked (贝城晚报))
-      (when intrusion_seen (警局))
+      (when (or intrusion_seen ryan_police_interfered) (警局))
       (when (or intrusion_seen nightingale_city_day_started) (仓库))
       (when nightingale_side_job_available (旧码头卸货))
       (when (or vera_thread_unlocked (and exploitation_incident_active (= exploitation_incident_location 'street))) (老街))

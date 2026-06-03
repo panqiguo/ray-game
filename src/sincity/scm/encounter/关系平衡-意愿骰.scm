@@ -133,7 +133,7 @@
   :meta (meta :key '关系平衡-意愿骰 :title "关系平衡-意愿骰" :desc "用反应骰表达对方当前意愿，测试顺势、转向与关系消耗。")
   :on-success (list (effect 'set 'test_relation_will_done true))
   :on-fail (list (effect 'set 'test_relation_will_failed true))
-  :on-cycle (list (effect 'clock+ time 1))
+  :on-cycle-start (list (effect 'clock+ time 1))
   :reaction-die
     (reaction-die
       (reaction-table

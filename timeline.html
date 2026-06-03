@@ -43,6 +43,7 @@ body{
 }
 .cl-num{font-size:10px;color:#ccc;letter-spacing:.02em}
 .cl-name{font-size:13px;font-weight:500;color:#333;margin-top:2px}
+.cl-loc{font-size:10px;color:#3a7a50;margin-top:6px;text-align:right;line-height:1.5}
 
 .tc{margin:5px;padding:14px 15px;border-radius:7px;align-self:stretch}
 .on{background:rgba(255,255,255,.78);border:1px solid #e2e2e2}
@@ -91,13 +92,13 @@ body{
 
 <!-- ── 列标题 ── -->
 <div class="corner"></div>
-<div class="th"><div class="thi cp"><span class="th-name">夜莺主线</span><span class="th-sub">威胁信 · 送信路线 · 莱恩 · 坠落事故 · 报社</span></div></div>
+<div class="th"><div class="thi cp"><span class="th-name">夜莺主线</span><span class="th-sub">威胁信 · 送信路线 · 莱恩 · 坠落事故 · 报社 · 拆迁废墟</span></div></div>
 <div class="th"><div class="thi cm"><span class="th-name">金发女郎</span><span class="th-sub">酒吧暧昧 · 旧名字</span></div></div>
 <div class="th"><div class="thi ct"><span class="th-name">信任关系</span><span class="th-sub">夜莺信任 · 期限压力</span></div></div>
 <div class="th"><div class="thi cs1"><span class="th-name">生存底盘</span><span class="th-sub">工作 · 债务 · 恢复</span></div></div>
 
 <!-- ══════════ 第一节：剧院之夜 ══════════ -->
-<div class="cl"><span class="cl-num">第一节</span><span class="cl-name">剧院之夜</span></div>
+<div class="cl"><span class="cl-num">第一节</span><span class="cl-name">剧院之夜</span><span class="cl-loc">► 剧院 · 摊贩 · 诊所 · 废弃区</span></div>
 
 <div class="tc on">
   <div class="b key">夜莺收第二封威胁信</div>
@@ -141,7 +142,7 @@ body{
 <div class="sep"></div>
 
 <!-- ══════════ 第二节：城市追踪 ══════════ -->
-<div class="cl"><span class="cl-num">第二节</span><span class="cl-name">城市追踪</span></div>
+<div class="cl"><span class="cl-num">第二节</span><span class="cl-name">城市追踪</span><span class="cl-loc">► 黑市 · 酒吧</span></div>
 
 <div class="tc on">
   <div class="b key">追查送信路线（3天窗口）</div>
@@ -190,7 +191,7 @@ body{
 <div class="sep"></div>
 
 <!-- ══════════ 第三节：旧码头的莱恩 ══════════ -->
-<div class="cl"><span class="cl-num">第三节</span><span class="cl-name">旧码头的莱恩</span></div>
+<div class="cl"><span class="cl-num">第三节</span><span class="cl-name">旧码头的莱恩</span><span class="cl-loc">► 旧码头 · 码头酒馆 · 海伦公寓 · 莱恩店铺</span></div>
 
 <div class="tc on">
   <div class="b key">打听莱恩（填 ryan_lead 4/4）</div>
@@ -267,7 +268,7 @@ body{
 <div class="sep"></div>
 
 <!-- ══════════ 第四节：后台坠落事故 ══════════ -->
-<div class="cl"><span class="cl-num">第四节</span><span class="cl-name">后台坠落事故</span></div>
+<div class="cl"><span class="cl-num">第四节</span><span class="cl-name">后台坠落事故</span><span class="cl-loc">► 剧院后台 · 报社（解锁）</span></div>
 
 <div class="tc on">
   <div class="b key">返回剧院 → 后台事故</div>
@@ -313,7 +314,7 @@ body{
 <div class="sep"></div>
 
 <!-- ══════════ 第五节：报纸的速度 ══════════ -->
-<div class="cl"><span class="cl-num">第五节</span><span class="cl-name">报纸的速度</span></div>
+<div class="cl"><span class="cl-num">第五节</span><span class="cl-name">报纸的速度</span><span class="cl-loc">► 贝城晚报</span></div>
 
 <div class="tc on">
   <div class="b key">调查事故稿件来源</div>
@@ -355,13 +356,64 @@ body{
 
 <div class="sep"></div>
 
+<!-- ══════════ 第六节：拆迁废墟里的莱恩 ══════════ -->
+<div class="cl"><span class="cl-num">第六节</span><span class="cl-name">拆迁废墟里的莱恩</span><span class="cl-loc">► 拆迁封锁线 · 警局</span></div>
+
+<div class="tc on">
+  <div class="b key">进入拆迁封锁线</div>
+  <div class="b loc">► 旧码头 → 拆迁封锁线</div>
+  <div class="b note">press_feed_confirmed → ryan_ruins_unlocked</div>
+  <div class="g"></div>
+  <div class="b key">收集拆迁线索（填 clues 2/2）</div>
+  <div class="pg">
+    <div class="pg-label">三处并列，任选其二</div>
+    <div class="b loc">► 拆迁公告墙</div>
+    <div class="b">撕开覆盖的旧通知（敏锐）</div>
+    <div class="b loc">► 改造蓝图棚</div>
+    <div class="b">偷看首演改造蓝图（知识）</div>
+    <div class="b loc">► 工会临时棚</div>
+    <div class="b">翻看工会抗议传单（魅力）</div>
+    <div class="b note">集齐 → 发现莱恩藏在废墟中</div>
+  </div>
+  <div class="g"></div>
+  <div class="b loc">► 废墟中对峙</div>
+  <div class="ch">拆迁废墟里的莱恩 <span class="t">冲突</span></div>
+  <div class="b">挡住攻击 / 摊蓝图 / 追问便条 / 让他说话</div>
+  <div class="b red">ryan_break 5 vs police_arrival 4</div>
+  <div class="b">莱恩承认给报社喂料，工会计划首演抗议</div>
+  <div class="b">警察介入带走科尔</div>
+  <div class="g"></div>
+  <div class="b loc">► 警局</div>
+  <div class="b">熬过审问（魅力 mid）</div>
+  <div class="b red">→ 首演夜解锁</div>
+</div>
+
+<div class="tc off"></div>
+
+<div class="tc on">
+  <div class="b key">真相汇聚</div>
+  <div class="b">莱恩承认参与威胁信链条</div>
+  <div class="b red">police_relation -1</div>
+  <div class="b note">警探暗示首演夜别缺席</div>
+</div>
+
+<div class="tc on">
+  <div class="b">调查封锁线</div>
+  <div class="b note">高风险拆迁区</div>
+  <div class="g"></div>
+  <div class="b">警局审问</div>
+  <div class="b note">失败 +2 pressure</div>
+</div>
+
+<div class="sep"></div>
+
 <!-- ══════════ 待续 ══════════ -->
 <div class="cl"><span class="cl-num">待续</span><span class="cl-name">Next…</span></div>
 
 <div class="tc fade">
-  <div class="b key">莱恩新店对峙（post-task）</div>
-  <div class="b mrg">"查清楚旧街区是谁拆的，再回来跟我谈。"</div>
-  <div class="b note">剧院赞助名单 · 城市更新利益链</div>
+  <div class="b key">首演夜（终局）</div>
+  <div class="b mrg">工会抗议 · 庆功剪彩 · 最后对决</div>
+  <div class="b note">premiere_night_unlocked → ENDING</div>
 </div>
 
 <div class="tc fade">

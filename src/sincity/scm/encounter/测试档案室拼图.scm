@@ -80,7 +80,7 @@
   :meta (meta :key '测试档案室拼图 :title "测试档案室拼图" :desc "每条缺失线索让分析行动 -1，找到后对应 factor 消失。")
   :on-success (list (effect 'set 'test_archive_done true))
   :on-fail (list (effect 'set 'test_archive_failed true) (effect 'add energy -1))
-  ;; :on-cycle (list (effect 'clock+ alert 1))
+  ;; :on-cycle-start (list (effect 'clock+ alert 1))
   :reacts (list
     (react :when (and (clock-filled? clue_a) (not clue_a_done)) :then (list (effect 'set clue_a_done true) (effect 'start-quick-dialogue "病历柜里有一张被换过的登记页。")))
     (react :when (and (clock-filled? clue_b) (not clue_b_done)) :then (list (effect 'set clue_b_done true) (effect 'start-quick-dialogue "财务夹里有一笔不该由诊所支付的车费。")))

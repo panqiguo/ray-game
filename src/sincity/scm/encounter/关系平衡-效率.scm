@@ -76,7 +76,7 @@
   :meta (meta :key '关系平衡-效率 :title "关系平衡-效率" :desc "关系区间决定情报收益，测试投资关系与直接开采之间的边际收益。")
   :on-success (list (effect 'set 'test_relation_efficiency_done true))
   :on-fail (list (effect 'set 'test_relation_efficiency_failed true))
-  :on-cycle (list (effect 'clock+ time 1))
+  :on-cycle-start (list (effect 'clock+ time 1))
   :reacts (list
     (react :when (clock-filled? intel) :then (list
       (effect 'start-quick-dialogue "你拿到了关键情报。对方还以为这只是一次普通的闲谈。")

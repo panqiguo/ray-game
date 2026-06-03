@@ -32,7 +32,18 @@
     (var 'helen_photo_damaged false)
     (var 'ryan_old_life_known false)
     (var 'ryan_followed_after_helen false)
-    (var 'docks_threat_escalated false)))
+    (var 'docks_threat_escalated false)
+    (var 'ryan_ruins_unlocked false)
+    (var 'ryan_ruins_clues (clock :title "封锁线线索" :desc "在拆迁封锁线内收集通知、蓝图和工会动向。任意两条足以找到莱恩。" :initial 0 :max 2))
+    (var 'ryan_ruins_notice_checked false)
+    (var 'ryan_ruins_blueprint_checked false)
+    (var 'ryan_ruins_union_checked false)
+    (var 'ryan_found_in_ruins false)
+    (var 'ryan_ruins_confronted false)
+    (var 'ryan_ruins_truth_heard false)
+    (var 'ryan_police_interfered false)
+    (var 'ryan_police_questioned false)
+    (var 'premiere_night_unlocked false)))
 
 (define docks-reacts
   (list
@@ -100,7 +111,19 @@
         (effect 'set nightingale_trust_checked_day day)
         (when (or (= (clock-value nightingale_trust) 7)
                   (= (clock-value nightingale_trust) 2))
-          (effect 'start-quick-dialogue nightingale-trust-loss-text))))))
+          (effect 'start-quick-dialogue nightingale-trust-loss-text))))
+    (react
+      :when (and press_feed_confirmed
+                 (not ryan_ruins_unlocked))
+      :then (list
+        (effect 'set ryan_ruins_unlocked true)
+        (effect 'start-quick-dialogue "# 拆迁封锁线\n\n# speaker: 科尔\n报社便条把莱恩和旧码头绑在一起，不像一句醉话，更像一条故意留下的路。\n\n# speaker: 科尔\n旧店后面那片街区已经拉起封锁线。拆迁队、保安和警察把破墙围起来，像怕里面的砖头自己开口。")))
+    (react
+      :when (and (clock-filled? ryan_ruins_clues)
+                 (not ryan_found_in_ruins))
+      :then (list
+        (effect 'set ryan_found_in_ruins true)
+        (effect 'start-quick-dialogue "# 废墟里的脚印\n\n# speaker: 科尔\n拆迁通知、改造蓝图、工会游行的口风终于压到同一个晚上：夜莺的首演不是普通演出，是旧码头改造拿给城里人看的庆功仪式。\n\n# speaker: 科尔\n有人刚从倒塌的店铺后门穿过去。鞋印深，步子乱，像一个不该还留在这里的人。\n\n莱恩就在废墟里。")))))
 
 (define (ryan-tavern-ready?)
   (or ryan_tavern_challenge_unlocked (>= (clock-value ryan_lead) 3)))
@@ -320,6 +343,75 @@
         (effect 'set ryan_confronted true)
         (effect 'start-quick-dialogue "# 莱恩\n\n# speaker: 莱恩\n他把椅子转过来，先看了你一眼，像在看一件还没决定要不要捡起来的旧工具。\n\n# speaker: 莱恩\n“剧院的人？还是夜莺的人？”\n\n# speaker: 科尔\n“保护她的人。”\n\n# speaker: 莱恩\n他笑了一下，难听，没有温度。\n\n# speaker: 莱恩\n“那你来错地方了。我恨不得她从舞台上摔下来——但我不写恐吓信。”\n\n# speaker: 科尔\n他说这话的时候没有回避目光。没有心虚的人那种闪躲。\n\n# speaker: 莱恩\n“你查清楚那片旧街区是谁拆的，再回来跟我谈威胁信。”")))))
 
+(define (ryan-ruins-actions)
+  (list
+    (when (and ryan_found_in_ruins (not ryan_ruins_confronted))
+      (action
+        :title "穿过废墟找到莱恩"
+        :desc "他就在坍塌的后门后面。你能听见玻璃被鞋底碾碎，也能听见他在压着怒气喘气。"
+        :effects (list (effect 'start-encounter '拆迁废墟里的莱恩))))))
+
+(define (拆迁公告墙)
+  (node
+    :title "拆迁公告墙"
+    :desc "几层旧公告叠在一起，最上面写着封锁日期，下面露出更早的搬迁通知。"
+    :actions (list
+      (when (and (not ryan_ruins_notice_checked) (not ryan_found_in_ruins))
+        (action
+          :title "剥开旧拆迁通知"
+          :desc "新公告盖住旧日期。真正的时间线可能藏在胶水和雨水下面。"
+          :check (check
+            :suit 敏锐
+            :risk 'mid
+            :ok (outcome (list (effect 'set ryan_ruins_notice_checked true) (effect 'clock+ ryan_ruins_clues 1)) "最早一张通知的日期早于威胁信，莱恩不是第一个被推到台前的人。")
+            :partial (outcome (list (effect 'set ryan_ruins_notice_checked true) (effect 'clock+ ryan_ruins_clues 1) (effect 'add pressure 1)) "你撕下一角日期，也惊动了巡逻保安。")
+            :fail (outcome (list (effect 'add pressure 1)) "雨水把纸糊成一团，保安的脚步声先清楚起来。")))))))
+
+(define (改造蓝图棚)
+  (node
+    :title "改造蓝图棚"
+    :desc "临时棚里堆着测绘木桩和卷起的蓝图。这里不像工地，更像一个还没公开的舞台布景。"
+    :actions (list
+      (when (and (not ryan_ruins_blueprint_checked) (not ryan_found_in_ruins))
+        (action
+          :title "偷看旧城区改造蓝图"
+          :desc "蓝图上有剧院、码头、剪彩路线和贵宾席。它们被画在同一张纸上不是巧合。"
+          :check (check
+            :suit 知识
+            :risk 'high
+            :ok (outcome (list (effect 'set ryan_ruins_blueprint_checked true) (effect 'clock+ ryan_ruins_clues 1)) "蓝图标出了首演夜后的剪彩路线，夜莺的演出正好压在拆迁宣传的中心。")
+            :partial (outcome (list (effect 'set ryan_ruins_blueprint_checked true) (effect 'clock+ ryan_ruins_clues 1) (effect 'add pressure 1)) "你记住了路线，但棚外有人喊了一声“谁在里面”。")
+            :fail (outcome (list (effect 'add pressure 2)) "蓝图被锁在铁夹里，你只换来一身木屑和越来越近的手电光。")))))))
+
+(define (工会临时棚)
+  (node
+    :title "工会临时棚"
+    :desc "油布下面压着标语、传单和几根还没削好的木棍。旧码头的人也在为今晚做准备。"
+    :actions (list
+      (when (and (not ryan_ruins_union_checked) (not ryan_found_in_ruins))
+        (action
+          :title "翻看工会传单"
+          :desc "他们不是来欣赏夜莺的。他们准备在首演夜让城市听见码头的声音。"
+          :check (check
+            :suit 魅力
+            :risk 'mid
+            :ok (outcome (list (effect 'set ryan_ruins_union_checked true) (effect 'clock+ ryan_ruins_clues 1)) "传单写着今晚游行路线，终点正对剧院门口。")
+            :partial (outcome (list (effect 'set ryan_ruins_union_checked true) (effect 'clock+ ryan_ruins_clues 1) (effect 'add pressure 1)) "你拿到一张传单，也被守棚的人记住了脸。")
+            :fail (outcome (list (effect 'add pressure 1)) "棚里的人把传单收走，只留下一句：外人少管。")))))))
+
+(define (拆迁封锁线)
+  (node
+    :title "拆迁封锁线"
+    :desc (if ryan_found_in_ruins
+      "围挡后面的旧街像被提前判了死刑。线索已经足够，莱恩就藏在废墟深处。"
+      "旧店后面的街区被围挡切开。拆迁队白天进场，夜里只剩保安、警察和没来得及搬走的旧生活。")
+    :show-clocks (list (when (not ryan_found_in_ruins) ryan_ruins_clues))
+    :actions (ryan-ruins-actions)
+    :children (list
+      (when (and (not ryan_ruins_notice_checked) (not ryan_found_in_ruins)) (拆迁公告墙))
+      (when (and (not ryan_ruins_blueprint_checked) (not ryan_found_in_ruins)) (改造蓝图棚))
+      (when (and (not ryan_ruins_union_checked) (not ryan_found_in_ruins)) (工会临时棚)))))
+
 (define (码头酒馆)
   (node
     :title "码头酒馆"
@@ -403,4 +495,5 @@
       (when (and helen_boarding_search_unlocked (not helen_boarding_unlocked) (not helen_seamen_house_checked)) (旧海员寄宿楼))
       (when helen_boarding_search_unlocked (红砖寄宿公寓))
       (when (and helen_boarding_search_unlocked (not helen_boarding_unlocked) (not helen_east_warehouse_checked)) (东栈房出租屋))
-      (when ryan_old_shop_unlocked (莱恩的老店铺)))))
+      (when ryan_old_shop_unlocked (莱恩的老店铺))
+      (when (and ryan_ruins_unlocked (not ryan_police_interfered)) (拆迁封锁线)))))

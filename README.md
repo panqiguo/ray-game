@@ -32,6 +32,7 @@ make web-upload ITCH_USER=<itch-user> ITCH_GAME=<itch-game>
 - 当前 Web 包会包含 `main.py`、`font.ttf` 和 `src/sincity`
 - itch.io 最终上传包会生成到 `build/sincity-itch.zip`
 - 上传 itch.io 需要先安装并登录 `butler`；`make web-upload` 会先重新构建并打包，再上传到 `<itch-user>/<itch-game>:html5`
+- 如果用户直接让你打包并上传到itch，他的意思是ITCH_USER=panqiguo ITCH_GAME=bob, 这是我们为这个项目约定的用户和游戏名。
 
 ## 环境
 

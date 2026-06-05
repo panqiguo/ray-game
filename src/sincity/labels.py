@@ -17,6 +17,8 @@ ITEM_LABELS = {
     "tools": "工具",
     "mysterious_item": "神秘物品",
     "wounded_man_lead": "死者线索",
+    "lockpick": "开锁器",
+    "criminal_clue": "罪案线索",
 }
 
 

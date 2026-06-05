@@ -4,7 +4,7 @@ import time
 from dataclasses import dataclass
 
 from sincity.constants import HAND_SIZE, MAX_LOG_LINES
-from sincity.content import DEBUG_COMPANION_ORDER, GROWTH_DEFS, INITIAL_COMPANION_ID, PLAYER_ACTOR_ID, SCENARIO, build_initial_party
+from sincity.content import ACTOR_STATUS_DEFS, DEBUG_COMPANION_ORDER, GROWTH_DEFS, INITIAL_COMPANION_ID, PARTY_ACTOR_DEFS, PLAYER_ACTOR_ID, SCENARIO, build_initial_party
 from sincity.content.runtime import next_react_rule as next_world_react_rule
 from sincity.content.runtime import react_rule_matches as world_react_rule_matches
 from sincity.content.runtime import evaluate_world_cycle_start_effects, evaluate_world_expr, evaluate_world_react_effects, render_tasks, render_world
@@ -19,6 +19,7 @@ from sincity.model.state import (
     ActionAssemblyState,
     ActionResolution,
     ActiveActionRevealState,
+    ActorStatusState,
     AttributeState,
     CardHintFlashState,
     DeckState,
@@ -26,6 +27,7 @@ from sincity.model.state import (
     ModalFrame,
     ModalState,
     PendingResolutionState,
+    PartyActorState,
     ProgressClockState,
     SelectedInputState,
     WorldState,
@@ -60,6 +62,12 @@ def _push_log(state: GameState, text: str) -> None:
 def start_new_run(seed: int) -> tuple[GameState, RandomSource]:
     rng = RandomSource(seed)
     deck = make_starting_deck(rng)
+    initial_inventory = {
+        **dict(SCENARIO.initial_inventory),
+        "money": SCENARIO.initial_money,
+        "cigarettes": SCENARIO.initial_cigarettes,
+    }
+    seen_items = {k for k, v in initial_inventory.items() if v > 0}
     world = WorldState(
         progress_clocks={
             clock_id: ProgressClockState(
@@ -68,11 +76,8 @@ def start_new_run(seed: int) -> tuple[GameState, RandomSource]:
             )
             for clock_id, spec in SCENARIO.clocks_by_id.items()
         },
-        inventory={
-            **dict(SCENARIO.initial_inventory),
-            "money": SCENARIO.initial_money,
-            "cigarettes": SCENARIO.initial_cigarettes,
-        },
+        inventory=initial_inventory,
+        seen_items=seen_items,
         values=dict(SCENARIO.initial_values),
     )
     state = GameState(
@@ -93,7 +98,7 @@ def start_new_run(seed: int) -> tuple[GameState, RandomSource]:
     state.party = build_initial_party(player_health=state.attributes.health, player_energy=state.attributes.energy)
     state.companion_actor_ids = [INITIAL_COMPANION_ID] if INITIAL_COMPANION_ID and INITIAL_COMPANION_ID in state.party else []
     sync_trauma_cards_with_health(state)
-    start_city_day(state.deck, rng, HAND_SIZE, actors=_active_card_actors(state))
+    start_city_day(state.deck, rng, HAND_SIZE, actors=_active_card_actors(state), status_defs=ACTOR_STATUS_DEFS)
     _reset_action_cycle_from_deck(state)
     sync_world_progress_clocks(state)
     _resolve_world_reacts(state, rng, [])
@@ -262,12 +267,11 @@ def _set_field(state: GameState, key: str, value: int | bool | str, extra_lines:
             _mark_content_dirty(state)
             return
         if spec.persist == "world_inventory":
-            count = int(value)
-            if count <= 0:
-                state.world.inventory.pop(key, None)
-            else:
-                state.world.inventory[key] = count
-            state.active_encounter.store[key] = state.world.inventory.get(key, 0)
+            count = max(0, int(value))
+            if count > 0:
+                state.world.seen_items.add(key)
+            state.world.inventory[key] = count
+            state.active_encounter.store[key] = count
             _mark_content_dirty(state)
             return
     if key == "energy":
@@ -293,11 +297,10 @@ def _set_field(state: GameState, key: str, value: int | bool | str, extra_lines:
         state.world.values[key] = value
         _mark_content_dirty(state)
         return
-    count = int(value)
-    if count <= 0:
-        state.world.inventory.pop(key, None)
-    else:
-        state.world.inventory[key] = count
+    count = max(0, int(value))
+    if count > 0:
+        state.world.seen_items.add(key)
+    state.world.inventory[key] = count
     _mark_content_dirty(state)
 
 
@@ -435,7 +438,7 @@ def slot_base_value(state: GameState, slot_id: str) -> int:
 
 
 def slot_current_value(state: GameState, slot_id: str) -> int:
-    return slot_base_value(state, slot_id) + state.deck.action_card_bonuses.get(slot_id, 0)
+    return max(0, slot_base_value(state, slot_id) + state.deck.action_card_bonuses.get(slot_id, 0) + state.deck.action_card_penalties.get(slot_id, 0))
 
 
 def slot_is_available(state: GameState, slot_id: str) -> bool:
@@ -1303,6 +1306,8 @@ def _consume_slotted_card(state: GameState) -> None:
     if slot_id is None:
         return
     state.deck.action_card_bonuses.pop(slot_id, None)
+    state.deck.action_card_penalties.pop(slot_id, None)
+    state.deck.action_card_labels.pop(slot_id, None)
     if slot_id in state.deck.available_slots:
         state.deck.available_slots.remove(slot_id)
     if slot_id not in state.deck.exhausted_slots:
@@ -1605,7 +1610,7 @@ def _resolve_world_reacts(state: GameState, rng: RandomSource, extra_lines: list
 
 
 def reset_hand(state: GameState, rng: RandomSource) -> None:
-    refresh_spirit_slots(state.deck, rng, actors=_active_card_actors(state), screen=state.screen)
+    refresh_spirit_slots(state.deck, rng, actors=_active_card_actors(state), screen=state.screen, status_defs=ACTOR_STATUS_DEFS)
     _reset_action_cycle_from_deck(state)
     _mark_content_dirty(state)
 
@@ -1644,6 +1649,8 @@ def advance_cycle(state: GameState, rng: RandomSource) -> None:
     # ── shared reset (guard: cycle-start may have ended the encounter) ──
     if state.screen in (ScreenName.CITY, ScreenName.ENCOUNTER):
         reset_hand(state, rng)
+        if state.screen == ScreenName.CITY:
+            tick_actor_statuses_after_draw(state)
 
     # ── encounter log (only for UI "休整" button, not action-initiated) ──
     if not from_effect and state.screen == ScreenName.ENCOUNTER:
@@ -1832,6 +1839,7 @@ def change_health(state: GameState, amount: int, extra_lines: list[str] | None =
 def change_actor_pressure(state: GameState, amount: int, actor_id: str, extra_lines: list[str] | None = None) -> None:
     actor = party_actor(state, actor_id)
     old = actor.pressure
+    was_locked = actor.pressure_locked
     actor.pressure = max(0, min(actor.max_pressure, actor.pressure + amount))
     delta = actor.pressure - old
     overflow = (old + amount) - actor.max_pressure
@@ -1841,8 +1849,21 @@ def change_actor_pressure(state: GameState, amount: int, actor_id: str, extra_li
             extra_lines.append(f"压力爆表，生命 -{overflow}")
     if delta > 0 and actor.pressure >= actor.max_pressure and not actor.is_player:
         actor.pressure_locked = True
+        if not was_locked:
+            actor_def = PARTY_ACTOR_DEFS.get(actor.id)
+            actor.stress_location = actor_def.stress_location if actor_def is not None else ""
+            location_text = actor.stress_location or "别处"
+            _push_log(state, f"{actor.name} 压力太大，去了{location_text}。")
+            push_notification(state, "warning", "同伴离开行动", f"{actor.name} 在{location_text}释放压力。")
     if delta < 0 and actor.pressure <= pressure_recovery_threshold(actor):
         actor.pressure_locked = False
+        if was_locked:
+            actor.stress_location = ""
+            actor_def = PARTY_ACTOR_DEFS.get(actor.id)
+            if actor_def is not None and actor_def.stress_return_status:
+                add_actor_status(actor, actor_def.stress_return_status)
+            _push_log(state, f"{actor.name} 压力降到安全线以下，回到了行动中。")
+            push_notification(state, "success", "同伴回归", f"{actor.name} 可以再次行动。")
     _mark_content_dirty(state)
     if extra_lines is not None and delta != 0 and overflow <= 0:
         label = "压力" if delta > 0 else "压力恢复"
@@ -1851,6 +1872,28 @@ def change_actor_pressure(state: GameState, amount: int, actor_id: str, extra_li
 
 def pressure_recovery_threshold(actor: PartyActorState) -> int:
     return max(0, actor.max_pressure - 3)
+
+
+def add_actor_status(actor: PartyActorState, status_id: str) -> None:
+    status_def = ACTOR_STATUS_DEFS.get(status_id)
+    assert status_def is not None, f"Unknown actor status: {status_id}"
+    for status in actor.statuses:
+        if status.id == status_id:
+            status.cycles = max(status.cycles, status_def.cycles)
+            return
+    actor.statuses.append(ActorStatusState(id=status_id, cycles=status_def.cycles))
+
+
+def tick_actor_statuses_after_draw(state: GameState) -> None:
+    for actor in state.party.values():
+        if not actor.statuses:
+            continue
+        next_statuses: list[ActorStatusState] = []
+        for status in actor.statuses:
+            status.cycles -= 1
+            if status.cycles > 0:
+                next_statuses.append(status)
+        actor.statuses = next_statuses
 
 
 def change_energy(state: GameState, amount: int, extra_lines: list[str] | None = None) -> None:
@@ -2000,15 +2043,9 @@ def _describe_effects(effects: tuple[Effect, ...], action_id: str, state: GameSt
 
 
 def _item_label(item_id: str) -> str:
-    if item_id == "clothes":
-        return "华美衣服"
-    if item_id == "car_key":
-        return "车钥匙"
-    if item_id == "repair_case_item":
-        return "任务道具"
-    if item_id == "gun":
-        return "枪"
-    return item_id
+    from sincity.labels import ITEM_LABELS
+
+    return ITEM_LABELS.get(item_id, item_id)
 
 
 def _field_label(field_id: str) -> str:

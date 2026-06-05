@@ -451,7 +451,7 @@ def _world_schema_env(
 ) -> Environment:
     return Environment(
         parent=base_environment(),
-        values={**_host_values(store_specs={}, store={}), **definitions},
+        values={**_host_values(store_specs={}, store={}), **_companion_schema_values(), **definitions},
         resolver=lambda name: _world_schema_resolver(name, clocks_by_id=clocks_by_id, initial_values=initial_values, initial_inventory=initial_inventory),
     )
 
@@ -482,11 +482,70 @@ def _world_schema_resolver(
 def _world_env(program: CompiledWorldProgram, state: GameState) -> Environment:
     env = Environment(
         parent=base_environment(),
-        values={**_host_values(store_specs={}, store={})},
+        values={**_host_values(store_specs={}, store={}), **_companion_runtime_values(state)},
         resolver=lambda name: _world_resolver(name, program, state),
     )
     env.values.update({name: _bind_runtime_definition(value, env) for name, value in program.definitions.items()})
     return env
+
+
+def _companion_schema_values() -> dict[str, Any]:
+    return {
+        "companion-joined?": lambda actor_id: False,
+        "companion-pressure-locked?": lambda actor_id: False,
+        "companion-stress-location": lambda actor_id: "",
+        "companion-at-stress-location?": lambda actor_id, location: False,
+        "companion-name": lambda actor_id: str(actor_id),
+        "companion-pressure": lambda actor_id: 0,
+        "companion-max-pressure": lambda actor_id: 0,
+    }
+
+
+def _companion_runtime_values(state: GameState) -> dict[str, Any]:
+    def actor_id_value(value: Any) -> str:
+        return str(value.value if isinstance(value, StateBindingValue) else value)
+
+    def companion(actor_id: Any):
+        key = actor_id_value(actor_id)
+        return state.party.get(key)
+
+    def companion_joined(actor_id: Any) -> bool:
+        return actor_id_value(actor_id) in state.companion_actor_ids
+
+    def companion_pressure_locked(actor_id: Any) -> bool:
+        actor = companion(actor_id)
+        return bool(actor is not None and companion_joined(actor_id) and actor.pressure_locked)
+
+    def companion_stress_location(actor_id: Any) -> str:
+        actor = companion(actor_id)
+        if actor is None or not companion_joined(actor_id):
+            return ""
+        return actor.stress_location
+
+    def companion_at_stress_location(actor_id: Any, location: Any) -> bool:
+        return companion_pressure_locked(actor_id) and companion_stress_location(actor_id) == actor_id_value(location)
+
+    def companion_name(actor_id: Any) -> str:
+        actor = companion(actor_id)
+        return actor.name if actor is not None else actor_id_value(actor_id)
+
+    def companion_pressure(actor_id: Any) -> int:
+        actor = companion(actor_id)
+        return actor.pressure if actor is not None else 0
+
+    def companion_max_pressure(actor_id: Any) -> int:
+        actor = companion(actor_id)
+        return actor.max_pressure if actor is not None else 0
+
+    return {
+        "companion-joined?": companion_joined,
+        "companion-pressure-locked?": companion_pressure_locked,
+        "companion-stress-location": companion_stress_location,
+        "companion-at-stress-location?": companion_at_stress_location,
+        "companion-name": companion_name,
+        "companion-pressure": companion_pressure,
+        "companion-max-pressure": companion_max_pressure,
+    }
 
 
 def _world_resolver(name: str, program: CompiledWorldProgram, state: GameState) -> Any:

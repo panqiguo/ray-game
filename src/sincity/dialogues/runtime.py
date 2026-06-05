@@ -163,22 +163,20 @@ def _story(session: ActiveDialogueState) -> Any:
 
 
 def _give_item(state: GameState, item_id: str, amount: int) -> None:
-    state.world.inventory[item_id] = state.world.inventory.get(item_id, 0) + amount
+    current = state.world.inventory.get(item_id, 0)
+    state.world.inventory[item_id] = current + amount
+    state.world.seen_items.add(item_id)
 
 
 def _remove_item(state: GameState, item_id: str, amount: int) -> None:
     current = state.world.inventory.get(item_id, 0)
     next_value = max(0, current - amount)
-    if next_value == 0:
-        state.world.inventory.pop(item_id, None)
-    else:
-        state.world.inventory[item_id] = next_value
+    state.world.inventory[item_id] = next_value
 
 
 def _change_money(state: GameState, amount: int) -> None:
     state.world.inventory["money"] = max(0, state.world.inventory.get("money", 0) + amount)
-    if state.world.inventory["money"] == 0:
-        state.world.inventory.pop("money", None)
+    state.world.seen_items.add("money")
 
 
 def _change_health(state: GameState, amount: int) -> None:

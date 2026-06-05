@@ -110,6 +110,11 @@
       :partial (outcome (list (effect 'clock+ clock 1) (effect 'add pressure 1)) "你得到了一点碎片，足够继续往下问。")
       :fail (outcome (list (effect 'add pressure 1)) "你问得太快，周围的人开始闭嘴。"))))
 
+(define (companion-in-bar?)
+  (or
+    (companion-at-stress-location? 'lena "酒吧")
+    (companion-at-stress-location? 'marco "酒吧")))
+
 (define (办公室)
   (node
     :title "办公室"
@@ -469,7 +474,21 @@
           :desc "她故意留了个口子。现在看你敢不敢顺着往里问，问那个她不想完整说出口的旧名字。"
           :effects (list
             (effect 'set blonde_mary_shared true)
-            (effect 'start-quick-dialogue blonde-mary-text)))))))
+            (effect 'start-quick-dialogue blonde-mary-text))))
+      (when (companion-at-stress-location? 'lena "酒吧")
+        (action
+        :title "和莉娜说句话"
+        :desc "她不是失踪了，只是暂时不想把自己再塞回案件里。你靠近的时候，看见她把票据往杯底推了推。"
+        :reveal (reveal
+          :title "莉娜在酒吧"
+          :text "她看得出你没有要催她的意思，肩膀终于松了一点。\n\n“再给一个晚上。”声音比你想的轻。\n\n她还在这里。至少你知道她去了哪里。等压力降下来，她会回来。")))
+      (when (companion-at-stress-location? 'marco "酒吧")
+        (action
+        :title "和马可说句话"
+        :desc "他没有离队，只是把自己从今天的麻烦里拔出来喘一口气。你看他敲杯沿的节奏已经有一会儿了。"
+        :reveal (reveal
+          :title "马可在酒吧"
+          :text "“看够了？”他先开口，语气比敲杯子的声音轻一点。\n\n“我没事，只是坐不住。回去之前，让我把这杯喝完。”\n\n他说得粗鲁，但不是玩笑。等压力降下来，他会重新坐回行动里。"))))))
 
 (define (望月旅馆)
   (node
@@ -874,6 +893,7 @@
       (when (or intrusion_seen ryan_police_interfered) (警局))
       (when (or intrusion_seen nightingale_city_day_started) (仓库))
       (when nightingale_side_job_available (旧码头卸货))
+      (when (companion-in-bar?) (酒吧))
       (when (or vera_thread_unlocked (and exploitation_incident_active (= exploitation_incident_location 'street))) (老街))
       (when nightingale_waste_unlocked (废弃区))
       (when ryan_docks_unlocked (旧码头))

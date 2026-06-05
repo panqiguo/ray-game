@@ -5,7 +5,7 @@ import math
 from pyray import *  # type: ignore
 
 from sincity.constants import MAX_LOG_LINES
-from sincity.content import CARD_DEFS, GROWTH_DEFS
+from sincity.content import ACTOR_STATUS_DEFS, CARD_DEFS, GROWTH_DEFS
 from sincity.labels import ITEM_LABELS
 from sincity.model.defs import ActionDef, InputRequirement
 from sincity.model.enums import ResultType, SUIT_LABELS, ScreenName
@@ -49,6 +49,11 @@ from .ui_text import ui_text_color, ui_text_size, ui_text_style
 
 INVENTORY_PANEL_WIDTH = 324
 INVENTORY_PANEL_RIGHT_OFFSET = 336
+INVENTORY_PADDING_X = 8.0
+INVENTORY_HEADER_HEIGHT = 42.0
+INVENTORY_GAP_X = 8.0
+INVENTORY_GAP_Y = 8.0
+INVENTORY_ITEM_ASPECT = 150.0 / 106.0
 
 
 def draw_hud(font: Font | None, state: GameState) -> None:
@@ -81,7 +86,7 @@ def draw_hud(font: Font | None, state: GameState) -> None:
     )
     draw_text(font, relation_text, int(hud.x + 392), int(hud.y + 17), day_style.size, day_style.color)
     if state.companion_actor_ids:
-        companion_text = "同行 " + "、".join(state.party[actor_id].name for actor_id in state.companion_actor_ids)
+        companion_text = "同行 " + "、".join(_companion_hud_label(state, actor_id) for actor_id in state.companion_actor_ids)
         companion_x = int(hud.x + 660)
         draw_text(font, companion_text, companion_x, int(hud.y + 17), day_style.size, ui_text_color("accent"))
     draw_text(font, f"第 {state.day} 天", int(hud.x + hud.width - 248), int(hud.y + 17), day_style.size, day_style.color)
@@ -137,8 +142,10 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
     clicked_exhausted_card = False
     current_owner = ""
     group_start_x = x
+    represented_owners: set[str] = set()
     for slot_index, slot_id in enumerate(list_all_spirit_slots(state.deck)):
         owner_id = slot_id.split(":", 1)[0]
+        represented_owners.add(owner_id)
         if owner_id != current_owner:
             _draw_actor_name_bar(font, state, current_owner, group_start_x, y)
             current_owner = owner_id
@@ -179,12 +186,42 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
             select_card_input(state, slot_id, slot_index)
         x += 162
     _draw_actor_name_bar(font, state, current_owner, group_start_x, y)
+    if state.active_encounter is None:
+        x = _draw_absent_companion_status_cards(font, state, x, y, cards_right_limit, represented_owners)
     if clicked_exhausted_card:
         state.action_log.append("行动卡已耗尽：休息后会抽取新的行动卡。")
         del state.action_log[:-MAX_LOG_LINES]
         push_notification(state, "warning", "行动卡已耗尽", "休息后会抽取新的行动卡。")
     inventory_rect = _inventory_panel_rect()
     draw_inventory_panel(font, inventory_rect, state, action)
+
+
+def _draw_absent_companion_status_cards(font: Font | None, state: GameState, x: float, y: float, cards_right_limit: float, represented_owners: set[str]) -> float:
+    for actor_id in state.companion_actor_ids:
+        if actor_id in represented_owners:
+            continue
+        actor = party_actor(state, actor_id)
+        rect = Rectangle(x + 24, y, 150, 106)
+        if rect.x + rect.width > cards_right_limit:
+            break
+        _draw_companion_status_slot(font, rect, actor)
+        _draw_actor_name_bar(font, state, actor_id, rect.x, y)
+        x = rect.x + 162
+    return x
+
+
+def _draw_companion_status_slot(font: Font | None, rect: Rectangle, actor) -> None:
+    location = _stress_location_label(actor.stress_location)
+    if actor.pressure_locked and location:
+        title = "暂离行动"
+        subtitle = f"在{location}"
+    elif actor.pressure_locked:
+        title = "暂离行动"
+        subtitle = "压力过高"
+    else:
+        title = "暂无行动"
+        subtitle = "不能行动"
+    _draw_locked_slot(font, rect, title, subtitle)
 
 
 def _draw_locked_slot(font: Font | None, rect: Rectangle, title: str, subtitle: str) -> None:
@@ -231,7 +268,8 @@ def _draw_actor_name_bar(font: Font | None, state: GameState, owner_id: str, gro
     value_x = start_x + shown * spacing + 4
     value_text = f"{actor.pressure}/{actor.max_pressure}"
     if actor.pressure_locked:
-        value_text += " 锁"
+        location = _stress_location_label(actor.stress_location)
+        value_text += f" {location}" if location else " 锁"
         value_style = ui_text_style("body_sm", "danger")
     else:
         value_style = ui_text_style("body_sm", "muted")
@@ -284,7 +322,9 @@ def _draw_hand_card_head(font: Font | None, rect: Rectangle, name: str, *, card_
     number_text = str(slot_current_value(state, card_id) if state is not None else 0)
     trauma = slot_trauma_count(state, card_id) if state is not None else 0
     bonus = state.deck.action_card_bonuses.get(card_id, 0) if state is not None else 0
-    number_style = ui_text_style("title", "disabled" if disabled else ("warning" if trauma else "accent"))
+    penalty = state.deck.action_card_penalties.get(card_id, 0) if state is not None else 0
+    card_label = state.deck.action_card_labels.get(card_id, "") if state is not None else ""
+    number_style = ui_text_style("title", "disabled" if disabled else ("warning" if trauma or penalty < 0 else "accent"))
     suffix_style = ui_text_style("body", "disabled" if disabled else "muted")
     text_size = max(28, number_style.size - 2)
     suffix_size = suffix_style.size
@@ -303,9 +343,13 @@ def _draw_hand_card_head(font: Font | None, rect: Rectangle, name: str, *, card_
         draw_frame(bonus_rect, Color(84, 68, 46, 255), Color(214, 184, 96, 245))
         bonus_style = ui_text_style("caption", "accent")
         draw_text(font, f"+{bonus}", int(bonus_rect.x) + 8, int(bonus_rect.y) + 3, bonus_style.size, bonus_style.color)
+    if penalty < 0 and card_label and not disabled:
+        label_style = ui_text_style("body_sm", "warning")
+        draw_text(font, f"{card_label} {penalty}", x, y + 34, label_style.size, label_style.color)
     if trauma and not disabled:
         trauma_style = ui_text_style("body_sm", "warning")
-        draw_text(font, f"创伤 {trauma}", x, y + 34, trauma_style.size, trauma_style.color)
+        trauma_y = y + (52 if penalty < 0 and card_label else 34)
+        draw_text(font, f"创伤 {trauma}", x, trauma_y, trauma_style.size, trauma_style.color)
 
 
 def _actor_theme_color(actor_id: str) -> Color:
@@ -434,18 +478,7 @@ def _selected_inventory_rect(state: GameState) -> Rectangle | None:
     )
     if match_index is None:
         return None
-    columns = max(1, math.ceil(len(slots) / 2))
-    rows = max(1, math.ceil(len(slots) / columns))
-    cell_w = (inventory_rect.width - 16 - (columns - 1) * 8) / columns
-    cell_h = min(44.0, (inventory_rect.height - 42 - (rows - 1) * 10) / rows)
-    col = match_index % columns
-    row = match_index // columns
-    return Rectangle(
-        inventory_rect.x + 8 + col * (cell_w + 8),
-        inventory_rect.y + 42 + row * (cell_h + 8),
-        cell_w,
-        cell_h,
-    )
+    return _inventory_item_rects(inventory_rect, len(slots))[match_index]
 
 
 def _inventory_panel_rect() -> Rectangle:
@@ -456,18 +489,10 @@ def _inventory_panel_rect() -> Rectangle:
 def draw_inventory_panel(font: Font | None, rect: Rectangle, state: GameState, action: ActionDef | None) -> None:
     draw_frame(rect, Color(16, 18, 24, 255), Color(76, 82, 96, 220))
     title_style = ui_text_style("subtitle")
-    label_style = ui_text_style("body")
-    amount_style = ui_text_style("body", "accent")
     draw_text(font, "物品", int(rect.x) + 14, int(rect.y) + 10, title_style.size, title_style.color)
     slots = _inventory_slots(state)
-    columns = max(1, math.ceil(len(slots) / 2))
-    rows = max(1, math.ceil(len(slots) / columns))
-    cell_w = (rect.width - 16 - (columns - 1) * 8) / columns
-    cell_h = min(44.0, (rect.height - 52 - (rows - 1) * 8) / rows)
-    for index, (kind, key, label, amount) in enumerate(slots):
-        col = index % columns
-        row = index // columns
-        cell = Rectangle(rect.x + 8 + col * (cell_w + 8), rect.y + 42 + row * (cell_h + 8), cell_w, cell_h)
+    item_rects = _inventory_item_rects(rect, len(slots))
+    for (kind, key, label, amount), cell in zip(slots, item_rects):
         requirement = _find_requirement(action, kind, key)
         active = requirement is not None and requirement_is_slotted(state, requirement)
         selected = state.selected_input.kind == kind and state.selected_input.key == key
@@ -480,26 +505,65 @@ def draw_inventory_panel(font: Font | None, rect: Rectangle, state: GameState, a
         draw_frame(cell, fill, border)
         if not disabled and clickable(cell):
             select_item_input(state, key)
-        draw_text(font, label, int(cell.x) + 8, int(cell.y) + 6, label_style.size, label_style.color if not disabled else ui_text_color("disabled"))
-        draw_text(font, str(amount), int(cell.x) + 8, int(cell.y) + 24, amount_style.size, amount_style.color if not disabled else ui_text_color("disabled"))
+        scale = max(0.55, min(1.0, cell.height / 44.0))
+        label_style = ui_text_style("body", scale=scale, minimum_size=10)
+        amount_style = ui_text_style("body", "accent", scale=scale, minimum_size=10)
+        text_x = int(cell.x + 8.0 * scale)
+        draw_text(font, _fit_inventory_label(font, label, cell.width - 16.0 * scale, label_style.size), text_x, int(cell.y + 6.0 * scale), label_style.size, label_style.color if not disabled else ui_text_color("disabled"))
+        draw_text(font, str(amount), text_x, int(cell.y + cell.height - (amount_style.line_height + 3.0 * scale)), amount_style.size, amount_style.color if not disabled else ui_text_color("disabled"))
+
+
+def _inventory_item_rects(rect: Rectangle, count: int) -> list[Rectangle]:
+    if count <= 0:
+        return []
+    content_x = rect.x + INVENTORY_PADDING_X
+    content_y = rect.y + INVENTORY_HEADER_HEIGHT
+    content_w = rect.width - INVENTORY_PADDING_X * 2
+    content_h = max(1.0, rect.height - INVENTORY_HEADER_HEIGHT - 10.0)
+    cell_h = _inventory_cell_height(content_w, content_h, count)
+    cell_w = min(content_w, cell_h * INVENTORY_ITEM_ASPECT)
+    columns = max(1, int((content_w + INVENTORY_GAP_X) // (cell_w + INVENTORY_GAP_X)))
+    rows = max(1, math.ceil(count / columns))
+    block_h = rows * cell_h + (rows - 1) * INVENTORY_GAP_Y
+    y0 = content_y + max(0.0, (content_h - block_h) * 0.5)
+    rects: list[Rectangle] = []
+    for index in range(count):
+        col = index % columns
+        row = index // columns
+        rects.append(Rectangle(content_x + col * (cell_w + INVENTORY_GAP_X), y0 + row * (cell_h + INVENTORY_GAP_Y), cell_w, cell_h))
+    return rects
+
+
+def _inventory_cell_height(content_w: float, content_h: float, count: int) -> float:
+    height = content_h
+    while height > 12.0:
+        width = min(content_w, height * INVENTORY_ITEM_ASPECT)
+        columns = max(1, int((content_w + INVENTORY_GAP_X) // (width + INVENTORY_GAP_X)))
+        rows = math.ceil(count / columns)
+        if rows * height + (rows - 1) * INVENTORY_GAP_Y <= content_h:
+            return height
+        height *= 0.5
+    width = max(1.0, 12.0 * INVENTORY_ITEM_ASPECT)
+    columns = max(1, int((content_w + INVENTORY_GAP_X) // (width + INVENTORY_GAP_X)))
+    rows = max(1, math.ceil(count / columns))
+    return max(8.0, (content_h - (rows - 1) * INVENTORY_GAP_Y) / rows)
+
+
+def _fit_inventory_label(font: Font | None, text: str, max_width: float, size: int) -> str:
+    if measure_text_width(font, text, size) <= max_width:
+        return text
+    result = text
+    while result and measure_text_width(font, result + "...", size) > max_width:
+        result = result[:-1]
+    return (result + "...") if result else text[:1]
 
 
 def _inventory_slots(state: GameState) -> list[tuple[str, str, str, int]]:
-    slots: list[tuple[str, str, str, int]] = [
-        ("item", "money", ITEM_LABELS["money"], state.world.inventory.get("money", 0)),
-        ("item", "cigarettes", ITEM_LABELS["cigarettes"], state.world.inventory.get("cigarettes", 0)),
-    ]
-    preferred_items = ("clothes", "hotel_pass", "car_key", "repair_case_item", "gun")
-    seen: set[str] = {"money", "cigarettes"}
-    for key in preferred_items:
+    slots: list[tuple[str, str, str, int]] = []
+    for key in sorted(state.world.seen_items):
         amount = state.world.inventory.get(key, 0)
-        if amount > 0 or key in ITEM_LABELS:
-            slots.append(("item", key, ITEM_LABELS.get(key, key), amount))
-            seen.add(key)
-    for key, amount in sorted(state.world.inventory.items()):
-        if key in seen:
-            continue
-        slots.append(("item", key, ITEM_LABELS.get(key, key), amount))
+        label = ITEM_LABELS.get(key, key)
+        slots.append(("item", key, label, amount))
     return slots
 
 
@@ -651,13 +715,36 @@ def _draw_profile_column(font: Font | None, rect: Rectangle, state: GameState, a
     pressure_text = f"压力 {actor.pressure}/{actor.max_pressure}"
     if actor.pressure_locked:
         lock_style = ui_text_style("body", "danger")
-        draw_text(font, pressure_text + " 锁", int(rect.x) + 16, y, text_size, lock_style.color)
+        location = _stress_location_label(actor.stress_location)
+        suffix = f"  在{location}" if location else " 锁"
+        draw_text(font, pressure_text + suffix, int(rect.x) + 16, y, text_size, lock_style.color)
     else:
         draw_text(font, pressure_text, int(rect.x) + 16, y, text_size, label_style.color)
     y += 24
+    if actor.statuses:
+        status_text = "  ".join(
+            f"{ACTOR_STATUS_DEFS.get(status.id).title if ACTOR_STATUS_DEFS.get(status.id) else status.id} {status.cycles}"
+            for status in actor.statuses
+        )
+        draw_text(font, status_text, int(rect.x) + 16, y, text_size, ui_text_style("body", "warning").color)
+        y += 24
     for label, key in (("暴力", actor.force), ("魅力", actor.charm), ("知识", actor.knowledge), ("敏锐", actor.sense)):
         draw_text(font, f"{label} {key}", int(rect.x) + 16, y, text_size, label_style.color)
         y += 20
+
+
+def _companion_hud_label(state: GameState, actor_id: str) -> str:
+    actor = state.party[actor_id]
+    location = _stress_location_label(actor.stress_location)
+    if actor.pressure_locked and location:
+        return f"{actor.name}（{location}，压力过高）"
+    if actor.pressure_locked:
+        return f"{actor.name}（压力过高）"
+    return actor.name
+
+
+def _stress_location_label(location: str) -> str:
+    return location
 
 
 def draw_card_pile_modal(font: Font | None, state: GameState) -> None:

@@ -37,6 +37,7 @@ def draw_debug_panel(font: Font | None, state: GameState, rng: RandomSource) -> 
     y = 142
     if text_button(font, Rectangle(1096, y, 140, 30), "加钱 +20", button_size):
         state.world.inventory["money"] = state.world.inventory.get("money", 0) + 20
+        state.world.seen_items.add("money")
     if text_button(font, Rectangle(1248, y, 140, 30), "精力 -2", button_size):
         change_energy(state, -2)
     y += 40

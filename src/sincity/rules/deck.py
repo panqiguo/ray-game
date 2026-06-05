@@ -57,11 +57,15 @@ def health_penalty_for_cards(health: int) -> int:
     return 0
 
 
-def refresh_spirit_slots(deck: DeckState, rng: RandomSource | None = None, *, actors=(), screen: ScreenName = ScreenName.CITY) -> None:
+def refresh_spirit_slots(deck: DeckState, rng: RandomSource | None = None, *, actors=(), screen: ScreenName = ScreenName.CITY, status_defs=None) -> None:
     if rng is None:
         rng = RandomSource(0)
+    if status_defs is None:
+        status_defs = {}
     deck.action_card_values.clear()
     deck.action_card_bonuses.clear()
+    deck.action_card_penalties.clear()
+    deck.action_card_labels.clear()
     deck.action_card_owners.clear()
     deck.exhausted_slots.clear()
     deck.available_slots.clear()
@@ -75,15 +79,26 @@ def refresh_spirit_slots(deck: DeckState, rng: RandomSource | None = None, *, ac
             value = max(0, raw - penalty)
             deck.action_card_values[slot_id] = value
             deck.action_card_owners[slot_id] = actor.id
+            _apply_actor_status_to_card(deck, slot_id, actor, rng, status_defs)
             if actor.can_act:
                 deck.available_slots.append(slot_id)
             else:
                 deck.locked_slots.append(slot_id)
 
 
-def start_city_day(deck: DeckState, rng: RandomSource, hand_size: int = 0, *, actors=()) -> None:
+def _apply_actor_status_to_card(deck: DeckState, slot_id: str, actor, rng: RandomSource, status_defs) -> None:
+    for status in getattr(actor, "statuses", ()):
+        status_def = status_defs.get(status.id)
+        if status_def is None or status_def.card_penalty == 0 or not status_def.card_label:
+            continue
+        if rng.randint(1, 100) <= int(status_def.card_chance * 100):
+            deck.action_card_penalties[slot_id] = deck.action_card_penalties.get(slot_id, 0) + status_def.card_penalty
+            deck.action_card_labels[slot_id] = status_def.card_label
+
+
+def start_city_day(deck: DeckState, rng: RandomSource, hand_size: int = 0, *, actors=(), status_defs=None) -> None:
     del hand_size
-    refresh_spirit_slots(deck, rng, actors=actors, screen=ScreenName.CITY)
+    refresh_spirit_slots(deck, rng, actors=actors, screen=ScreenName.CITY, status_defs=status_defs)
 
 
 def draw_cards(deck: DeckState, rng: RandomSource, amount: int) -> None:

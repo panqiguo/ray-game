@@ -12,6 +12,8 @@ class DeckState:
     extra_slots: dict[str, int] = field(default_factory=dict)
     action_card_values: dict[str, int] = field(default_factory=dict)
     action_card_bonuses: dict[str, int] = field(default_factory=dict)
+    action_card_penalties: dict[str, int] = field(default_factory=dict)
+    action_card_labels: dict[str, str] = field(default_factory=dict)
     action_card_owners: dict[str, str] = field(default_factory=dict)
     available_slots: list[str] = field(default_factory=list)
     exhausted_slots: list[str] = field(default_factory=list)
@@ -25,6 +27,12 @@ class AttributeState:
     max_health: int = 10
     energy: int = 5
     max_energy: int = 5
+
+
+@dataclass
+class ActorStatusState:
+    id: str
+    cycles: int
 
 
 @dataclass
@@ -43,6 +51,8 @@ class PartyActorState:
     pressure: int = 0
     max_pressure: int = 5
     pressure_locked: bool = False
+    stress_location: str = ""
+    statuses: list[ActorStatusState] = field(default_factory=list)
 
     @property
     def can_act(self) -> bool:
@@ -65,6 +75,7 @@ class WorldState:
     fresh_locations: set[str] = field(default_factory=set)
     progress_clocks: dict[str, ProgressClockState] = field(default_factory=dict)
     inventory: dict[str, int] = field(default_factory=dict)
+    seen_items: set[str] = field(default_factory=set)
     values: dict[str, int | bool | str] = field(default_factory=dict)
     rewarded_tasks: set[str] = field(default_factory=set)
 

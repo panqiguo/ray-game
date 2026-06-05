@@ -134,7 +134,17 @@
     (var 'press_note_found false)
     (var 'reporter_negotiation_unlocked false)
     (var 'reporter_negotiation_done false)
-    (var 'press_feed_confirmed false)))
+    (var 'press_feed_confirmed false)
+    (var 'premiere_perimeter_checked false)
+    (var 'premiere_vip_lounge_visited false)
+    (var 'premiere_backstage_visited false)
+    (var 'premiere_ready false)
+    (var 'premiere_chase_completed false)
+    (var 'premiere_night_completed false)
+    (var 'premiere_clue_program false)
+    (var 'premiere_clue_wallet false)
+    (var 'premiere_clue_jacket false)
+    (var 'premiere_clue_wire false)))
 
 (define nightingale-reacts
   (list
@@ -288,6 +298,14 @@
         (effect 'set press_note_found true)
         (effect 'set reporter_negotiation_unlocked true)
         (effect 'start-quick-dialogue "# 提前送来的便条\n\n# speaker: 科尔\n记者工位的夹层里塞着一张便条。上面写着：莱恩、夜莺、旧码头、后台事故。顺序像一份标题提纲。\n\n# speaker: 科尔\n纸上的字迹粗暴，像莱恩会写出来的东西。可问题不在这里。\n\n# speaker: 科尔\n如果他真想威胁夜莺，为什么要把威胁送给报社？他是想吓她，还是想让整座城替他看见什么？")))
+    (react
+      :when (and premiere_night_unlocked
+                 (not premiere_ready)
+                 (>= (+ (if premiere_perimeter_checked 1 0)
+                        (if premiere_vip_lounge_visited 1 0)
+                        (if premiere_backstage_visited 1 0)) 2))
+      :then (list
+        (effect 'set premiere_ready true)))
     ))
 
 (define (nightingale-cycle-start-effects)
@@ -375,7 +393,19 @@
         (step :title "在废墟里发现莱恩" :completed ryan_found_in_ruins)
         (step :title "与莱恩在拆迁废墟中对峙" :completed ryan_ruins_confronted)
         (step :title "被干涉调查的警察带走" :completed ryan_police_interfered)
-        (step :title "熬过警局审问，赶往首演夜" :completed premiere_night_unlocked)))))
+        (step :title "熬过警局审问，赶往首演夜" :completed premiere_night_unlocked)))
+    (task
+      :kind '主线
+      :title "保护夜莺：首演夜"
+      :desc "你从警局脱身赶到剧院。夜莺马上就要登台。剧院外围的警力密得不正常，暗处有人已经等了一晚。做好你该做的事，等枪响。"
+      :active (and premiere_night_unlocked (not premiere_night_completed))
+      :completed premiere_night_completed
+      :failed false
+      :steps (list
+        (step :title "检查剧院外围的警力布防" :completed premiere_perimeter_checked)
+        (step :title "在贵宾休息室探听口风" :completed premiere_vip_lounge_visited)
+        (step :title "去后台见夜莺" :completed premiere_backstage_visited)
+        (step :title "在首演现场追击黑影" :completed premiere_chase_completed)))))
 
 (define (press-alert-factors)
   (list

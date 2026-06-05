@@ -87,6 +87,9 @@ def debug_load(state: GameState, rng: RandomSource, slot: int = 1) -> None:
 
     _upgrade_dataclass(loaded_state)
     loaded_state.render_cache = RenderCacheState()
+    loaded_state.world.seen_items.update(
+        k for k, v in loaded_state.world.inventory.items() if v > 0
+    )
 
     for f in dataclasses.fields(type(state)):
         setattr(state, f.name, getattr(loaded_state, f.name))

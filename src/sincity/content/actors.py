@@ -6,6 +6,16 @@ from sincity.model.state import PartyActorState
 
 
 @dataclass(frozen=True)
+class ActorStatusDef:
+    id: str
+    title: str
+    cycles: int
+    card_label: str = ""
+    card_penalty: int = 0
+    card_chance: float = 0.0
+
+
+@dataclass(frozen=True)
 class PartyActorDef:
     id: str
     name: str
@@ -17,6 +27,8 @@ class PartyActorDef:
     knowledge: int = 0
     sense: int = 0
     is_player: bool = False
+    stress_location: str = ""
+    stress_return_status: str = ""
 
     def instantiate(self, *, health: int | None = None, energy: int | None = None) -> PartyActorState:
         return PartyActorState(
@@ -39,6 +51,17 @@ PLAYER_ACTOR_ID = "cole"
 INITIAL_COMPANION_ID = "lena"
 DEBUG_COMPANION_ORDER: tuple[str, ...] = ("lena", "marco")
 
+ACTOR_STATUS_DEFS: dict[str, ActorStatusDef] = {
+    "hangover": ActorStatusDef(
+        id="hangover",
+        title="宿醉",
+        cycles=2,
+        card_label="头疼",
+        card_penalty=-2,
+        card_chance=0.5,
+    ),
+}
+
 PARTY_ACTOR_DEFS: dict[str, PartyActorDef] = {
     "cole": PartyActorDef(
         id="cole",
@@ -56,6 +79,8 @@ PARTY_ACTOR_DEFS: dict[str, PartyActorDef] = {
         max_energy=3,
         charm=2,
         sense=1,
+        stress_location="酒吧",
+        stress_return_status="hangover",
     ),
     "marco": PartyActorDef(
         id="marco",

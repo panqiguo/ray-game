@@ -173,6 +173,42 @@
             (effect 'set nightingale_commission_taken true)
             (effect 'start-quick-dialogue nightingale-stage-text)))))))
 
+(define (剧院外围)
+  (node
+    :title "剧院外围 · 警力布防"
+    :desc "剧场外的警力多得不正常。带队警官不认识你——不是你叫来的人，有人提前帮他安排好了今晚的位置。"
+    :actions (list
+      (action
+        :title "查看警力分布"
+        :desc "封锁线、便衣、巡逻路线——每条线都像是照着某张图纸画的，而不是照着事故预案。"
+        :effects (list
+          (effect 'set premiere_perimeter_checked true)
+          (effect 'start-quick-dialogue "# 剧院外围\n\n# speaker: 科尔\n封锁线拉得比首演安保标准远了一整条街。便衣散在人群里，位置选得不像在保护入场口，更像在等某个方向的人跑出来。\n\n# speaker: 科尔\n带队警官看了我的证件，没多问。他没说谁安排的布防，但他看我的眼神像在确认我已经到场。\n\n# speaker: 科尔\n他知道我是谁。也知道我今晚在这里。"))))))
+
+(define (贵宾休息室)
+  (node
+    :title "贵宾休息室"
+    :desc "香槟杯在灯下叠成一座透明的小塔。今晚的人不全是为了听歌来的——旧码头改造的剪彩路线图被叠成节目单大小，塞在每个人的口袋里。"
+    :actions (list
+      (action
+        :title "在权贵之间探听口风"
+        :desc "每个人都笑容满面，每个人都在等首演结束后的另一场——拆迁剪彩。你注意到有个人在演出开始前就离开了。太早了。"
+        :effects (list
+          (effect 'set premiere_vip_lounge_visited true)
+          (effect 'start-quick-dialogue "# 贵宾休息室\n\n# speaker: 科尔\n香槟和西装的气味让这里听起来更像一场提前举行的庆功宴。有人在谈论旧码头改造后的房价，有人在确认剪彩名单，没有人提到夜莺的名字。\n\n# speaker: 科尔\n我在角落里看见一个人——他比演出时间提前了整整四十分钟离开休息室。不是去洗手间的方向。\n\n# speaker: 科尔\n我记住他的脸。后来在屋顶上，我又想起这张脸。"))))))
+
+(define (后台·夜莺化妆间)
+  (node
+    :title "后台 · 夜莺化妆间"
+    :desc "夜莺已经换好演出服。镜灯亮着，她在梳妆台前安静得像一张已经拍好的照片。"
+    :actions (list
+      (action
+        :title "和夜莺最后说几句话"
+        :desc "她比你预想的平静。首演对她来说不是第一次面临某种危险。"
+        :effects (list
+          (effect 'set premiere_backstage_visited true)
+          (effect 'start-quick-dialogue "# 夜莺的化妆间\n\n# speaker: 科尔\n她没回头，从镜子里看见我进来。\n\n# speaker: 夜莺\n“外面怎么样？”\n\n# speaker: 科尔\n“警察多了一倍。休息室里的人在聊拆迁。有人提前走了。”\n\n# speaker: 科尔\n她把一枚袖扣摘下来，放在桌上。\n\n# speaker: 夜莺\n“那就别太相信第一眼看到的事。”\n\n# speaker: 科尔\n她没解释这句话。她把袖扣推向我。\n\n# speaker: 科尔\n我收下了。后来我才知道，这是她能给出的最接近信任的东西。"))))))
+
 (define (剧院)
   (node
     :title "剧院"
@@ -216,7 +252,14 @@
          :title "追上那个鬼祟的人"
           :desc "你已经看见他了。接下来不是问话，是先别让他走掉。"
           :effects (list
-                    (effect 'start-encounter '剧院后巷交锋)))))
+                    (effect 'start-encounter '剧院后巷交锋))))
+      (when (and premiere_night_unlocked (not premiere_chase_completed) premiere_ready)
+        (action
+          :title "走向观众席——等待开场"
+          :desc "灯光渐暗。夜莺就要登台了。你在座位上坐下来，手心有汗。你感觉整座剧院都在屏息等待同一件事。"
+          :effects (list
+            (effect 'start-quick-dialogue "# 首演开始\n\n（夜莺登台。灯光像一层薄霜落在她肩上。她开口的瞬间，整座剧院被她的声音提了起来。）\n\n（画面分镜：舞台上的夜莺 / 场外的游行队伍正在向剧院移动 / 包厢里有人在打电话 / 你坐在观众席中，手按在袖扣上。）\n\n（歌声攀向高潮——\n\n枪响。）")
+            (effect 'start-encounter '首演夜追逐)))))
     :children (list
                (when nightingale_front_done (夜莺))
                
@@ -229,4 +272,7 @@
                           (or (not theater_accident_cleanup_started)
                               (not (clock-filled? theater_accident_cleanup))))
                  (后台道具间))
-               (when (and nightingale_city_day_started nightingale_second_letter_ready) (剧院后巷)))))
+               (when (and nightingale_city_day_started nightingale_second_letter_ready) (剧院后巷))
+               (when (and premiere_night_unlocked (not premiere_chase_completed)) (剧院外围))
+               (when (and premiere_night_unlocked (not premiere_chase_completed)) (贵宾休息室))
+               (when (and premiere_night_unlocked (not premiere_chase_completed)) (后台·夜莺化妆间)))))

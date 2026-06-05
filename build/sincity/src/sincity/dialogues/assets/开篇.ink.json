@@ -1,1 +1,0 @@
-{"inkVersion":21,"root":[["\n","^你的头很晕，身体也很痛","\n","^你挣扎着睁开眼睛，你被绑在一个椅子上","\n","^什么？","\n","ev","str","^逃离疗养院","/str",{"x()":"start_encounter","exArgs":1},"pop","/ev","\n",["done",{"#n":"g-0"}],null],"done",null],"listDefs":{}}

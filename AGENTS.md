@@ -24,6 +24,7 @@
 - `.scm` 文件在 `src/sincity/scm/`，城市入口 `city_1.scm`，外出任务在 `encounter/` 下
 - 修改后重新运行游戏或 Ctrl+R 热重启即生效
 - Scheme 参考: `encounters/cheat-sheet.md`
+- SCM 编写规范 (Skill): [SKILL.md](file:///Users/usr/Documents/python/ray-game/src/如何写scm场景文件/SKILL.md)
 - `:suit` 只写一个最适属性，环境修正用 modifier 表达
 - DSL 语义规则（city 和 encounter 统一）：
   - `define value` = 模块加载时求值一次

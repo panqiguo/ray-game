@@ -78,9 +78,20 @@ def draw_location_grid(
 
 def draw_world_objects(font: Font | None, state: GameState, rng, rect: Rectangle, cards: tuple[PresentedWorldObject, ...]) -> None:
     laid_out = layout_world_objects(font, rect, cards)
-    for presented, card, scale in laid_out:
+    base_z = current_layer_z()
+    world_layers: list[int] = []
+    for index, (presented, card, _scale) in enumerate(laid_out):
+        item_z = base_z + index + 1
+        world_layers.append(item_z)
+        register_input_region(
+            f"world_object:{presented.kind}:{presented.location_id or (presented.action_card.action.id if presented.action_card is not None else '')}",
+            card,
+            z=item_z,
+            interactive=presented.kind == "location",
+        )
+    for (presented, card, scale), item_z in zip(laid_out, world_layers):
         if presented.kind == "location":
-            if draw_table_card(font, card, state, presented.card, scale=scale):
+            if draw_table_card(font, card, state, presented.card, scale=scale, z=item_z):
                 clear_assembly(state)
                 clear_selected_input(state)
                 assert presented.location_id is not None
@@ -252,7 +263,8 @@ def draw_action_card(font: Font | None, state: GameState, presented: PresentedAc
             draw_reveal_progress_bar(font, preview_rect, state.action_reveal, scale=scale)
         elif is_direct:
             execute_rect = button_rects[0]
-            label = action.button_label or "执行"
+            default_label = "查看" if action.reveal is not None else "执行"
+            label = action.button_label or default_label
             if pill(font, execute_rect, label, False, disabled=not presented.attachment.can_execute, scale=scale, z=button_z):
                 if mode == "reveal_ready":
                     perform_reveal_action(state, action, rng)

@@ -145,7 +145,6 @@
       (action
         :title "检查办公桌"
         :desc "桌面上堆着文件、空咖啡杯和一只倒扣的相框。"
-        :button "检查"
         :reveal (reveal
           :text "相框里是一张黑白照片——一个女人的侧脸，背景是某个游乐园的摩天轮。照片边缘被反复摩挲过，但你还是看不出她是谁。"))
       (when (and intrusion_seen (not blood_cleaned))
@@ -899,16 +898,16 @@
       (if (> gang_days_remaining 0)
           (list (effect 'add gang_days_remaining -1))
           (list))
-      ;; random event spawn: after frontpage, if nothing active, roll
-      (if (and reporter_frontpage_published
-              ;  (not reporter_rumor_event_active)
-              ;  (not dock_strike_event_active)
-               )
-          (if (< (random-float) 0.5)
-              (if (< (random-float) 0.5)
-                  (spawn-press-rumor-event)
-                  (spawn-dock-strike-event))
-              (list))
+      ;; random event spawn: after frontpage, each day pick uniformly
+      ;; from events that are not already active on the map.
+      (if reporter_frontpage_published
+          (let ((available-events
+                  (append
+                    (if (not reporter_rumor_event_active) (list spawn-press-rumor-event) (list))
+                    (if (not dock_strike_event_active) (list spawn-dock-strike-event) (list)))))
+            (if (null? available-events)
+                (list)
+                ((random-choice available-events))))
           (list)))))
 
 (define world-tasks

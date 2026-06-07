@@ -38,13 +38,21 @@ TABLE_CARD = TableCardStyle(width=188.0, height=96.0, title_size=ui_text_size("s
 ACTION_CARD = TableCardStyle(width=232.0, height=224.0, title_size=ui_text_size("subtitle"), body_size=ui_text_size("body") + 2)
 
 
-def draw_table_card(font: Font | None, rect: Rectangle, state: GameState, model: TableCardModel, scale: float = 1.0) -> bool:
+def draw_table_card(
+    font: Font | None,
+    rect: Rectangle,
+    state: GameState,
+    model: TableCardModel,
+    scale: float = 1.0,
+    *,
+    z: int | None = None,
+) -> bool:
     fill = Color(72, 57, 42, 255) if model.active else Color(28, 32, 40, 255)
     border = Color(191, 157, 96, 255) if model.active else Color(92, 96, 104, 220)
     if model.disabled:
         fill = Color(22, 24, 30, 240)
         border = Color(62, 66, 74, 180)
-    clicked = clickable(rect) if model.interactive and not model.disabled else False
+    clicked = clickable(rect, z=z) if model.interactive and not model.disabled else False
     draw_frame(rect, fill, border)
     title_style = ui_text_style(
         "subtitle",

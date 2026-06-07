@@ -535,18 +535,23 @@ def _inventory_item_rects(rect: Rectangle, count: int) -> list[Rectangle]:
 
 
 def _inventory_cell_height(content_w: float, content_h: float, count: int) -> float:
-    height = content_h
-    while height > 12.0:
+    if count <= 0:
+        return content_h
+
+    TARGET_CELL_HEIGHT = 56.0
+    MIN_CELL_HEIGHT = 24.0
+
+    for height in [TARGET_CELL_HEIGHT, 48.0, 40.0, 32.0, MIN_CELL_HEIGHT]:
         width = min(content_w, height * INVENTORY_ITEM_ASPECT)
         columns = max(1, int((content_w + INVENTORY_GAP_X) // (width + INVENTORY_GAP_X)))
-        rows = math.ceil(count / columns)
+        rows = max(1, math.ceil(count / columns))
         if rows * height + (rows - 1) * INVENTORY_GAP_Y <= content_h:
             return height
-        height *= 0.5
-    width = max(1.0, 12.0 * INVENTORY_ITEM_ASPECT)
+
+    width = max(MIN_CELL_HEIGHT * INVENTORY_ITEM_ASPECT, 1.0)
     columns = max(1, int((content_w + INVENTORY_GAP_X) // (width + INVENTORY_GAP_X)))
     rows = max(1, math.ceil(count / columns))
-    return max(8.0, (content_h - (rows - 1) * INVENTORY_GAP_Y) / rows)
+    return max(MIN_CELL_HEIGHT, (content_h - (rows - 1) * INVENTORY_GAP_Y) / rows)
 
 
 def _fit_inventory_label(font: Font | None, text: str, max_width: float, size: int) -> str:

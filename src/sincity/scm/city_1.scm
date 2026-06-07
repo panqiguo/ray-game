@@ -137,21 +137,6 @@
         :inputs (list (item 'food 1 "干粮"))
         :effects (list (effect 'add energy 3)))
       (action
-        :title "在门口泼油漆"
-        :desc "趁没人注意在办公室门上泼了一桶红漆。"
-        :conditions (list (field-equals 'office_door_painted false))
-        :effects (list
-          (effect 'set 'office_door_painted true)
-          (effect 'mount-action
-            (list "贝城县/办公室"
-              (action
-                :title "擦掉门口的油漆"
-                :desc "你花了一点时间把油漆擦掉。"
-                :effects (list
-                  (effect 'set 'office_door_painted false)
-                  (effect 'unmount-action
-                    (list "贝城县/办公室" "擦掉门口的油漆"))))))))
-      (action
         :title "使用医药品处理伤口"
         :desc "在办公室慢慢处理伤口。消耗 1 份医药品，恢复 3 点健康。"
         :conditions (list (has-item 'first_aid 1 "需要医药品"))
@@ -648,7 +633,9 @@
       (var 'black_loan_due (clock :title "高利贷倒计时" :desc "黑市借款每天涨 10 元。满 10 天还不上，就会有人替账本动手。" :initial 0 :max 10))
       (var 'black_loan_defaulted false)
       (var 'gang_days_remaining 15)
-      (var 'office_door_painted false)
+      (var 'dock_strike_progress (clock :title "罢工调停" :initial 0 :max 4))
+      (var 'dock_strike_event_active false)
+      (var 'dock_strike_event_days 0)
 
       (var 'recovery_deadline_day 5)
       (var 'police_interview_started false)
@@ -723,6 +710,28 @@
       (var 'rehab2_started false)
       (var 'rehab2_done false)
       (var 'rehab2_progress (clock :title "简易康复训练" :desc "每次训练恢复少量体力，可用3次。" :initial 0 :max 3)))))
+
+(define-fragment 码头罢工冲突
+  (location
+    :title "码头罢工冲突"
+    :desc "工人堵在仓库门口，账房的人躲在里面，警察远远看着。"
+    :show-clocks (list dock_strike_progress)
+    :actions (list
+      (action
+        :title "调停罢工冲突"
+        :desc "你在几拨人之间来回说话，试图让他们至少先停下。"
+        :check (check
+          :suit 'charm
+          :risk 'mid
+          :ok (outcome
+            "你抓住了双方都还没准备撕破脸的空隙。"
+            (list (effect 'clock+ dock_strike_progress 2)))
+          :partial (outcome
+            "他们暂时愿意听你说，但每个人都觉得自己被亏待了。"
+            (list (effect 'clock+ dock_strike_progress 1)))
+          :fail (outcome
+            "有人把你的话当成站队，争吵变得更难压住。"
+            (list (effect 'add energy -1))))))))
 
 (define world-reacts
   (append
@@ -844,7 +853,17 @@
     building-reacts
     rich-enclave-reacts
     waste-reacts
-    docks-reacts))
+    docks-reacts
+    (list
+      (react
+        :when (and dock_strike_event_active (clock-filled? dock_strike_progress))
+        :then (list
+          (effect 'set dock_strike_event_active false)
+          (effect 'set dock_strike_event_days 0)
+          (effect 'clock- dock_strike_progress (clock-value dock_strike_progress))
+          (effect 'unmount-location
+            (list "贝城县/旧码头" "码头罢工冲突"))))))
+    )
 
 (define (world-cycle-start-effects)
   (apply append
@@ -858,6 +877,12 @@
       (list (effect 'set bookshop_entered_today false))
       (if (> gang_days_remaining 0)
           (list (effect 'add gang_days_remaining -1))
+          (list))
+      (if (and ryan_docks_unlocked (not dock_strike_event_active))
+          (list
+            (effect 'set dock_strike_event_active true)
+            (effect 'mount-location
+              (list "贝城县/旧码头" (码头罢工冲突))))
           (list)))))
 
 (define world-tasks

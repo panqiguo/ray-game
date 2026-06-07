@@ -12,6 +12,13 @@ class StringAtom:
     value: str
 
 
+@dataclass(frozen=True)
+class SourceRef:
+    source_path: Path | None
+    line: int
+    column: int
+
+
 SexpAtom: TypeAlias = str | int | bool | StringAtom
 SexpNode: TypeAlias = SexpAtom | list["SexpNode"]
 
@@ -230,6 +237,7 @@ class ReactTemplate:
     condition: Any
     effects: tuple[Effect, ...]
     effects_expr: Any | None = None
+    source: str = ""
 
 
 @dataclass(frozen=True)

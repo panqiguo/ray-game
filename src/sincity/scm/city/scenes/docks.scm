@@ -513,7 +513,6 @@
     :actions (append
       (ryan-docks-investigation-actions)
       (list
-        (reporter-rumor-event-action 'docks)
         (when (and reporter_more_proof_needed
                    (not reporter_docks_reaction_done)
                    (not reporter_frontpage_ready))

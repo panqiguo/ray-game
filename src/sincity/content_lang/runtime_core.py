@@ -26,7 +26,7 @@ from sincity.encounters.defs import (
     TaskStepTemplate,
     TaskTemplate,
 )
-from sincity.encounters.lispy import Environment, Procedure, SpecialFormProcedure, StringAtom, evaluate, truthy
+from sincity.encounters.lispy import Environment, Procedure, SpecialFormProcedure, StringAtom, evaluate, format_sexp, format_source_ref, source_ref, truthy
 from sincity.labels import lookup_input_label
 from sincity.model.defs import (
     ActionDef,
@@ -654,7 +654,11 @@ def builtin_react(args: list[Any], env: Environment) -> ReactTemplate:
     condition = Procedure(params=(), body=normalize_react_condition_body(kwargs[":when"], env), env=env)
     effects_expr = kwargs[":then"]
     effects = eval_effect_list(effects_expr, env)
-    return ReactTemplate(condition=condition, effects=effects, effects_expr=effects_expr)
+    ref = source_ref(args)
+    location = format_source_ref(ref)
+    when_summary = format_sexp(kwargs[":when"], max_length=120)
+    source = f"{location} when={when_summary}" if location else f"when={when_summary}"
+    return ReactTemplate(condition=condition, effects=effects, effects_expr=effects_expr, source=source)
 
 
 def builtin_reaction_table(args: tuple[Any, ...]) -> ReactionTable:
@@ -1099,5 +1103,4 @@ def _render_action(program: Any, action: ActionTemplate, *, location_path: tuple
     )
     handle = ActionHandle(action_id=action_id, location_path=location_path, slot_index=source_index, action_key=action_key)
     return RenderedAction(handle=handle, action=replace(action_def, id=action_id))
-
 

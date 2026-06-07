@@ -636,6 +636,7 @@
       (var 'dock_strike_progress (clock :title "罢工调停" :initial 0 :max 4))
       (var 'dock_strike_event_active false)
       (var 'dock_strike_event_days 0)
+      (var 'dock_strike_resolved false)
 
       (var 'recovery_deadline_day 5)
       (var 'police_interview_started false)
@@ -860,6 +861,7 @@
         :then (list
           (effect 'set dock_strike_event_active false)
           (effect 'set dock_strike_event_days 0)
+          (effect 'set dock_strike_resolved true)
           (effect 'clock- dock_strike_progress (clock-value dock_strike_progress))
           (effect 'unmount-location
             (list "贝城县/旧码头" "码头罢工冲突"))))))
@@ -878,7 +880,7 @@
       (if (> gang_days_remaining 0)
           (list (effect 'add gang_days_remaining -1))
           (list))
-      (if (and ryan_docks_unlocked (not dock_strike_event_active))
+      (if (and ryan_docks_unlocked (not dock_strike_event_active) (not dock_strike_resolved))
           (list
             (effect 'set dock_strike_event_active true)
             (effect 'mount-location

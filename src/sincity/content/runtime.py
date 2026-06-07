@@ -287,6 +287,12 @@ def validate_world_program(program: CompiledWorldProgram) -> None:
     for name, value in program.definitions.items():
         if isinstance(value, Procedure):
             _validate_effect_target_symbols_generic(value.body, env, context=f"{program.id}: definition `{name}`", local_symbols=frozenset(value.params))
+            if not value.params:
+                result = evaluate(value.body, env)
+                if isinstance(result, LocationTemplate):
+                    _validate_location_template(result)
+                elif isinstance(result, ActionTemplate):
+                    _validate_action_template(result)
         try:
             if isinstance(value, LocationTemplate):
                 _validate_location_template(value)
@@ -446,7 +452,7 @@ def _resolve_reacts(expr: Any, env: Environment) -> list[ReactRule]:
         if item is None:
             continue
         _validate_react_template(item)
-        rules.append(ReactRule(condition=item.condition, effects=item.effects, source=f"react[{index}]", effects_expr=item.effects_expr))
+        rules.append(ReactRule(condition=item.condition, effects=item.effects, source=_react_source_label(item, index), effects_expr=item.effects_expr))
     return rules
 
 
@@ -467,6 +473,12 @@ def _resolve_tasks(expr: Any, env: Environment) -> tuple[TaskTemplate, ...]:
         seen_titles.add(title)
         tasks.append(item)
     return tuple(tasks)
+
+
+def _react_source_label(item: ReactTemplate, index: int) -> str:
+    if item.source:
+        return f"react[{index}] @ {item.source}"
+    return f"react[{index}]"
 
 
 def _validate_task_template(program: CompiledWorldProgram, task: TaskTemplate, env: Environment) -> None:

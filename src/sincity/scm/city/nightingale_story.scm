@@ -109,8 +109,10 @@
     (var 'nightingale_lore_known false)
     (var 'nightingale_docks_direction_known false)
     (var 'nightingale_side_job_clock (clock :title "旧码头卸货" :desc "临时招工，搬几趟箱子换工钱。" :initial 0 :max 4))
+    (var 'nightingale_side_job_window (clock :title "窗口期剩余" :desc "卸货活只开到首演首信截止后两个 cycle。过了窗口期，工头会另找人手。" :initial 0 :max 2))
     (var 'nightingale_side_job_available false)
     (var 'nightingale_side_job_done false)
+    (var 'nightingale_side_job_expired false)
     (var 'theater_accident_unlocked false)
     (var 'theater_accident_survived false)
     (var 'theater_accident_started false)
@@ -262,21 +264,26 @@
       :when (and nightingale_commission_taken
                  (not nightingale_side_job_done)
                  (not nightingale_side_job_available)
+                 (not nightingale_side_job_expired)
                  (> nightingale_first_letter_due_day 0)
                  (>= day nightingale_first_letter_due_day))
       :then (list
-        (effect 'set nightingale_side_job_available true)))
+        (effect 'set nightingale_side_job_available true)
+        (effect 'clock- nightingale_side_job_window (clock-value nightingale_side_job_window))))
+    ;; expire when window clock fills
     (react
       :when (and nightingale_side_job_available
                  (not nightingale_side_job_done)
-                 (> day (+ nightingale_first_letter_due_day 1)))
+                 (clock-filled? nightingale_side_job_window))
       :then (list
-        (effect 'set nightingale_side_job_available false)))
+        (effect 'set nightingale_side_job_available false)
+        (effect 'set nightingale_side_job_expired true)))
     (react
       :when (and (clock-filled? nightingale_side_job_clock) (not nightingale_side_job_done))
       :then (list
         (effect 'set nightingale_side_job_done true)
         (effect 'set nightingale_side_job_available false)
+        (effect 'set nightingale_side_job_expired true)
         (effect 'add money 30)
         (effect 'start-quick-dialogue "# 卸货工钱\n\n# speaker: 工头\n“干完了。这是你的工钱。”")))
     (react
@@ -437,7 +444,11 @@
     (when (and reporter_aftershock_started
                (not (clock-filled? reporter_aftershock))
                (> day reporter_aftershock_checked_day))
-      (effect 'set reporter_aftershock_checked_day day))))
+      (effect 'set reporter_aftershock_checked_day day))
+    (when (and nightingale_side_job_available
+               (not nightingale_side_job_done)
+               (not (clock-filled? nightingale_side_job_window)))
+      (effect 'clock+ nightingale_side_job_window 1))))
 
 (define (reporter-rumor-location-for-day)
   (cond
@@ -696,7 +707,7 @@
           :title "逼小报记者说出便条来路"
           :desc "便条给了你谈判的筹码。现在问题不是问他知不知道，而是让他承认自己知道多少。"
           :effects (list
-            (effect 'start-encounter "报社谈判交锋")))))
+             (effect 'start-encounter "报社谈判交锋"))))
       (when (and reporter_storyline_unlocked (not reporter_second_meeting_done))
         (action
           :title "和小报记者再次见面"
@@ -709,7 +720,7 @@
         (action
           :title "把首演夜材料交给记者"
           :desc "这一步不是换奖励。材料交出去以后，故事就会开始离开你的手，进入报社、警局、剧院和街头。"
-          :conditions (list (field-eq 'premiere_night_completed true "需要完成首演夜"))
+          :conditions (list (field-equals 'premiere_night_completed true "需要完成首演夜"))
           :effects (list
             (effect 'set reporter_evidence_committed true)
             (effect 'set reporter_headline_wait_started true)
@@ -747,7 +758,7 @@
     :children (list
       (when (and newspaper_first_visit_done (not press_source_found)) (报社编辑室))
       (when (and newspaper_first_visit_done (not press_source_found)) (报社排版间))
-      (when (and newspaper_first_visit_done (not press_source_found)) (记者工位))))
+      (when (and newspaper_first_visit_done (not press_source_found)) (记者工位)))))
 
 (define (nightingale-stall-investigation-action)
   (when (and nightingale_commission_taken
@@ -801,7 +812,8 @@
     :title "旧码头卸货"
     :desc "码头临时招人手卸货，干一天结一天钱。机会不等人。"
     :position '(700 520)
-    :show-clocks (list nightingale_side_job_clock)
+    :show-clocks (list nightingale_side_job_clock
+                       (when (not nightingale_side_job_expired) nightingale_side_job_window))
     :actions (list
       (action
         :title "帮忙卸货"

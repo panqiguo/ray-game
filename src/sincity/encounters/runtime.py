@@ -400,7 +400,7 @@ def _eval_reacts_expr(expr: Any, env: Environment, module: ModuleState) -> None:
             continue
         assert isinstance(item, ReactTemplate), f":reacts expects react or nil, got: {item!r}"
         _validate_react_template(item)
-        module.react_rules.append(ReactRule(condition=item.condition, effects=item.effects, source=f"react[{index}]", effects_expr=item.effects_expr))
+        module.react_rules.append(ReactRule(condition=item.condition, effects=item.effects, source=_react_source_label(item, index), effects_expr=item.effects_expr))
 
 
 def _reaction_die_body(expr: Any | None) -> Any | None:
@@ -409,6 +409,12 @@ def _reaction_die_body(expr: Any | None) -> Any | None:
     assert _is_call(expr, "reaction-die"), "Encounter :reaction-die must be `(reaction-die expr)`."
     assert len(expr) == 2, "`reaction-die` expects one expression."
     return expr[1]
+
+
+def _react_source_label(item: ReactTemplate, index: int) -> str:
+    if item.source:
+        return f"react[{index}] @ {item.source}"
+    return f"react[{index}]"
 
 
 def _resolve_expr(expr: Any, definitions: dict[str, Any]) -> Any:

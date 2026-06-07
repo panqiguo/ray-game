@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
-from .defs import ClockTemplate, EncounterModuleError, EncounterReadError, EncounterSchemeError, ObjectValue, RuntimeClockValue, SexpNode, StringAtom
+from .defs import ClockTemplate, EncounterModuleError, EncounterReadError, EncounterSchemeError, ObjectValue, RuntimeClockValue, SexpNode, SourceRef, StringAtom
 
 
 @dataclass(frozen=True)
@@ -22,8 +22,30 @@ class SpecialFormProcedure:
 @dataclass(frozen=True)
 class Token:
     text: str
+    source_path: Path | None
     line: int
     column: int
+
+
+class SourceList(list):
+    def __init__(
+        self,
+        iterable: list[Any] | None = None,
+        *,
+        source_path: Path | None = None,
+        line: int = 0,
+        column: int = 0,
+    ) -> None:
+        super().__init__(() if iterable is None else iterable)
+        self.source_path = source_path
+        self.line = line
+        self.column = column
+
+    def __getitem__(self, item: Any) -> Any:
+        value = super().__getitem__(item)
+        if isinstance(item, slice):
+            return SourceList(value, source_path=self.source_path, line=self.line, column=self.column)
+        return value
 
 
 class Environment:
@@ -575,12 +597,12 @@ def _tokenize(text: str, *, source_path: Path | None = None) -> list[Token]:
                         )
                     )
                 paren_stack.pop()
-            tokens.append(Token(ch, line, column))
+            tokens.append(Token(ch, source_path, line, column))
             advance_char(ch)
             i += 1
             continue
         if ch == "'":
-            tokens.append(Token("'", line, column))
+            tokens.append(Token("'", source_path, line, column))
             advance_char(ch)
             i += 1
             continue
@@ -625,10 +647,10 @@ def _tokenize(text: str, *, source_path: Path | None = None) -> list[Token]:
                         column=start_column,
                     )
                 )
-            tokens.append(Token(f'"{"".join(chars)}"', start_line, start_column))
+            tokens.append(Token(f'"{"".join(chars)}"', source_path, start_line, start_column))
             continue
         token_text, token_line, token_column = read_while(lambda cur: cur not in '()"; \t\r\n')
-        tokens.append(Token(token_text, token_line, token_column))
+        tokens.append(Token(token_text, source_path, token_line, token_column))
     if paren_stack:
         missing_line, missing_column = paren_stack[-1]
         raise EncounterReadError(
@@ -652,10 +674,10 @@ def _parse_form(tokens: list[Token], index: int) -> tuple[SexpNode, int]:
             items.append(item)
         if index >= len(tokens) or tokens[index].text != ")":
             raise EncounterReadError("Missing closing parenthesis.")
-        return items, index + 1
+        return SourceList(items, source_path=token.source_path, line=token.line, column=token.column), index + 1
     if token.text == "'":
         quoted, next_index = _parse_form(tokens, index + 1)
-        return ["quote", quoted], next_index
+        return SourceList(["quote", quoted], source_path=token.source_path, line=token.line, column=token.column), next_index
     if token.text == ")":
         raise EncounterReadError("Unexpected closing parenthesis.")
     return _parse_atom(token.text), index + 1
@@ -690,7 +712,42 @@ def _is_call(node: Any, name: str) -> bool:
     return isinstance(node, list) and bool(node) and node[0] == name
 
 
+def source_ref(node: Any) -> SourceRef | None:
+    if not isinstance(node, SourceList):
+        return None
+    if node.line <= 0 or node.column <= 0:
+        return None
+    return SourceRef(source_path=node.source_path, line=node.line, column=node.column)
+
+
+def format_source_ref(ref: SourceRef | None) -> str:
+    if ref is None:
+        return ""
+    location = f"{ref.line}:{ref.column}"
+    if ref.source_path is not None:
+        return f"{ref.source_path}:{location}"
+    return location
+
+
+def format_sexp(node: Any, *, max_length: int = 120) -> str:
+    text = _format_sexp(node)
+    if len(text) <= max_length:
+        return text
+    return f"{text[: max_length - 3]}..."
+
+
 def _symbol(value: Any) -> str:
     if isinstance(value, str):
         return value
     raise EncounterSchemeError(f"Expected symbol, got: {value!r}")
+
+
+def _format_sexp(node: Any) -> str:
+    if isinstance(node, StringAtom):
+        return f'"{node.value}"'
+    if isinstance(node, bool):
+        return "true" if node else "false"
+    if isinstance(node, list):
+        inner = " ".join(_format_sexp(item) for item in node)
+        return f"({inner})"
+    return str(node)

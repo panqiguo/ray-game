@@ -1633,6 +1633,7 @@ def _resolve_encounter_reacts(state: GameState, rng: RandomSource, extra_lines: 
     encounter = _encounter(state)
     blocked_sources: set[str] = set()
     steps = 0
+    fired_sources: list[str] = []
     while state.active_encounter is not None and state.screen == ScreenName.ENCOUNTER:
         blocked_sources = {
             source
@@ -1642,8 +1643,9 @@ def _resolve_encounter_reacts(state: GameState, rng: RandomSource, extra_lines: 
         rule = next_react_rule(encounter, state.active_encounter.store, blocked_sources)
         if rule is None:
             return
+        fired_sources.append(rule.source)
         steps += 1
-        assert steps <= MAX_REACT_STEPS, f"Encounter react did not converge: {encounter.id}"
+        assert steps <= MAX_REACT_STEPS, _react_non_convergence_message("Encounter", encounter.id, fired_sources)
         _apply_effects(rule.effects, state, rng, extra_lines, resolve_encounter_reacts=False)
         if state.active_encounter is None or state.screen != ScreenName.ENCOUNTER:
             return
@@ -1656,6 +1658,7 @@ def _resolve_encounter_reacts(state: GameState, rng: RandomSource, extra_lines: 
 def _resolve_world_reacts(state: GameState, rng: RandomSource, extra_lines: list[str]) -> None:
     blocked_sources: set[str] = set()
     steps = 0
+    fired_sources: list[str] = []
     while state.screen == ScreenName.CITY:
         blocked_sources = {
             source
@@ -1665,14 +1668,23 @@ def _resolve_world_reacts(state: GameState, rng: RandomSource, extra_lines: list
         rule = next_world_react_rule(SCENARIO, state, blocked_sources)
         if rule is None:
             return
+        fired_sources.append(rule.source)
         steps += 1
-        assert steps <= MAX_REACT_STEPS, f"World react did not converge: {SCENARIO.id}"
+        assert steps <= MAX_REACT_STEPS, _react_non_convergence_message("World", SCENARIO.id, fired_sources)
         effects = evaluate_world_react_effects(SCENARIO, state, rule, rng)
         _apply_effects(effects, state, rng, extra_lines, resolve_encounter_reacts=False)
         if world_react_rule_matches(SCENARIO, state, rule):
             blocked_sources.add(rule.source)
         else:
             blocked_sources.discard(rule.source)
+
+
+def _react_non_convergence_message(kind: str, program_id: str, fired_sources: list[str]) -> str:
+    recent = fired_sources[-8:]
+    chain = " -> ".join(recent)
+    if chain:
+        return f"{kind} react did not converge: {program_id}. Recent chain: {chain}"
+    return f"{kind} react did not converge: {program_id}"
 
 
 def reset_hand(state: GameState, rng: RandomSource) -> None:

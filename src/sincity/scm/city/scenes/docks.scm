@@ -261,6 +261,27 @@
 
 (define (helen-talk-actions)
   (cond
+    ((and reporter_more_proof_needed
+          (not reporter_helen_statement_done)
+          (not reporter_frontpage_ready)
+          helen_room_searched)
+      (list
+        (action
+          :title "请老海伦为报道作证"
+          :desc "她不喜欢记者，也不喜欢警察。但如果旧码头只剩别人替它说话，它就会再次被写错。"
+          :check (check
+            :suit 魅力
+            :risk 'mid
+            :ok (outcome (list
+              (effect 'set reporter_helen_statement_done true)
+              (effect 'clock+ reporter_story_strength 1))
+              "老海伦同意说出照片背后的改造说明会，以及莱恩旧店被逼走的那一晚。")
+            :partial (outcome (list
+              (effect 'set reporter_helen_statement_done true)
+              (effect 'clock+ reporter_story_strength 1)
+              (effect 'add pressure 1))
+              "她只肯让你记下几句，但已经足够让报道多一个活人的声音。")
+            :fail (outcome (list (effect 'add pressure 1)) "她把门关上，说报纸只会把穷人的话剪成他们想要的样子。")))))
     ((not helen_met)
       (list
         (action
@@ -489,7 +510,29 @@
     :desc "旧码头不大，但足够藏下不愿被找到的人。莱恩就是其中之一。"
     :position '(900 280)
     :show-clocks (list ryan_lead ryan_deadline nightingale_trust)
-    :actions (ryan-docks-investigation-actions)
+    :actions (append
+      (ryan-docks-investigation-actions)
+      (list
+        (reporter-rumor-event-action 'docks)
+        (when (and reporter_more_proof_needed
+                   (not reporter_docks_reaction_done)
+                   (not reporter_frontpage_ready))
+          (action
+            :title "记录旧码头对报道的反应"
+            :desc "报纸还没刊出来，但风声已经到了码头。你要听见他们怕什么、盼什么，以及谁正在施压。"
+            :check (check
+              :suit 敏锐
+              :risk 'mid
+              :ok (outcome (list
+                (effect 'set reporter_docks_reaction_done true)
+                (effect 'clock+ reporter_story_strength 1))
+                "酒馆、宿舍和工棚里的话互相咬合：他们怕莱恩被定死，也怕拆迁队借题清场。")
+              :partial (outcome (list
+                (effect 'set reporter_docks_reaction_done true)
+                (effect 'clock+ reporter_story_strength 1)
+                (effect 'add pressure 1))
+                "你记下一些街面反应，也被几个不想见报的人盯上。")
+              :fail (outcome (list (effect 'add pressure 1)) "今天码头人的嘴很紧。报纸让他们害怕，也让他们怀疑你。"))))))
     :children (list
       (码头酒馆)
       (when (and helen_boarding_search_unlocked (not helen_boarding_unlocked) (not helen_seamen_house_checked)) (旧海员寄宿楼))

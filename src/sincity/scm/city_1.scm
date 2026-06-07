@@ -137,6 +137,12 @@
         :inputs (list (item 'food 1 "干粮"))
         :effects (list (effect 'add energy 3)))
       (action
+        :title "使用医药品处理伤口"
+        :desc "在办公室慢慢处理伤口。消耗 1 份医药品，恢复 3 点健康。"
+        :conditions (list (has-item 'first_aid 1 "需要医药品"))
+        :inputs (list (item 'first_aid 1 "医药品"))
+        :effects (list (effect 'add health 3)))
+      (action
         :title "检查办公桌"
         :desc "桌面上堆着文件、空咖啡杯和一只倒扣的相框。"
         :button "检查"
@@ -190,6 +196,7 @@
           (effect 'add energy 3)
           (when (and nightingale_city_day_started (not nightingale_restaurant_done))
             (effect 'clock+ nightingale_restaurant_talk 1))))
+      (reporter-rumor-event-action 'stall)
       (make-work-action "帮摊贩收摊洗碗" "低风险，钱少，但至少不会把腰和命都押在仓库里。" 暴力 'low 6 4 2 0)
       (nightingale-stall-investigation-action)
       (when (and intrusion_seen (not item_recovered) (not stall_investigated))
@@ -268,11 +275,11 @@
     :show-clocks (list (when (and rehab_started (not rehab_done)) rehab_progress) (when (and rehab2_started (not rehab2_done)) rehab2_progress) (when (and intrusion_seen (not item_recovered) (not wounded_man_lead_obtained)) investigation_progress))
     :actions (list
       (action
-        :title "标准治疗"
-        :desc "贵，但稳妥。至少这里的针头来自密封袋。"
-        :conditions (list (field-at-least 'money 20 "需要 20 元"))
-        :inputs (list (item 'money 20 "诊费"))
-        :effects (list (effect 'add health 3)))
+        :title "购买医药品"
+        :desc "正规诊所不再替你现场处理普通伤口。十二块钱买一份干净的绷带、药水和止痛片，回办公室慢慢用。"
+        :conditions (list (field-at-least 'money 12 "需要 12 元"))
+        :inputs (list (item 'money 12 "药费"))
+        :effects (list (effect 'add 'first_aid 1)))
       (when (or (not rehab_started) rehab_done)
         (action
           :title "开始康复治疗"

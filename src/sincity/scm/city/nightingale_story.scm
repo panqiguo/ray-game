@@ -144,7 +144,33 @@
     (var 'premiere_clue_program false)
     (var 'premiere_clue_wallet false)
     (var 'premiere_clue_jacket false)
-    (var 'premiere_clue_wire false)))
+    (var 'premiere_clue_wire false)
+    (var 'reporter_storyline_unlocked false)
+    (var 'reporter_second_meeting_done false)
+    (var 'reporter_evidence_committed false)
+    (var 'reporter_headline_wait (clock :title "头版准备" :desc "记者正在排版、核查、顶住压力。每天推进一格，期间城市会开始反应。" :initial 0 :max 3))
+    (var 'reporter_headline_wait_started false)
+    (var 'reporter_headline_wait_checked_day 0)
+    (var 'reporter_city_impact_1_seen false)
+    (var 'reporter_city_impact_2_seen false)
+    (var 'reporter_city_impact_3_seen false)
+    (var 'reporter_more_proof_needed false)
+    (var 'reporter_story_strength (clock :title "报道支撑" :desc "头版需要不只是一份证据，还需要活证词、街面反应或上层失言来压住版面。" :initial 0 :max 2))
+    (var 'reporter_helen_statement_done false)
+    (var 'reporter_docks_reaction_done false)
+    (var 'reporter_editor_pressure_done false)
+    (var 'reporter_frontpage_ready false)
+    (var 'reporter_frontpage_published false)
+    (var 'reporter_aftershock (clock :title "刊登后的余波" :desc "报道已经印出，人们的命运开始被这篇头版改写。" :initial 0 :max 3))
+    (var 'reporter_aftershock_started false)
+    (var 'reporter_aftershock_checked_day 0)
+    (var 'reporter_aftershock_1_seen false)
+    (var 'reporter_aftershock_2_seen false)
+    (var 'reporter_aftershock_3_seen false)
+    (var 'reporter_rumor_event_active false)
+    (var 'reporter_rumor_event_location 'none)
+    (var 'reporter_rumor_event_expires_day 0)
+    (var 'reporter_rumor_event_seen false)))
 
 (define nightingale-reacts
   (list
@@ -306,12 +332,139 @@
                         (if premiere_backstage_visited 1 0)) 2))
       :then (list
         (effect 'set premiere_ready true)))
+    (react
+      :when (and premiere_night_completed
+                 (not reporter_storyline_unlocked))
+      :then (list
+        (effect 'set reporter_storyline_unlocked true)
+        (effect 'start-quick-dialogue "# 结案之后\n\n# speaker: 科尔\n首演夜过去得太快，报纸来得更快。警方的版本已经写好：莱恩、旧码头、嫉恨、袭击。\n\n# speaker: 小报记者\n他在楼下等我，帽檐压得很低。\n\n# speaker: 小报记者\n“你手里有东西。我有版面。但这次不是一张便条就够。”")))
+    (react
+      :when (and (clock-filled? reporter_headline_wait)
+                 (not reporter_more_proof_needed))
+      :then (list
+        (effect 'set reporter_more_proof_needed true)
+        (effect 'start-quick-dialogue "# 头版还不够硬\n\n# speaker: 小报记者\n“编辑同意留版面，但律师和警局的人已经在楼下喝咖啡。”\n\n# speaker: 科尔\n“你要反悔？”\n\n# speaker: 小报记者\n“我要更多东西。一个活人愿意说话，或者一条街已经开始变样的证据。否则他们会把这篇稿子按死在排字间。”")))
+    (react
+      :when (and (clock-filled? reporter_story_strength)
+                 reporter_more_proof_needed
+                 (not reporter_frontpage_ready))
+      :then (list
+        (effect 'set reporter_frontpage_ready true)
+        (effect 'start-quick-dialogue "# 可以刊登\n\n# speaker: 小报记者\n“够了。老人的证词、码头人的反应、还有编辑室里那些被改掉的字，终于能互相撑住。”\n\n# speaker: 科尔\n“你会怎么写？”\n\n# speaker: 小报记者\n“写成他们明天早上不能假装没看见的样子。”")))
+    (react
+      :when (and (>= (clock-value reporter_headline_wait) 1)
+                 reporter_headline_wait_started
+                 (not reporter_city_impact_1_seen))
+      :then (list
+        (effect 'set reporter_city_impact_1_seen true)
+        (effect 'start-quick-dialogue "# 城市开始听见\n\n# speaker: 科尔\n饭摊边有人压低声音讨论“莱恩也许不是唯一的问题”。这句话还很轻，但已经让旁边的人不再继续吃汤。")))
+    (react
+      :when (and (>= (clock-value reporter_headline_wait) 2)
+                 reporter_headline_wait_started
+                 (not reporter_city_impact_2_seen))
+      :then (list
+        (effect 'set reporter_city_impact_2_seen true)
+        (effect 'start-quick-dialogue "# 压力往下落\n\n# speaker: 科尔\n剧院经理派人问我有没有把材料交给报社。码头酒馆里，有人第一次不是骂莱恩，而是骂“他们早就写好了故事”。")))
+    (react
+      :when (and (>= (clock-value reporter_headline_wait) 3)
+                 reporter_headline_wait_started
+                 (not reporter_city_impact_3_seen))
+      :then (list
+        (effect 'set reporter_city_impact_3_seen true)
+        (effect 'start-quick-dialogue "# 版面前夜\n\n# speaker: 科尔\n警局门口多了两个穿便装的人。贝城晚报的排字间灯亮到后半夜。\n\n# speaker: 科尔\n这篇稿子还没印出来，已经开始改变人们站的位置。")))
+    (react
+      :when (and (>= (clock-value reporter_aftershock) 1)
+                 reporter_aftershock_started
+                 (not reporter_aftershock_1_seen))
+      :then (list
+        (effect 'set reporter_aftershock_1_seen true)
+        (effect 'start-quick-dialogue "# 头版之后：旧码头\n\n# speaker: 科尔\n报纸被贴在码头酒馆门口。有人把莱恩的名字划掉，又在旁边写上“拆迁”。\n\n# speaker: 科尔\n这不是平反。只是旧码头第一次看见官方故事裂开了一条缝。")))
+    (react
+      :when (and (>= (clock-value reporter_aftershock) 2)
+                 reporter_aftershock_started
+                 (not reporter_aftershock_2_seen))
+      :then (list
+        (effect 'set reporter_aftershock_2_seen true)
+        (effect 'start-quick-dialogue "# 头版之后：剧院\n\n# speaker: 科尔\n夜莺取消了一次公开露面。剧院门口的花篮还在，但记者比观众更多。\n\n# speaker: 科尔\n她终于不再只是幸存者。这个位置让她更危险，也更自由。")))
+    (react
+      :when (and (>= (clock-value reporter_aftershock) 3)
+                 reporter_aftershock_started
+                 (not reporter_aftershock_3_seen))
+      :then (list
+        (effect 'set reporter_aftershock_3_seen true)
+        (effect 'start-quick-dialogue "# 头版之后：新的敌人\n\n# speaker: 科尔\n一个陌生人把信封放在我办公室门缝下。里面没有威胁，只有一张私人俱乐部的请柬。\n\n# speaker: 科尔\n真相刚刚开始产生后果。下一步，他们不会只想让我闭嘴。")))
     ))
 
 (define (nightingale-cycle-start-effects)
   (list
     (when newspaper_first_visit_done
-      (effect 'clock- press_alert (clock-value press_alert)))))
+      (effect 'clock- press_alert (clock-value press_alert)))
+    (when (and reporter_frontpage_published
+               (not reporter_rumor_event_active)
+               (not reporter_rumor_event_seen))
+      (effect 'set reporter_rumor_event_active true))
+    (when (and reporter_frontpage_published
+               reporter_rumor_event_active
+               (= reporter_rumor_event_location 'none))
+      (effect 'set reporter_rumor_event_location (reporter-rumor-location-for-day)))
+    (when (and reporter_frontpage_published
+               reporter_rumor_event_active
+               (= reporter_rumor_event_expires_day 0))
+      (effect 'set reporter_rumor_event_expires_day (+ day 2)))
+    (when (and reporter_rumor_event_active
+               (> reporter_rumor_event_expires_day 0)
+               (>= day reporter_rumor_event_expires_day))
+      (effect 'set reporter_rumor_event_active false))
+    (when (and (not reporter_rumor_event_active)
+               (> reporter_rumor_event_expires_day 0)
+               (not reporter_rumor_event_seen))
+      (effect 'set reporter_rumor_event_seen true))
+    (when (and (not reporter_rumor_event_active)
+               (> reporter_rumor_event_expires_day 0))
+      (effect 'set reporter_rumor_event_location 'none))
+    (when (and reporter_headline_wait_started
+               (not reporter_more_proof_needed)
+               (> day reporter_headline_wait_checked_day))
+      (effect 'clock+ reporter_headline_wait (- day reporter_headline_wait_checked_day)))
+    (when (and reporter_headline_wait_started
+               (not reporter_more_proof_needed)
+               (> day reporter_headline_wait_checked_day))
+      (effect 'set reporter_headline_wait_checked_day day))
+    (when (and reporter_aftershock_started
+               (not (clock-filled? reporter_aftershock))
+               (> day reporter_aftershock_checked_day))
+      (effect 'clock+ reporter_aftershock (- day reporter_aftershock_checked_day)))
+    (when (and reporter_aftershock_started
+               (not (clock-filled? reporter_aftershock))
+               (> day reporter_aftershock_checked_day))
+      (effect 'set reporter_aftershock_checked_day day))))
+
+(define (reporter-rumor-location-for-day)
+  (cond
+    ((= (mod day 3) 0) 'stall)
+    ((= (mod day 3) 1) 'docks)
+    (else 'newspaper)))
+
+(define (reporter-rumor-text)
+  (cond
+    ((= reporter_rumor_event_location 'stall)
+      "# 街边摊贩的低声话\n\n# speaker: 摊贩\n“今天少了两艘船靠岸。不是没货，是没人想在报纸上被拍到和旧码头站太近。”\n\n# speaker: 科尔\n汤锅还在冒热气，排队的人却比平时少。头版不是命令，但它已经让一些人开始重新算账。")
+    ((= reporter_rumor_event_location 'docks)
+      "# 旧码头的墙边\n\n# speaker: 码头工人\n“他们说莱恩是疯子。报纸现在说，疯子后面还有人拿尺子画线。”\n\n# speaker: 科尔\n没人因此原谅莱恩。可他们终于开始问：如果故事早就写好了，谁拿着笔？")
+    (else
+      "# 报社门口\n\n# speaker: 报童\n“加印！旧码头那篇加印！”\n\n# speaker: 科尔\n报童喊得越响，报社门口的西装就越多。城市不是相信了另一种真相，只是发现真相可以不止一种。")))
+
+(define (reporter-rumor-event-action location-id)
+  (when (and reporter_rumor_event_active
+             (= reporter_rumor_event_location location-id))
+    (action
+      :title "听见关于头版的街头议论"
+      :desc "头版已经印出去，城市开始用自己的方式复述它。停下来听一会儿。"
+      :effects (list
+        (effect 'set reporter_rumor_event_active false)
+        (effect 'set reporter_rumor_event_seen true)
+        (effect 'set reporter_rumor_event_location 'none)
+        (effect 'start-quick-dialogue (reporter-rumor-text))))))
 
 (define nightingale-tasks
   (list
@@ -405,7 +558,31 @@
         (step :title "检查剧院外围的警力布防" :completed premiere_perimeter_checked)
         (step :title "在贵宾休息室探听口风" :completed premiere_vip_lounge_visited)
         (step :title "去后台见夜莺" :completed premiere_backstage_visited)
-        (step :title "在首演现场追击黑影" :completed premiere_chase_completed)))))
+        (step :title "在首演现场追击黑影" :completed premiere_chase_completed)))
+    (task
+      :kind '主线
+      :title "结案之后：头版之前"
+      :desc "小报记者愿意刊登另一种说法，但这不是交换资源的按钮。你把证据交出去后，城市会先开始反应；而报社会要求你继续把这篇报道撑起来。"
+      :active (and reporter_storyline_unlocked (not reporter_frontpage_published))
+      :completed reporter_frontpage_published
+      :failed false
+      :steps (list
+        (step :title "和小报记者再次见面" :completed reporter_second_meeting_done)
+        (step :title "把首演夜和旧码头的材料交给他" :completed reporter_evidence_committed)
+        (step :title "等待三天，让报道开始影响城市" :completed reporter_more_proof_needed)
+        (step :title "补强报道，让它压得住压力" :completed reporter_frontpage_ready)
+        (step :title "决定刊登头版" :completed reporter_frontpage_published)))
+    (task
+      :kind '主线
+      :title "头版之后：城市回声"
+      :desc "报道已经刊出。它不会立刻带来真相大白，只会让旧码头、剧院、警局和上层社会都开始重新摆放自己的位置。"
+      :active reporter_frontpage_published
+      :completed (clock-filled? reporter_aftershock)
+      :failed false
+      :steps (list
+        (step :title "旧码头开始重新谈论莱恩" :completed reporter_aftershock_1_seen)
+        (step :title "剧院和夜莺的受害者位置开始动摇" :completed reporter_aftershock_2_seen)
+        (step :title "上层社会开始向你递出新的邀请" :completed reporter_aftershock_3_seen)))))
 
 (define (press-alert-factors)
   (list
@@ -502,7 +679,10 @@
     :position '(1080 500)
     :show-clocks (list
       (when (and newspaper_first_visit_done (not press_source_found)) press_source)
-      (when (and newspaper_first_visit_done (not press_source_found)) press_alert))
+      (when (and newspaper_first_visit_done (not press_source_found)) press_alert)
+      (when (and reporter_evidence_committed (not reporter_more_proof_needed)) reporter_headline_wait)
+      (when (and reporter_more_proof_needed (not reporter_frontpage_ready)) reporter_story_strength)
+      (when reporter_aftershock_started reporter_aftershock))
     :actions (list
       (when (not newspaper_first_visit_done)
         (action
@@ -517,10 +697,57 @@
           :desc "便条给了你谈判的筹码。现在问题不是问他知不知道，而是让他承认自己知道多少。"
           :effects (list
             (effect 'start-encounter "报社谈判交锋")))))
+      (when (and reporter_storyline_unlocked (not reporter_second_meeting_done))
+        (action
+          :title "和小报记者再次见面"
+          :desc "他这次没有装作偶遇。首演夜之后，所有人都想尽快把故事定型，而他想在定型前撕开一道口子。"
+          :effects (list
+            (effect 'set reporter_second_meeting_done true)
+            (effect 'start-quick-dialogue "# 小报记者再次找你\n\n# speaker: 小报记者\n“官方版本太顺了。顺到像昨晚之前就已经排好版。”\n\n# speaker: 科尔\n“你想刊出来？”\n\n# speaker: 小报记者\n“我想活着刊出来。所以你得给我能撑住三天的东西。”"))))
+      (when (and reporter_second_meeting_done
+                 (not reporter_evidence_committed))
+        (action
+          :title "把首演夜材料交给记者"
+          :desc "这一步不是换奖励。材料交出去以后，故事就会开始离开你的手，进入报社、警局、剧院和街头。"
+          :conditions (list (field-eq 'premiere_night_completed true "需要完成首演夜"))
+          :effects (list
+            (effect 'set reporter_evidence_committed true)
+            (effect 'set reporter_headline_wait_started true)
+            (effect 'set reporter_headline_wait_checked_day day)
+            (effect 'start-quick-dialogue "# 材料交出去\n\n# speaker: 科尔\n我把首演夜的材料放到他桌上：莱恩出现前就准备好的警力、包厢里的电话、后台那条不该出现的路线。\n\n# speaker: 小报记者\n他没有立刻翻，先看了我一眼。\n\n# speaker: 小报记者\n“从现在开始，这东西会让很多人睡不着。你也是。”"))))
+      (when (and reporter_more_proof_needed
+                 (not reporter_editor_pressure_done)
+                 (not reporter_frontpage_ready))
+        (action
+          :title "在编辑室顶住压稿压力"
+          :desc "编辑想要能自保的说法，律师想要能吓退你的说法。你必须让这篇稿子还有站上版面的勇气。"
+          :check (check
+            :suit 魅力
+            :risk 'high
+            :ok (outcome (list
+              (effect 'set reporter_editor_pressure_done true)
+              (effect 'clock+ reporter_story_strength 1))
+              "你让编辑承认：不刊登也是一种站队。")
+            :partial (outcome (list
+              (effect 'set reporter_editor_pressure_done true)
+              (effect 'clock+ reporter_story_strength 1)
+              (effect 'add pressure 1))
+              "编辑答应继续留版面，但你的名字被写进了报社门房的记录。")
+            :fail (outcome (list (effect 'add pressure 1)) "编辑把稿纸压回抽屉，说他不能拿整间报社替你赌。"))))
+      (when (and reporter_frontpage_ready (not reporter_frontpage_published))
+        (action
+          :title "决定刊登头版"
+          :desc "这不是结局，只是让另一种版本进入城市。刊登之后，旧码头、夜莺、剧院和上层都会开始被它改变。"
+          :effects (list
+            (effect 'set reporter_frontpage_published true)
+            (effect 'set reporter_aftershock_started true)
+            (effect 'set reporter_aftershock_checked_day day)
+            (effect 'start-quick-dialogue "# 头版刊出\n\n# speaker: 小报记者\n铅字压上纸面时，机器声像一场低沉的雨。\n\n# speaker: 小报记者\n“明早，这座城会多一个版本。”\n\n# speaker: 科尔\n“真相？”\n\n# speaker: 小报记者\n“别太贪心，侦探。先让他们不能只相信那一个版本。”"))))
+      (reporter-rumor-event-action 'newspaper))
     :children (list
       (when (and newspaper_first_visit_done (not press_source_found)) (报社编辑室))
       (when (and newspaper_first_visit_done (not press_source_found)) (报社排版间))
-      (when (and newspaper_first_visit_done (not press_source_found)) (记者工位)))))
+      (when (and newspaper_first_visit_done (not press_source_found)) (记者工位))))
 
 (define (nightingale-stall-investigation-action)
   (when (and nightingale_commission_taken

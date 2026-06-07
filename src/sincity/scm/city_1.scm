@@ -196,7 +196,6 @@
           (effect 'add energy 3)
           (when (and nightingale_city_day_started (not nightingale_restaurant_done))
             (effect 'clock+ nightingale_restaurant_talk 1))))
-      (reporter-rumor-event-action 'stall)
       (make-work-action "帮摊贩收摊洗碗" "低风险，钱少，但至少不会把腰和命都押在仓库里。" 暴力 'low 6 4 2 0)
       (nightingale-stall-investigation-action)
       (when (and intrusion_seen (not item_recovered) (not stall_investigated))
@@ -636,7 +635,6 @@
       (var 'dock_strike_progress (clock :title "罢工调停" :initial 0 :max 4))
       (var 'dock_strike_event_active false)
       (var 'dock_strike_event_days 0)
-      (var 'dock_strike_resolved false)
 
       (var 'recovery_deadline_day 5)
       (var 'police_interview_started false)
@@ -733,6 +731,28 @@
           :fail (outcome
             "有人把你的话当成站队，争吵变得更难压住。"
             (list (effect 'add energy -1))))))))
+
+(define-fragment spawn-press-rumor-event
+  (list
+    (effect 'set reporter_rumor_event_active true)
+    (effect 'set reporter_rumor_event_seen false)
+    (effect 'clock- reporter_rumor_window (clock-value reporter_rumor_window))
+    (effect 'mount-action
+      (list "贝城县/旧码头"
+        (action
+          :title "听见码头上的议论"
+          :desc "头版已经印出去，城市开始用自己的方式复述它。停下来听一会儿。"
+          :effects (list
+            (effect 'set reporter_rumor_event_active false)
+            (effect 'set reporter_rumor_event_seen true)
+            (effect 'unmount-action (list "贝城县/旧码头" "听见码头上的议论"))
+            (effect 'start-quick-dialogue "# 旧码头的墙边\n\n# speaker: 码头工人\n\"他们说莱恩是疯子。报纸现在说，疯子后面还有人拿尺子画线。\"\n\n# speaker: 科尔\n没人因此原谅莱恩。可他们终于开始问：如果故事早就写好了，谁拿着笔？")))))))
+
+(define-fragment spawn-dock-strike-event
+  (list
+    (effect 'set dock_strike_event_active true)
+    (effect 'mount-location
+      (list "贝城县/旧码头" (码头罢工冲突)))))
 
 (define world-reacts
   (append
@@ -859,10 +879,9 @@
       (react
         :when (and dock_strike_event_active (clock-filled? dock_strike_progress))
         :then (list
-          (effect 'set dock_strike_event_active false)
-          (effect 'set dock_strike_event_days 0)
-          (effect 'set dock_strike_resolved true)
-          (effect 'clock- dock_strike_progress (clock-value dock_strike_progress))
+           (effect 'set dock_strike_event_active false)
+           (effect 'set dock_strike_event_days 0)
+           (effect 'clock- dock_strike_progress (clock-value dock_strike_progress))
           (effect 'unmount-location
             (list "贝城县/旧码头" "码头罢工冲突"))))))
     )
@@ -880,11 +899,16 @@
       (if (> gang_days_remaining 0)
           (list (effect 'add gang_days_remaining -1))
           (list))
-      (if (and ryan_docks_unlocked (not dock_strike_event_active) (not dock_strike_resolved))
-          (list
-            (effect 'set dock_strike_event_active true)
-            (effect 'mount-location
-              (list "贝城县/旧码头" (码头罢工冲突))))
+      ;; random event spawn: after frontpage, if nothing active, roll
+      (if (and reporter_frontpage_published
+              ;  (not reporter_rumor_event_active)
+              ;  (not dock_strike_event_active)
+               )
+          (if (< (random-float) 0.5)
+              (if (< (random-float) 0.5)
+                  (spawn-press-rumor-event)
+                  (spawn-dock-strike-event))
+              (list))
           (list)))))
 
 (define world-tasks

@@ -170,8 +170,7 @@
     (var 'reporter_aftershock_2_seen false)
     (var 'reporter_aftershock_3_seen false)
     (var 'reporter_rumor_event_active false)
-    (var 'reporter_rumor_event_location 'none)
-    (var 'reporter_rumor_event_expires_day 0)
+    (var 'reporter_rumor_window (clock :title "传闻窗口" :initial 0 :max 2))
     (var 'reporter_rumor_event_seen false)))
 
 (define nightingale-reacts
@@ -406,29 +405,23 @@
   (list
     (when newspaper_first_visit_done
       (effect 'clock- press_alert (clock-value press_alert)))
-    (when (and reporter_frontpage_published
-               (not reporter_rumor_event_active)
-               (not reporter_rumor_event_seen))
-      (effect 'set reporter_rumor_event_active true))
-    (when (and reporter_frontpage_published
-               reporter_rumor_event_active
-               (= reporter_rumor_event_location 'none))
-      (effect 'set reporter_rumor_event_location (reporter-rumor-location-for-day)))
-    (when (and reporter_frontpage_published
-               reporter_rumor_event_active
-               (= reporter_rumor_event_expires_day 0))
-      (effect 'set reporter_rumor_event_expires_day (+ day 2)))
+    ;; rumor tick: advance window clock
     (when (and reporter_rumor_event_active
-               (> reporter_rumor_event_expires_day 0)
-               (>= day reporter_rumor_event_expires_day))
+               (not (clock-filled? reporter_rumor_window)))
+      (effect 'clock+ reporter_rumor_window 1))
+    ;; rumor expiry: clock filled → deactivate
+    (when (and reporter_rumor_event_active
+               (clock-filled? reporter_rumor_window))
       (effect 'set reporter_rumor_event_active false))
+    ;; rumor cleanup: clock must be filled (expired naturally) before unmount
     (when (and (not reporter_rumor_event_active)
-               (> reporter_rumor_event_expires_day 0)
+               (clock-filled? reporter_rumor_window)
                (not reporter_rumor_event_seen))
       (effect 'set reporter_rumor_event_seen true))
     (when (and (not reporter_rumor_event_active)
-               (> reporter_rumor_event_expires_day 0))
-      (effect 'set reporter_rumor_event_location 'none))
+               (clock-filled? reporter_rumor_window)
+               (not reporter_rumor_event_seen))
+      (effect 'unmount-action (list "贝城县/旧码头" "听见码头上的议论")))
     (when (and reporter_headline_wait_started
                (not reporter_more_proof_needed)
                (> day reporter_headline_wait_checked_day))
@@ -449,33 +442,6 @@
                (not nightingale_side_job_done)
                (not (clock-filled? nightingale_side_job_window)))
       (effect 'clock+ nightingale_side_job_window 1))))
-
-(define (reporter-rumor-location-for-day)
-  (cond
-    ((= (mod day 3) 0) 'stall)
-    ((= (mod day 3) 1) 'docks)
-    (else 'newspaper)))
-
-(define (reporter-rumor-text)
-  (cond
-    ((= reporter_rumor_event_location 'stall)
-      "# 街边摊贩的低声话\n\n# speaker: 摊贩\n“今天少了两艘船靠岸。不是没货，是没人想在报纸上被拍到和旧码头站太近。”\n\n# speaker: 科尔\n汤锅还在冒热气，排队的人却比平时少。头版不是命令，但它已经让一些人开始重新算账。")
-    ((= reporter_rumor_event_location 'docks)
-      "# 旧码头的墙边\n\n# speaker: 码头工人\n“他们说莱恩是疯子。报纸现在说，疯子后面还有人拿尺子画线。”\n\n# speaker: 科尔\n没人因此原谅莱恩。可他们终于开始问：如果故事早就写好了，谁拿着笔？")
-    (else
-      "# 报社门口\n\n# speaker: 报童\n“加印！旧码头那篇加印！”\n\n# speaker: 科尔\n报童喊得越响，报社门口的西装就越多。城市不是相信了另一种真相，只是发现真相可以不止一种。")))
-
-(define (reporter-rumor-event-action location-id)
-  (when (and reporter_rumor_event_active
-             (= reporter_rumor_event_location location-id))
-    (action
-      :title "听见关于头版的街头议论"
-      :desc "头版已经印出去，城市开始用自己的方式复述它。停下来听一会儿。"
-      :effects (list
-        (effect 'set reporter_rumor_event_active false)
-        (effect 'set reporter_rumor_event_seen true)
-        (effect 'set reporter_rumor_event_location 'none)
-        (effect 'start-quick-dialogue (reporter-rumor-text))))))
 
 (define nightingale-tasks
   (list
@@ -754,7 +720,7 @@
             (effect 'set reporter_aftershock_started true)
             (effect 'set reporter_aftershock_checked_day day)
             (effect 'start-quick-dialogue "# 头版刊出\n\n# speaker: 小报记者\n铅字压上纸面时，机器声像一场低沉的雨。\n\n# speaker: 小报记者\n“明早，这座城会多一个版本。”\n\n# speaker: 科尔\n“真相？”\n\n# speaker: 小报记者\n“别太贪心，侦探。先让他们不能只相信那一个版本。”"))))
-      (reporter-rumor-event-action 'newspaper))
+      )
     :children (list
       (when (and newspaper_first_visit_done (not press_source_found)) (报社编辑室))
       (when (and newspaper_first_visit_done (not press_source_found)) (报社排版间))

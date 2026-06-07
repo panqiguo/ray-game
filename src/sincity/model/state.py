@@ -3,8 +3,13 @@ from __future__ import annotations
 from typing import Any
 from dataclasses import dataclass, field
 
+from typing import TYPE_CHECKING
+
 from .defs import Effect
 from .enums import ResultType, ScreenName
+
+if TYPE_CHECKING:
+    from sincity.encounters.defs import ActionTemplate, LocationTemplate
 
 
 @dataclass
@@ -78,6 +83,8 @@ class WorldState:
     seen_items: set[str] = field(default_factory=set)
     values: dict[str, int | bool | str] = field(default_factory=dict)
     rewarded_tasks: set[str] = field(default_factory=set)
+    mounted_locations: dict[str, tuple["LocationTemplate", ...]] = field(default_factory=dict)
+    mounted_actions: dict[str, tuple["ActionTemplate", ...]] = field(default_factory=dict)
 
 
 @dataclass

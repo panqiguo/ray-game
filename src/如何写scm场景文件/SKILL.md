@@ -18,6 +18,7 @@
 7. 不要把"是否出现"写成 `conditions`。
 8. 不要为了复用先加底层专用语法。
 9. 不要按旧 Python builder 思路平移。
+10. 随机逻辑优先写在结算阶段（如 `:on-cycle-start`、行动效果、交锋结算）里，不要写进负责渲染地图/地点/行动的 view 表达式；否则每次重绘都可能改变 UI，难以调试。
 
 ---
 
@@ -338,6 +339,48 @@ encounter 里改全局字段用 quoted symbol：`(effect 'add 'money 80)`。
 说明：
 
 - `advance-cycle` 是统一的周期推进 effect（CITY/ENCOUNTER 通用），替代旧的 `advance-day` + `reset-hand`；自动处理手牌重置
+
+---
+
+## 八、随机
+
+运行时提供两个标准随机函数：
+
+```scheme
+(random-float)
+```
+
+返回 `[0.0, 1.0)` 的浮点数。常用于概率判断：
+
+```scheme
+(< (random-float) 0.35)
+```
+
+```scheme
+(random-choice (list 'rumor 'strike))
+```
+
+从非空列表中随机取一个元素。
+
+推荐把随机写在 `:on-cycle-start`、行动效果或 encounter 的结算表达式里。例如每天开始时有概率生成一个事件：
+
+```scheme
+:on-cycle-start
+(list
+  (when (and press_exposure_started
+             (not press_rumor_event_active)
+             (not dock_strike_event_active)
+             (< (random-float) 0.35))
+    (if (= (random-choice (list 'rumor 'strike)) 'rumor)
+      (spawn-press-rumor-event)
+      (spawn-dock-strike-event))))
+```
+
+说明：
+
+- `random-float` 和 `random-choice` 使用游戏运行时 RNG，随存档保存/读取保持连续。
+- 内容校验阶段会使用稳定占位值，只用于让脚本通过结构检查。
+- 不建议在地图/地点/行动的显示表达式里直接调用随机函数。
 - `:on-cycle-start` 是统一钩子，替代旧的 `:on-day-start`（world）和 `:on-cycle`（encounter）
 - 旧名不再兼容：不要写 `advance-day`、`reset-hand`、`:on-day-start`、`:on-cycle`、`rest_during_encounter`
 - 统一使用最准确的 effect 名称

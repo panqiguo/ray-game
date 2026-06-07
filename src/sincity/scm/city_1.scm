@@ -137,6 +137,21 @@
         :inputs (list (item 'food 1 "干粮"))
         :effects (list (effect 'add energy 3)))
       (action
+        :title "在门口泼油漆"
+        :desc "趁没人注意在办公室门上泼了一桶红漆。"
+        :conditions (list (field-equals 'office_door_painted false))
+        :effects (list
+          (effect 'set 'office_door_painted true)
+          (effect 'mount-action
+            (list "贝城县/办公室"
+              (action
+                :title "擦掉门口的油漆"
+                :desc "你花了一点时间把油漆擦掉。"
+                :effects (list
+                  (effect 'set 'office_door_painted false)
+                  (effect 'unmount-action
+                    (list "贝城县/办公室" "擦掉门口的油漆"))))))))
+      (action
         :title "使用医药品处理伤口"
         :desc "在办公室慢慢处理伤口。消耗 1 份医药品，恢复 3 点健康。"
         :conditions (list (has-item 'first_aid 1 "需要医药品"))
@@ -633,6 +648,7 @@
       (var 'black_loan_due (clock :title "高利贷倒计时" :desc "黑市借款每天涨 10 元。满 10 天还不上，就会有人替账本动手。" :initial 0 :max 10))
       (var 'black_loan_defaulted false)
       (var 'gang_days_remaining 15)
+      (var 'office_door_painted false)
 
       (var 'recovery_deadline_day 5)
       (var 'police_interview_started false)

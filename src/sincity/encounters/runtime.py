@@ -246,10 +246,10 @@ def evaluate_react_rules(program: CompiledEncounterProgram, store: dict[str, Any
     return tuple(module.react_rules)
 
 
-def evaluate_cycle_start_effects(program: CompiledEncounterProgram, store: dict[str, Any]) -> tuple[Effect, ...]:
+def evaluate_cycle_start_effects(program: CompiledEncounterProgram, store: dict[str, Any], rng: Any | None = None) -> tuple[Effect, ...]:
     if program.cycle_start_effects_expr is None:
         return ()
-    env = _runtime_env(definitions=program.definitions, store=store, store_specs=program.store_specs)
+    env = _runtime_env(definitions=program.definitions, store=store, store_specs=program.store_specs, extra_values=_random_values(rng))
     return _eval_effect_list(program.cycle_start_effects_expr, env)
 
 
@@ -267,10 +267,11 @@ def evaluate_fail_effects(program: CompiledEncounterProgram, store: dict[str, An
     return _eval_effect_list(program.fail_effects_expr, env)
 
 
-def evaluate_effect_expr(program: CompiledEncounterProgram, store: dict[str, Any], expr: Any, *, action_log: Any | None = None) -> Any:
+def evaluate_effect_expr(program: CompiledEncounterProgram, store: dict[str, Any], expr: Any, *, action_log: Any | None = None, rng: Any | None = None) -> Any:
     extra_values = {}
     if action_log is not None:
         extra_values["action-log!"] = action_log
+    extra_values.update(_random_values(rng))
     env = _runtime_env(definitions=program.definitions, store=store, store_specs=program.store_specs, extra_values=extra_values)
     return evaluate(expr, env)
 
@@ -424,7 +425,7 @@ def _runtime_env(
     builtins = _host_values(store_specs=store_specs, store=store)
     env = Environment(
         parent=base_environment(),
-        values={**builtins},
+        values={**builtins, **_schema_random_values()},
         resolver=lambda name: _state_resolver(name, store=store, store_specs=store_specs),
     )
     for name, value in definitions.items():
@@ -435,7 +436,28 @@ def _runtime_env(
 
 
 def _schema_env(*, definitions: dict[str, Any]) -> Environment:
-    return Environment(parent=base_environment(), values={**_host_values(store_specs={}, store={}), **_schema_definition_values(definitions)})
+    return Environment(parent=base_environment(), values={**_host_values(store_specs={}, store={}), **_schema_random_values(), **_schema_definition_values(definitions)})
+
+
+def _schema_random_values() -> dict[str, Any]:
+    return {
+        "random-float": lambda: 0.0,
+        "random-choice": lambda values: _first_random_choice(values),
+    }
+
+
+def _random_values(rng: Any | None) -> dict[str, Any]:
+    if rng is None:
+        return {}
+    return {
+        "random-float": rng.random_float,
+        "random-choice": lambda values: rng.random_choice(tuple(values)),
+    }
+
+
+def _first_random_choice(values: Any) -> Any:
+    assert values, "random-choice expects a non-empty list."
+    return values[0]
 
 
 

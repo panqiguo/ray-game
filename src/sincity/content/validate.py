@@ -7,6 +7,8 @@ from sincity.encounters.lispy import StringAtom, expand_includes
 from sincity.content.cards import CARD_DEFS
 from sincity.content.growth import GROWTH_DEFS
 from sincity.content.city_1 import SCENARIO
+from sincity.content_lang.runtime_core import validate_action_template, validate_location_template
+from sincity.encounters.defs import ActionTemplate, LocationTemplate
 from sincity.model.defs import ActionDef, AddFieldPayload, Condition, Effect, InputRequirement, LocationDef, ProgressClockSpec, SetFieldPayload, ShiftClockPayload
 
 
@@ -38,6 +40,10 @@ WORLD_EFFECTS = {
     "start_encounter",
     "start_dialogue",
     "start_quick_dialogue",
+    "mount_location",
+    "unmount_location",
+    "mount_action",
+    "unmount_action",
 }
 
 ENCOUNTER_EFFECTS = {
@@ -108,6 +114,21 @@ def _validate_effect(item: Effect, *, context: str) -> None:
             and len(item.value) == 2
             and all(isinstance(part, str) and part.strip() for part in item.value)
         ), "end_game should be true or carry title/body text"
+    if item.kind in ("mount_location", "mount_action"):
+        assert isinstance(item.value, (list, tuple)) and len(item.value) == 2, f"mount effect value must be (parent_path template), got: {item.value!r}"
+        parent_path, template = item.value
+        assert isinstance(parent_path, str) and parent_path, "mount effect parent_path must be a non-empty string"
+        if item.kind == "mount_location":
+            assert isinstance(template, LocationTemplate), f"mount-location template must be a location form, got: {template!r}"
+            validate_location_template(template)
+        else:
+            assert isinstance(template, ActionTemplate), f"mount-action template must be an action form, got: {template!r}"
+            validate_action_template(template)
+    if item.kind in ("unmount_location", "unmount_action"):
+        assert isinstance(item.value, (list, tuple)) and len(item.value) == 2, f"unmount effect value must be (parent_path title), got: {item.value!r}"
+        parent_path, child_title = item.value
+        assert isinstance(parent_path, str) and parent_path, "unmount effect parent_path must be a non-empty string"
+        assert isinstance(child_title, str) and child_title, "unmount effect title must be a non-empty string"
 
 
 def _validate_input(item: InputRequirement) -> None:

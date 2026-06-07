@@ -20,3 +20,10 @@ class RandomSource:
 
     def randint(self, low: int, high: int) -> int:
         return self._random.randint(low, high)
+
+    def random_float(self) -> float:
+        return self._random.random()
+
+    def random_choice(self, values):
+        assert values, "random-choice expects a non-empty list."
+        return values[self._random.randrange(len(values))]

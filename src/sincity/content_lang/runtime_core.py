@@ -87,6 +87,8 @@ def validate_template(value: Any) -> None:
 
 
 def validate_location_template(location: LocationTemplate) -> None:
+    assert location.title, f"location :title must not be empty; got: {location.title!r}"
+    assert "/" not in location.title, f"location :title must not contain '/': {location.title}"
     for condition in location.conditions:
         assert isinstance(condition, Condition), f"location contains non-condition value: {condition!r}"
     for action in location.actions:
@@ -99,6 +101,8 @@ _MODAL_EFFECTS = frozenset({"start_dialogue", "start_quick_dialogue", "start_enc
 
 
 def validate_action_template(action: ActionTemplate) -> None:
+    assert action.title, f"action :title must not be empty; got: {action.title!r}"
+    assert "/" not in action.title, f"action :title must not contain '/': {action.title}"
     for condition in action.conditions:
         assert isinstance(condition, Condition), f"action contains non-condition value: {condition!r}"
     for item in action.inputs:
@@ -289,11 +293,24 @@ def _validate_effect_target_expr(expr: Any, env: Environment, *, local_symbols: 
     )
 
 
-def render_location(program: Any, location: LocationTemplate, *, location_path: tuple[str, ...] = ()) -> RenderedLocation:
+def render_location(
+    program: Any,
+    location: LocationTemplate,
+    *,
+    location_path: tuple[str, ...] = (),
+    mounted_locations: dict[str, tuple[LocationTemplate, ...]] | None = None,
+    mounted_actions: dict[str, tuple[ActionTemplate, ...]] | None = None,
+) -> RenderedLocation:
     assert location.title, "location :title must not be empty"
     assert "/" not in location.title, f"location :title must not contain '/': {location.title}"
     location_key = location.title
     location_id = "/".join(location_path + (location_key,))
+
+    if mounted_locations or mounted_actions:
+        extra_actions = tuple(mounted_actions.get(location_id, ())) if mounted_actions else ()
+        extra_children = tuple(mounted_locations.get(location_id, ())) if mounted_locations else ()
+        if extra_actions or extra_children:
+            location = replace(location, actions=location.actions + extra_actions, children=location.children + extra_children)
 
     action_keys: set[str] = set()
     for action in location.actions:
@@ -315,7 +332,10 @@ def render_location(program: Any, location: LocationTemplate, *, location_path: 
     rendered_actions: list[RenderedAction] = []
     for source_index, action in enumerate(location.actions):
         rendered_actions.append(_render_action(program, action, location_path=path, source_index=source_index))
-    rendered_children = tuple(render_location(program, child, location_path=path) for child in location.children)
+    rendered_children = tuple(
+        render_location(program, child, location_path=path, mounted_locations=mounted_locations, mounted_actions=mounted_actions)
+        for child in location.children
+    )
     root = LocationDef(
         id=location_id,
         title=location.title,
@@ -802,6 +822,34 @@ def builtin_effect(args: list[Any], env: Environment) -> Effect:
         return Effect(kind="end_encounter", value=str(unwrap(evaluate(args[1], env))))
     if kind == "advance-cycle":
         return Effect(kind="advance_cycle", value=True)
+    if kind == "mount-location":
+        value = evaluate(args[1], env)
+        assert isinstance(value, (list, tuple)) and len(value) == 2, "mount-location expects (parent_path location)"
+        parent_path, template = value
+        assert isinstance(parent_path, str) and parent_path, "mount-location parent_path must be a non-empty string"
+        assert isinstance(template, LocationTemplate), "mount-location second argument must be a location form"
+        return Effect(kind="mount_location", value=(parent_path, template))
+    if kind == "unmount-location":
+        value = evaluate(args[1], env)
+        assert isinstance(value, (list, tuple)) and len(value) == 2, "unmount-location expects (parent_path title)"
+        parent_path, child_title = value
+        assert isinstance(parent_path, str) and parent_path, "unmount-location parent_path must be a non-empty string"
+        assert isinstance(child_title, str) and child_title, "unmount-location title must be a non-empty string"
+        return Effect(kind="unmount_location", value=(parent_path, child_title))
+    if kind == "mount-action":
+        value = evaluate(args[1], env)
+        assert isinstance(value, (list, tuple)) and len(value) == 2, "mount-action expects (parent_path action)"
+        parent_path, template = value
+        assert isinstance(parent_path, str) and parent_path, "mount-action parent_path must be a non-empty string"
+        assert isinstance(template, ActionTemplate), "mount-action second argument must be an action form"
+        return Effect(kind="mount_action", value=(parent_path, template))
+    if kind == "unmount-action":
+        value = evaluate(args[1], env)
+        assert isinstance(value, (list, tuple)) and len(value) == 2, "unmount-action expects (parent_path title)"
+        parent_path, child_title = value
+        assert isinstance(parent_path, str) and parent_path, "unmount-action parent_path must be a non-empty string"
+        assert isinstance(child_title, str) and child_title, "unmount-action title must be a non-empty string"
+        return Effect(kind="unmount_action", value=(parent_path, child_title))
     if kind == "end-game":
         assert len(args) in {1, 3}, "`end-game` takes zero parameters, or title and body."
         if len(args) == 3:

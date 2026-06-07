@@ -82,7 +82,32 @@ WORLD_EFFECTS = frozenset({
     "start_encounter",
     "start_dialogue",
     "start_quick_dialogue",
+    "mount_location",
+    "unmount_location",
+    "mount_action",
+    "unmount_action",
 })
+
+
+SCM_EFFECT_KIND_MAP = {
+    "set": "set_field",
+    "add": "add_field",
+    "copy": "copy_field",
+    "clock+": "shift_clock",
+    "clock-": "shift_clock",
+    "advance-cycle": "advance_cycle",
+    "end-game": "end_game",
+    "upgrade-spirit-value": "upgrade_spirit_value",
+    "add-spirit-slot": "add_spirit_slot",
+    "start-encounter": "start_encounter",
+    "end-encounter": "end_encounter",
+    "start-dialogue": "start_dialogue",
+    "start-quick-dialogue": "start_quick_dialogue",
+    "mount-location": "mount_location",
+    "unmount-location": "unmount_location",
+    "mount-action": "mount_action",
+    "unmount-action": "unmount_action",
+}
 
 
 def compile_world_program(
@@ -150,7 +175,11 @@ def render_world(program: CompiledWorldProgram, state: GameState) -> CompiledSce
     env = _world_env(program, state)
     location = evaluate(program.view_expr, env)
     assert isinstance(location, LocationTemplate), f"World root must resolve to a location: {program.id}"
-    rendered = _render_location(program, location, location_path=())
+    rendered = _render_location(
+        program, location, location_path=(),
+        mounted_locations=state.world.mounted_locations,
+        mounted_actions=state.world.mounted_actions,
+    )
     locations_by_id: dict[str, LocationDef] = {}
     parent_by_id: dict[str, str | None] = {}
     actions_by_id = {}
@@ -167,6 +196,16 @@ def render_world(program: CompiledWorldProgram, state: GameState) -> CompiledSce
         action_handles_by_id=action_handles_by_id,
         shown_clock_ids_by_location=shown_clock_ids_by_location,
     )
+    for parent_path in state.world.mounted_locations:
+        assert parent_path in locations_by_id, (
+            f"Mount target location `{parent_path}` does not exist in rendered world. "
+            f"Available locations: {sorted(locations_by_id)}"
+        )
+    for parent_path in state.world.mounted_actions:
+        assert parent_path in locations_by_id, (
+            f"Mount target location `{parent_path}` does not exist in rendered world. "
+            f"Available locations: {sorted(locations_by_id)}"
+        )
     return CompiledScenario(
         id=program.id,
         title=program.title,
@@ -213,20 +252,20 @@ def render_tasks(program: CompiledWorldProgram, state: GameState) -> tuple[Rende
     return tuple(rendered)
 
 
-def evaluate_world_expr(program: CompiledWorldProgram, state: GameState, expr: Any) -> Any:
-    return evaluate(expr, _world_env(program, state))
+def evaluate_world_expr(program: CompiledWorldProgram, state: GameState, expr: Any, rng: Any | None = None) -> Any:
+    return evaluate(expr, _world_env(program, state, rng=rng))
 
 
-def evaluate_world_react_effects(program: CompiledWorldProgram, state: GameState, rule: ReactRule) -> tuple[Effect, ...]:
+def evaluate_world_react_effects(program: CompiledWorldProgram, state: GameState, rule: ReactRule, rng: Any | None = None) -> tuple[Effect, ...]:
     if rule.effects_expr is None:
         return rule.effects
-    return _eval_effect_list(rule.effects_expr, _world_env(program, state))
+    return _eval_effect_list(rule.effects_expr, _world_env(program, state, rng=rng))
 
 
-def evaluate_world_cycle_start_effects(program: CompiledWorldProgram, state: GameState) -> tuple[Effect, ...]:
+def evaluate_world_cycle_start_effects(program: CompiledWorldProgram, state: GameState, rng: Any | None = None) -> tuple[Effect, ...]:
     if program.cycle_start_effects_expr is None:
         return program.cycle_start_effects
-    return _eval_effect_list(program.cycle_start_effects_expr, _world_env(program, state))
+    return _eval_effect_list(program.cycle_start_effects_expr, _world_env(program, state, rng=rng))
 
 
 def _render_task_steps(steps: tuple[TaskStepTemplate, ...], env: Environment) -> tuple[RenderedTaskStep, ...]:
@@ -309,8 +348,9 @@ def _assert_cycle_start_expr_allowed(expr: Any, *, allowed: frozenset[str], cont
         if isinstance(kind_expr, list) and len(kind_expr) == 2 and kind_expr[0] == "quote":
             kind = kind_expr[1]
             if isinstance(kind, str):
-                assert kind in allowed, f"{context}: on-cycle-start contains disallowed effect `{kind}`"
-                assert kind != "advance_cycle", f"{context}: on-cycle-start cannot advance the cycle"
+                internal_kind = SCM_EFFECT_KIND_MAP.get(kind, kind)
+                assert internal_kind in allowed, f"{context}: on-cycle-start contains disallowed effect `{kind}`"
+                assert internal_kind != "advance_cycle", f"{context}: on-cycle-start cannot advance the cycle"
         return
     for child in expr:
         _assert_cycle_start_expr_allowed(child, allowed=allowed, context=context)
@@ -451,7 +491,7 @@ def _world_schema_env(
 ) -> Environment:
     return Environment(
         parent=base_environment(),
-        values={**_host_values(store_specs={}, store={}), **_companion_schema_values(), **definitions},
+        values={**_host_values(store_specs={}, store={}), **_companion_schema_values(), **_schema_random_values(), **definitions},
         resolver=lambda name: _world_schema_resolver(name, clocks_by_id=clocks_by_id, initial_values=initial_values, initial_inventory=initial_inventory),
     )
 
@@ -479,14 +519,35 @@ def _world_schema_resolver(
     return _MISSING
 
 
-def _world_env(program: CompiledWorldProgram, state: GameState) -> Environment:
+def _world_env(program: CompiledWorldProgram, state: GameState, *, rng: Any | None = None) -> Environment:
     env = Environment(
         parent=base_environment(),
-        values={**_host_values(store_specs={}, store={}), **_companion_runtime_values(state)},
+        values={**_host_values(store_specs={}, store={}), **_companion_runtime_values(state), **_random_values(rng)},
         resolver=lambda name: _world_resolver(name, program, state),
     )
     env.values.update({name: _bind_runtime_definition(value, env) for name, value in program.definitions.items()})
     return env
+
+
+def _schema_random_values() -> dict[str, Any]:
+    return {
+        "random-float": lambda: 0.0,
+        "random-choice": lambda values: _first_random_choice(values),
+    }
+
+
+def _random_values(rng: Any | None) -> dict[str, Any]:
+    if rng is None:
+        return {}
+    return {
+        "random-float": rng.random_float,
+        "random-choice": lambda values: rng.random_choice(tuple(values)),
+    }
+
+
+def _first_random_choice(values: Any) -> Any:
+    assert values, "random-choice expects a non-empty list."
+    return values[0]
 
 
 def _companion_schema_values() -> dict[str, Any]:

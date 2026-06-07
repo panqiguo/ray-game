@@ -1385,13 +1385,13 @@ def _parse_legacy_scalar(raw: str) -> int | bool | str:
         return raw
 
 
-def _resolve_set_field_payload(value: object, state: GameState) -> tuple[str, int | bool | str]:
+def _resolve_set_field_payload(value: object, state: GameState, rng: RandomSource) -> tuple[str, int | bool | str]:
     if isinstance(value, SetFieldPayload):
         raw = value.value
         if isinstance(raw, FieldRef):
             return value.target, _field_value(state, raw.name)
         if isinstance(raw, DynamicValue):
-            evaluated = _evaluate_dynamic_value(state, raw)
+            evaluated = _evaluate_dynamic_value(state, raw, rng)
             if isinstance(evaluated, FieldRef):
                 return value.target, _field_value(state, evaluated.name)
             if evaluated is None:
@@ -1429,7 +1429,7 @@ def _describe_set_field_payload(value: object, state: GameState) -> tuple[str, s
         if isinstance(raw, FieldRef):
             return value.target, str(_field_value(state, raw.name))
         if isinstance(raw, DynamicValue):
-            return value.target, str(_evaluate_dynamic_value(state, raw))
+            return value.target, "动态值"
         if raw is None:
             return value.target, "nil"
         return value.target, str(raw)
@@ -1438,16 +1438,16 @@ def _describe_set_field_payload(value: object, state: GameState) -> tuple[str, s
     return key, raw
 
 
-def _evaluate_dynamic_value(state: GameState, value: DynamicValue) -> object:
+def _evaluate_dynamic_value(state: GameState, value: DynamicValue, rng: RandomSource) -> object:
     if state.screen == ScreenName.ENCOUNTER and state.active_encounter is not None:
-        return evaluate_effect_expr(_encounter(state), state.active_encounter.store, value.body)
-    return evaluate_world_expr(SCENARIO, state, value.body)
+        return evaluate_effect_expr(_encounter(state), state.active_encounter.store, value.body, rng=rng)
+    return evaluate_world_expr(SCENARIO, state, value.body, rng)
 
 
 def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines: list[str]) -> None:
     value = item.value
     if item.kind == "set_field":
-        key, parsed = _resolve_set_field_payload(value, state)
+        key, parsed = _resolve_set_field_payload(value, state, rng)
         _set_field(state, key, parsed, extra_lines)
         return
     if item.kind == "add_field":
@@ -1516,7 +1516,7 @@ def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines
         def action_log(message: object) -> None:
             _push_log(state, str(message))
 
-        result = evaluate_effect_expr(_encounter(state), state.active_encounter.store, value, action_log=action_log)
+        result = evaluate_effect_expr(_encounter(state), state.active_encounter.store, value, action_log=action_log, rng=rng)
         if isinstance(result, Effect):
             _apply_effect(result, state, rng, extra_lines)
         elif isinstance(result, list) and all(isinstance(entry, Effect) for entry in result):
@@ -1538,6 +1538,72 @@ def _apply_effect(item: Effect, state: GameState, rng: RandomSource, extra_lines
         return
     if item.kind == "advance_cycle":
         advance_cycle(state, rng)
+        return
+    if item.kind == "mount_location":
+        assert isinstance(value, (list, tuple)) and len(value) == 2
+        parent_path, template = value
+        assert isinstance(parent_path, str)
+        from sincity.encounters.defs import LocationTemplate
+        assert isinstance(template, LocationTemplate)
+        assert template.title, "mounted location :title must not be empty"
+        assert "/" not in template.title, f"mounted location :title must not contain '/': {template.title}"
+        existing = state.world.mounted_locations.setdefault(parent_path, ())
+        for t in existing:
+            assert t.title != template.title, f"Duplicate mounted location title under {parent_path}: {template.title}"
+        for t in state.world.mounted_actions.get(parent_path, ()):
+            assert t.title != template.title, f"Mounted location title conflicts with mounted action under {parent_path}: {template.title}"
+        state.world.mounted_locations[parent_path] = existing + (template,)
+        _mark_content_dirty(state)
+        _push_log(state, f"新增地点：{parent_path}/{template.title}")
+        return
+    if item.kind == "mount_action":
+        assert isinstance(value, (list, tuple)) and len(value) == 2
+        parent_path, template = value
+        assert isinstance(parent_path, str)
+        from sincity.encounters.defs import ActionTemplate
+        assert isinstance(template, ActionTemplate)
+        assert template.title, "mounted action :title must not be empty"
+        assert "/" not in template.title, f"mounted action :title must not contain '/': {template.title}"
+        existing = state.world.mounted_actions.setdefault(parent_path, ())
+        for t in existing:
+            assert t.title != template.title, f"Duplicate mounted action title under {parent_path}: {template.title}"
+        for t in state.world.mounted_locations.get(parent_path, ()):
+            assert t.title != template.title, f"Mounted action title conflicts with mounted location under {parent_path}: {template.title}"
+        state.world.mounted_actions[parent_path] = existing + (template,)
+        _mark_content_dirty(state)
+        _push_log(state, f"新增行动：{parent_path}/{template.title}")
+        return
+    if item.kind == "unmount_location":
+        assert isinstance(value, (list, tuple)) and len(value) == 2
+        parent_path, child_title = value
+        assert isinstance(parent_path, str)
+        assert isinstance(child_title, str)
+        existing = state.world.mounted_locations.get(parent_path)
+        assert existing is not None, f"No mounted locations under {parent_path} to unmount"
+        remaining = tuple(t for t in existing if t.title != child_title)
+        assert len(remaining) < len(existing), f"Mounted location not found under {parent_path}: {child_title}"
+        if remaining:
+            state.world.mounted_locations[parent_path] = remaining
+        else:
+            del state.world.mounted_locations[parent_path]
+        _mark_content_dirty(state)
+        _push_log(state, f"移除地点：{parent_path}/{child_title}")
+        return
+    if item.kind == "unmount_action":
+        assert isinstance(value, (list, tuple)) and len(value) == 2
+        parent_path, child_title = value
+        assert isinstance(parent_path, str)
+        assert isinstance(child_title, str)
+        existing = state.world.mounted_actions.get(parent_path)
+        assert existing is not None, f"No mounted actions under {parent_path} to unmount"
+        remaining = tuple(t for t in existing if t.title != child_title)
+        assert len(remaining) < len(existing), f"Mounted action not found under {parent_path}: {child_title}"
+        if remaining:
+            state.world.mounted_actions[parent_path] = remaining
+        else:
+            del state.world.mounted_actions[parent_path]
+        _mark_content_dirty(state)
+        _push_log(state, f"移除行动：{parent_path}/{child_title}")
         return
     if item.kind == "end_game":
         if isinstance(value, tuple):
@@ -1601,7 +1667,7 @@ def _resolve_world_reacts(state: GameState, rng: RandomSource, extra_lines: list
             return
         steps += 1
         assert steps <= MAX_REACT_STEPS, f"World react did not converge: {SCENARIO.id}"
-        effects = evaluate_world_react_effects(SCENARIO, state, rule)
+        effects = evaluate_world_react_effects(SCENARIO, state, rule, rng)
         _apply_effects(effects, state, rng, extra_lines, resolve_encounter_reacts=False)
         if world_react_rule_matches(SCENARIO, state, rule):
             blocked_sources.add(rule.source)
@@ -1637,9 +1703,9 @@ def advance_cycle(state: GameState, rng: RandomSource) -> None:
 
     # ── shared :on-cycle-start ──
     if state.screen == ScreenName.CITY:
-        cycle_effects = evaluate_world_cycle_start_effects(SCENARIO, state)
+        cycle_effects = evaluate_world_cycle_start_effects(SCENARIO, state, rng)
     else:
-        cycle_effects = evaluate_cycle_start_effects(_encounter(state), state.active_encounter.store)
+        cycle_effects = evaluate_cycle_start_effects(_encounter(state), state.active_encounter.store, rng)
     _apply_effects(cycle_effects, state, rng, extra_lines, resolve_encounter_reacts=False)
 
     # ── screen-specific midstep ──
@@ -2023,6 +2089,18 @@ def _describe_effects(effects: tuple[Effect, ...], action_id: str, state: GameSt
                 lines.append("进入新的一天，精力 -1")
             else:
                 lines.append("进入新的行动周期，精力 -1")
+        elif item.kind == "mount_location":
+            assert isinstance(value, (list, tuple)) and len(value) == 2
+            lines.append(f"新增地点：{value[0]}/{value[1].title}")
+        elif item.kind == "mount_action":
+            assert isinstance(value, (list, tuple)) and len(value) == 2
+            lines.append(f"新增行动：{value[0]}/{value[1].title}")
+        elif item.kind == "unmount_location":
+            assert isinstance(value, (list, tuple)) and len(value) == 2
+            lines.append(f"移除地点：{value[0]}/{value[1]}")
+        elif item.kind == "unmount_action":
+            assert isinstance(value, (list, tuple)) and len(value) == 2
+            lines.append(f"移除行动：{value[0]}/{value[1]}")
         elif item.kind == "end_game":
             if isinstance(value, tuple):
                 lines.append(str(value[0]))

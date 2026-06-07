@@ -34,7 +34,7 @@
   :vars (list
     (var 'pressure (clock :title "施压" :initial 0 :max 3)))
   :root
-  (scene
+  (location
     :title "吧台边的麻烦"
     :desc "一个喝高了的客人把手搭得太自然，像这里所有女人都该免费替他解闷。你只需要让他明白今晚不行。"
     :show-clocks (list pressure)

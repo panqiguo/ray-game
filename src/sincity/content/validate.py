@@ -7,7 +7,7 @@ from sincity.encounters.lispy import StringAtom, expand_includes
 from sincity.content.cards import CARD_DEFS
 from sincity.content.growth import GROWTH_DEFS
 from sincity.content.city_1 import SCENARIO
-from sincity.model.defs import ActionDef, AddFieldPayload, Condition, Effect, InputRequirement, LocationNode, ProgressClockSpec, SetFieldPayload, ShiftClockPayload
+from sincity.model.defs import ActionDef, AddFieldPayload, Condition, Effect, InputRequirement, LocationDef, ProgressClockSpec, SetFieldPayload, ShiftClockPayload
 
 
 VALID_CONDITIONS = {
@@ -181,7 +181,7 @@ def validate_content() -> None:
             _validate_effect(effect, context="encounter_completion")
 
 
-def _validate_location(location: LocationNode) -> None:
+def _validate_location(location: LocationDef) -> None:
     for condition in location.conditions:
         _validate_condition(condition)
 

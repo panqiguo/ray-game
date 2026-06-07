@@ -240,7 +240,7 @@
   ))
 
 (define (exposed_scene)
-  (scene
+  (location
     :title "暴露撤退"
     :desc "宅子里已经乱起来了。你没能把话听完，只能先退开。"
     :show-clocks (list alert truth)
@@ -248,17 +248,17 @@
   ))
 
 (define (yard_act)
-  (scene
+  (location
     :title "院墙缺口"
     :desc "深夜。你站在宅邸外墙的阴影里。第一幕的目标很简单：穿过外部警戒，摸到屋外。左边是保安巡逻的走廊，右边是看门犬守着的小径。"
     :show-clocks (list alert)
     :actions (list )
-    :children (list (scene
+    :children (list (location
     :title "左侧走廊"
     :desc "这是一条没有遮挡的硬路。你可以先控场，把巡逻引偏后再穿；也可以狠狠干硬闯，拿伤势和警觉度去换速度。"
     :show-clocks (list alert patrol traverse)
     :actions (list (when (clock-empty? patrol) (left_start_patrol)) (when (not (clock-filled? traverse)) (left_berserk_rush)) (when (and (= route 'left) (clock-partial? patrol) (not (clock-filled? traverse))) (left_hold_position)) (when (and (= route 'left) (not (clock-empty? patrol)) (not (clock-filled? traverse))) (left_advance)) (when (and (= route 'left) (clock-filled? patrol) (not (clock-filled? traverse))) (left_fight_guard)))
-  ) (scene
+  ) (location
     :title "右侧小径"
     :desc "这条路更偏潜行。你可以贴墙慢行，也可以先处理那条看门犬，再从树影里悄悄摸过去。"
     :show-clocks (list alert traverse)
@@ -267,17 +267,17 @@
   ))
 
 (define (entry_act)
-  (scene
+  (location
     :title "房屋外墙"
     :desc "第二幕里，你已经摸到屋外。现在的问题不是还能不能潜过去，而是你要以什么姿态进屋。正门稳一点，窗户快一点，也险一点。"
     :show-clocks (list alert)
     :actions (list )
-    :children (list (scene
+    :children (list (location
     :title "大门"
     :desc "门锁不算新，里头的人影偶尔会从门缝后晃过去。"
     :show-clocks (list alert)
     :actions (list (front_pick_lock) (front_wait_gap))
-  ) (scene
+  ) (location
     :title "窗户"
     :desc "排水管能借力，但二楼那扇窗只留了一道窄缝。"
     :show-clocks (list alert)
@@ -286,7 +286,7 @@
   ))
 
 (define (bedroom_front_scene)
-  (scene
+  (location
     :title "卧室"
     :desc "第三幕开始了。你从正门进来，老大抬头时明显愣了一下。现在你的目标不是再潜，而是逼他说出真相。"
     :show-clocks (list alert truth)
@@ -294,7 +294,7 @@
   ))
 
 (define (bedroom_window_scene)
-  (scene
+  (location
     :title "卧室"
     :desc "第三幕开始了。你从窗户翻进来，他看你的眼神更冷，也更警觉。你得在更高压的气氛里把真相逼出来。"
     :show-clocks (list alert truth)

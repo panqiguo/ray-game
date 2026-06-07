@@ -129,22 +129,22 @@
   :reacts (list
     (react :when (<= (clock-value enemy_hp) 0) :then (list (effect 'end-encounter 'success))))
   :root
-  (cond ((< (clock-value initiative) (clock-max initiative)) (if (< (clock-value knife) (clock-max knife)) (scene
+  (cond ((< (clock-value initiative) (clock-max initiative)) (if (< (clock-value knife) (clock-max knife)) (location
     :title "徒手受压"
     :desc "打手把你逼在墙边，低声重复那个名字：红房间。你得先决定，是稳着反顶、直接狠狠干、还是冒险把折刀夺到手。"
     :show-clocks (list initiative (when (> (clock-value knife) 0) knife))
     :actions (list (counter) (blunt_punch) (rush_knife) (breathe))
-  ) (scene
+  ) (location
     :title "持刀逼退"
     :desc "刀终于到了你手里。现在你可以借着这口气把主动权彻底抢回来。"
     :show-clocks (list initiative knife)
     :actions (list (counter) (knife_press) (breathe))
-  ))) ((< (clock-value opening) (clock-max opening)) (scene
+  ))) ((< (clock-value opening) (clock-max opening)) (location
     :title "对峙"
     :desc "对方后退半步，准备再扑上来。他背后的人不想杀你，至少现在不想。他们只想让你学会害怕。"
     :show-clocks (list enemy_hp opening)
     :actions (list (heavy_punch) (feint) (knee_kick) (breathe))
-  )) (else (scene
+  )) (else (location
     :title "空门大开"
     :desc "他的防守空档已经完全露出来了。狠狠干净地结束这场架。"
     :show-clocks (list enemy_hp opening)

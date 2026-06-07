@@ -24,7 +24,7 @@
 ;   玩家不能只推一条轴——必须交替管理情绪和距离
 
 (define (standoff)
-  (scene
+  (location
     :title "无门牌公寓 · 枪口"
     :desc
       (cond

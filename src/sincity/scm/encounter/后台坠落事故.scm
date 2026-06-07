@@ -90,7 +90,7 @@
       (var 'control (clock :title "控制局面" :desc "稳住人群、布景和夜莺的位置。填满后事故被压住。" :initial 0 :max 5))
       (var 'nightingale_danger (clock :title "夜莺的危险" :desc "坠落、踩踏和错误指令正在把夜莺推向事故中心。填满则她会受伤。" :initial 0 :max 4))))
   :root
-  (scene
+  (location
     :title "剧院后台"
     :desc "尖叫从幕布后面炸开。灯架、绳索、布景板和乱跑的人挤成一团，夜莺的名字被一遍遍喊出来。"
     :show-clocks (list control nightingale_danger)

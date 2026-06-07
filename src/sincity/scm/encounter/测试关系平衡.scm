@@ -15,7 +15,7 @@
       (factor -1 :when (<= (clock-value tension) 1) :label "关系冷淡"))))
 
 (define (tension-root)
-  (scene
+  (location
     :title "关系"
     :desc "你要在关系没有冷掉、也没有越界之前，把关键情报套出来。关系 3-5 是安全区。"
     :show-clocks (list intel tension time)

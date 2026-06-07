@@ -211,7 +211,7 @@
   ))
 
 (define (stage_cold)
-  (scene
+  (location
     :title "冷淡"
     :desc "目标把自己裹在沉默里。你得先让他愿意继续说话。"
     :show-clocks (list rapport tension)
@@ -219,7 +219,7 @@
   ))
 
 (define (stage_warm)
-  (scene
+  (location
     :title "熟络"
     :desc "话题已经打开了。你要让他意识到，这次偶遇有点不一样。"
     :show-clocks (list rapport tension)
@@ -227,7 +227,7 @@
   ))
 
 (define (stage_soft)
-  (scene
+  (location
     :title "松动"
     :desc "他的防备已经松了。现在只差最后一层，情报就在那后面。"
     :show-clocks (list rapport tension)
@@ -235,7 +235,7 @@
   ))
 
 (define (stage_exit)
-  (scene
+  (location
     :title "离场"
     :desc "情报已经到手。你只剩下决定今晚怎么收尾。"
     :show-clocks (list rapport tension)

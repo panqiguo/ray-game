@@ -34,7 +34,7 @@
   :vars (list
     (var 'advantage (clock :title "局势" :initial 0 :max 3)))
   :root
-  (scene
+  (location
     :title "巷口碰撞"
     :desc "追债的人把赌徒按在墙上搜身。他脸上那点求生欲，比西装里的零钱更先掉出来。"
     :show-clocks (list advantage)

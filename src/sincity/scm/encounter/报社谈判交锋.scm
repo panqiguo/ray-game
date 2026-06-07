@@ -53,7 +53,7 @@
       (var 'concession (clock :title "记者让步" :desc "让他承认便条和事故稿的时间线不正常。" :initial 0 :max 4))
       (var 'backlash (clock :title "舆论反咬" :desc "他越能把你写成麻烦，你越难从报社拿到东西。" :initial 0 :max 3))))
   :root
-  (scene
+  (location
     :title "报社谈判桌"
     :desc "记者靠在桌边，笔尖还停在纸上。这里没有拳头，只有谁先把谁写进故事里。"
     :show-clocks (list concession backlash)

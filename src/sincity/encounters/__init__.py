@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from .defs import ActionHandle, CompiledEncounterProgram, EncounterCompileError, RenderedEncounter, RenderedScene, StoreFieldSpec
+from .defs import ActionHandle, CompiledEncounterProgram, EncounterCompileError, RenderedEncounter, RenderedLocation, StoreFieldSpec
 
 __all__ = [
     "ActionHandle",
     "CompiledEncounterProgram",
     "EncounterCompileError",
     "RenderedEncounter",
-    "RenderedScene",
+    "RenderedLocation",
     "StoreFieldSpec",
     "ENCOUNTERS_BY_ID",
     "MAX_REACT_STEPS",

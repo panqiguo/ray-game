@@ -3,7 +3,7 @@
 (include "../common_world_bindings.scm")
 
 (define (stance-scene)
-  (scene
+  (location
     :title (if (= stance 'guard) "防守" "进攻")
     :desc
       (if (= stance 'guard)

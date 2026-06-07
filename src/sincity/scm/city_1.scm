@@ -116,7 +116,7 @@
     (companion-at-stress-location? 'marco "酒吧")))
 
 (define (办公室)
-  (node
+  (location
     :title "办公室"
     :desc "办公桌、沙发、电话和一块还没完全褪色的地板。这里既是工作地点，也是你暂时能睡下的地方。"
     :position '(40 280)
@@ -177,7 +177,7 @@
             (effect 'start-quick-dialogue leo-preliminary-text)))))))
 
 (define (街边摊贩)
-  (node
+  (location
     :title "街边摊贩"
     :desc "铁锅、热汤、油烟和零钱。这里不问你从哪里来，只问你要不要加辣。"
     :position '(245 280)
@@ -211,7 +211,7 @@
             :fail (outcome "他今天不想提中枪的事，你的出现反而让他闭了嘴。" (list (effect 'add pressure 1)))))))))
 
 (define (黑市)
-  (node
+  (location
     :title "黑市"
     :desc "修表铺后门、药味、假章和压低的声音。这里什么都能办，只是从不保证干净。"
     :position '(450 280)
@@ -268,7 +268,7 @@
             :fail (outcome "黑市的人嘴很严，你用错方式了。" (list (effect 'add pressure 1)))))))))
 
 (define (正规诊所)
-  (node
+  (location
     :title "正规诊所"
     :desc "白墙、玻璃柜、登记表。正规两个字的意思是：他们会救你，也会记住你。"
     :position '(655 280)
@@ -340,7 +340,7 @@
             :fail (outcome "护士警惕地看了你一眼，你没敢继续问。" (list (effect 'add pressure 1)))))))))
 
 (define (警局)
-  (node
+  (location
     :title "警局"
     :desc "铁柜、烟味和一排不愿回答问题的人。警察想要报告，不一定想要真相。"
     :position '(1065 280)
@@ -380,7 +380,7 @@
             (effect 'start-dialogue 'police_interview)))))))
 
 (define (仓库)
-  (node
+  (location
     :title "仓库"
     :desc "仓库按小时结钱，也按小时消耗人。白天搬货，夜里有人谈不该谈的路线。"
     :position '(40 520)
@@ -406,7 +406,7 @@
             (effect 'start-encounter '取回神秘物品)))))))
 
 (define (酒吧)
-  (node
+  (location
     :title "酒吧"
     :desc "酒吧白天像咖啡馆，晚上像供词室。这里没有秘密，只有还没轮到你听见的消息。"
     :position '(245 520)
@@ -498,7 +498,7 @@
           :text "“看够了？”他先开口，语气比敲杯子的声音轻一点。\n\n“我没事，只是坐不住。回去之前，让我把这杯喝完。”\n\n他说得粗鲁，但不是玩笑。等压力降下来，他会重新坐回行动里。"))))))
 
 (define (望月旅馆)
-  (node
+  (location
     :title "望月旅馆"
     :desc "招牌灯一半亮着，一半像从来没亮过。老板记性很差，收费时除外。"
     :position '(860 520)
@@ -517,7 +517,7 @@
           :effects (list (effect 'start-encounter '潜入旅馆)))))))
 
 (define (公寓)
-  (node
+  (location
     :title "公寓"
     :desc "没有门牌的公寓楼，走廊闻起来像潮墙、廉价香水和旧火药。"
     :position '(1065 520)
@@ -552,7 +552,7 @@
             (effect 'start-encounter '公寓对峙3关系版)))))))
 
 (define (赌场)
-  (node
+  (location
     :title "赌场"
     :desc "地下室、绿绒桌、假笑和真债。这里能赢钱，也能把明天提前输掉。"
     :position '(1270 520)
@@ -560,7 +560,7 @@
       (make-work-action "替赌场看一晚场子" "不问问题，只看住门口。" 暴力 'high 18 12 6 1))))
 
 (define (情景测试C)
-  (node
+  (location
     :title "情景测试C"
     :desc "临时测试入口。这里不接主线，只用来快速比较几个情景模型的手感。"
     :position '(1460 520)
@@ -881,7 +881,7 @@
   :tasks world-tasks
   :on-cycle-start (world-cycle-start-effects)
   :root
-  (node
+  (location
     :title "贝城县"
     :desc (if nightingale_city_day_started
       "贝城县不大。你从剧院醒来后，城市才重新露出那些能救命、能买消息、也能把人推向旧码头的地方。"

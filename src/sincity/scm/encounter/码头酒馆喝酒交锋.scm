@@ -42,7 +42,7 @@
       (var 'table_pressure (clock :title "酒桌压力" :initial 0 :max 3))
       (var 'drunkenness (clock :title "醉意" :initial 0 :max 3))))
   :root
-  (scene
+  (location
     :title "码头酒馆"
     :desc "酒桌上的人故意把杯子摆得很满。你问莱恩，他们就让你先喝。"
     :show-clocks (list table_pressure drunkenness)

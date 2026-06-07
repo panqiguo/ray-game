@@ -82,7 +82,7 @@
       (var 'search_progress (clock :title "搜查进度" :desc "找到旧照片前，你还需要在房间里多翻一点。" :initial 0 :max 4))
       (var 'helen_stirring (clock :title "惊醒" :desc "老海伦越接近醒来，这件事就越不像调查。" :initial 0 :max 3))))
   :root
-  (scene
+  (location
     :title "老海伦的房间"
     :desc "老海伦歪在椅子里，杯子还在手边。房间堆满旧物，像旧码头被拆下来的碎片全被塞进了这里。"
     :show-clocks (list search_progress helen_stirring)

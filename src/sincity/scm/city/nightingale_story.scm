@@ -604,7 +604,7 @@
         :fail (outcome (list (effect 'clock+ press_alert 1) (effect 'add pressure 1)) fail-text)))))
 
 (define (报社编辑室)
-  (node
+  (location
     :title "编辑室"
     :desc "编辑们把烟灰弹在校样边上。这里的每一行字都像刚从事故现场跑回来，但有些标题跑得太早。"
     :show-clocks (list
@@ -627,7 +627,7 @@
         "他让你离稿桌远点，整个编辑室都听见了。"))))
 
 (define (报社排版间)
-  (node
+  (location
     :title "排版间"
     :desc "铅字、油墨和机器声把话压得很低。排版时间不会撒谎，除非有人提前把谎话排好了。"
     :show-clocks (list
@@ -650,7 +650,7 @@
         "废纸篓被人一脚踢远，你只抓到一手油墨。"))))
 
 (define (记者工位)
-  (node
+  (location
     :title "记者工位"
     :desc "桌上摊着笔记本、电话记录和没喝完的咖啡。记者本人不在，但他的稿子已经替他占好了位置。"
     :show-clocks (list
@@ -673,7 +673,7 @@
         "抽屉响得太大，隔壁桌的打字声停了一拍。"))))
 
 (define (贝城晚报)
-  (node
+  (location
     :title "贝城晚报"
     :desc "印刷机在楼后震动，编辑室里全是烟味和铅字味。这里不生产真相，只生产能赶上明早的版本。"
     :position '(1080 500)
@@ -797,7 +797,7 @@
         (effect 'start-quick-dialogue nightingale-bar-text)))))
 
 (define (旧码头卸货)
-  (node
+  (location
     :title "旧码头卸货"
     :desc "码头临时招人手卸货，干一天结一天钱。机会不等人。"
     :position '(700 520)

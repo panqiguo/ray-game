@@ -81,7 +81,7 @@
           (list (effect 'clock+ time 1)))))))
 
 (define (topic-a-scene)
-  (scene
+  (location
     :title "话题A：她的过去"
     :desc (topic-status 'past)
     :position '(260 260)
@@ -95,7 +95,7 @@
       (ease-action))))
 
 (define (topic-b-scene)
-  (scene
+  (location
     :title "话题B：她的看法"
     :desc (topic-status 'view)
     :position '(540 260)
@@ -109,7 +109,7 @@
       (ease-action))))
 
 (define (topic-c-scene)
-  (scene
+  (location
     :title "话题C：关键情报"
     :desc (if (topic-current? 'clue)
       "她现在愿意靠近情报话题。这是最好的推进窗口。"
@@ -120,7 +120,7 @@
       (ease-action))))
 
 (define (will-root)
-  (scene
+  (location
     :title "关系平衡-意愿骰"
     :desc (relation-desc)
     :show-clocks (list intel relation time)

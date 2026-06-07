@@ -21,7 +21,7 @@
     (+ base (relation-efficiency))))
 
 (define (relation-efficiency-root)
-  (scene
+  (location
     :title "关系平衡-效率"
     :desc "关系不是硬性约束，而是情报开采效率。1-2 惩罚，3-5 正常，6-7 奖励；0 冷掉，8 越界。"
     :show-clocks (list intel relation time)

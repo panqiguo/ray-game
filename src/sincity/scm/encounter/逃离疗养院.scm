@@ -69,8 +69,8 @@
 ;; ==========================================
 ;; Scene 1: 房间脱困
 ;; ==========================================
-(define (scene1)
-  (scene
+(define (location1)
+  (location
    :title "拘禁室"
    :desc "我的脑袋像塞满了浸水的棉花，双手被皮带死死捆在椅子上。门外偶尔传来胶底鞋走过的声音。我得尽快弄断这些束缚。"
    :show-clocks (list alert_clock 挣脱束缚钟)
@@ -110,15 +110,15 @@
 ;; ==========================================
 ;; Scene 2: 二楼探索
 ;; ==========================================
-(define (scene2)
-  (scene
+(define (location2)
+  (location
    :title "疗养院走廊"
    :desc "你跌跌撞撞地溜出病房。走廊里的灯光昏暗得像劣质威士忌。前方有三条岔路，桑德堡医生的狗腿子随时会巡逻过来。"
    :show-clocks (list alert_clock)
    :actions (list (rest))
    :children (list
               ;; 探索路径A
-              (scene
+              (location
                :title "左侧阴影"
                :desc (if path_a_revealed
                          "这是一条死路，只有监护室。"
@@ -151,7 +151,7 @@
                             "你冲得太急，沉重的脚步声在墙面间弹了两下。"
                             "你撞翻了堆在一旁的金属医疗车，瓶瓶罐罐碎了一地。"))))
               ;; 探索路径B
-              (scene
+              (location
                :title "右侧深处"
                :desc (if path_b_revealed
                          "这条路已经被证实被死死锁住了。"
@@ -184,7 +184,7 @@
                             "你是冲到了尽头，但粗重的喘息声可能已经暴露了你。"
                             "你扑得太快，整个人重重地撞在了走廊的木墙板上。"))))
               ;; 探索路径C
-              (scene
+              (location
                :title "正前方通道"
                :desc (if path_c_revealed
                          "这道楼梯通向一楼的大门。"
@@ -220,8 +220,8 @@
 ;; ==========================================
 ;; Scene 3: 一楼大门
 ;; ==========================================
-(define (scene3)
-  (scene
+(define (location3)
+  (location
    :title "疗养院一楼大厅"
    :desc "你顺着楼梯摸到了一楼。大门就在不远处，外面的洛杉矶夜景正向你招手。但在门旁边，桑德堡医生的办公室亮着灯，那个老狐狸肯定坐在里面。"
    :show-clocks (list alert_clock)
@@ -319,6 +319,6 @@
  :vars all-state
  :reacts all-reacts
  :root (cond
-        ((not escaped) (scene1))
-        ((not path_c_revealed) (scene2))
-        (else (scene3))))
+        ((not escaped) (location1))
+        ((not path_c_revealed) (location2))
+        (else (location3))))

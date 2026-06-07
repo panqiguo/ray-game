@@ -127,14 +127,14 @@ class ActionDef:
 
 
 @dataclass(frozen=True)
-class LocationNode:
+class LocationDef:
     id: str
     title: str
     description: str
     position: tuple[int, int] | None = None
     show_clock_ids: tuple[str, ...] = ()
     actions: tuple[ActionDef, ...] = ()
-    children: tuple["LocationNode", ...] = ()
+    children: tuple["LocationDef", ...] = ()
     conditions: tuple[Condition, ...] = ()
 
 
@@ -188,7 +188,7 @@ class CompiledScenario:
     screen: ScreenName
     world_root_id: str
     root_location_ids: tuple[str, ...]
-    locations_by_id: dict[str, LocationNode]
+    locations_by_id: dict[str, LocationDef]
     parent_by_id: dict[str, str | None]
     actions_by_id: dict[str, ActionDef]
     actions_by_location: dict[str, tuple[str, ...]]
@@ -207,7 +207,7 @@ class CompiledScenario:
         return self.world_root_id
 
     @property
-    def root_location(self) -> LocationNode:
+    def root_location(self) -> LocationDef:
         return self.locations_by_id[self.world_root_id]
 
     @property

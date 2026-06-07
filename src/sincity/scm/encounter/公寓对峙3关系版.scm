@@ -105,7 +105,7 @@
             :fail (outcome (list (effect 'clock+ pressure 3)) "她差点扣下扳机。你知道下一次可能不会只是差点。")))))))
 
 (define (gun-scene)
-  (scene
+  (location
     :title "枪"
     :desc
       (cond
@@ -138,7 +138,7 @@
                 :fail (outcome (list (effect 'set disarm_failed true) (effect 'clock+ pressure 4)) "她预判了你的动作，枪口重新抵住你。你没有第二次机会。")))))))))
 
 (define (emotion-scene)
-  (scene
+  (location
     :title "情绪"
     :desc
       (cond
@@ -151,7 +151,7 @@
       (soothe-action))))
 
 (define (distance-scene)
-  (scene
+  (location
     :title "距离"
     :desc
       (if (clock-filled? approach)
@@ -163,7 +163,7 @@
         (approach-action)))))
 
 (define (standoff)
-  (scene
+  (location
     :title "无门牌公寓 · 关系版"
     :desc
       (cond

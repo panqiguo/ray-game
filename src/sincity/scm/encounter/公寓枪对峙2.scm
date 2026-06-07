@@ -20,7 +20,7 @@
       (effect 'set hostility 12))))
 
 (define (standoff)
-  (scene
+  (location
     :title "无门牌公寓 · 枪对峙"
     :desc
       (cond

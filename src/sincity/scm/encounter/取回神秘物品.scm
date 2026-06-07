@@ -93,7 +93,7 @@
         "麻袋砸在铁板上的声音太响了。"))))
 
 (define (awning-scene)
-  (scene
+  (location
     :title "雨棚堆箱"
     :desc (if awning_revealed
       "木箱后面只剩一截带血帆布和空木匣。这里已经可以排除。"
@@ -102,7 +102,7 @@
     :actions (if awning_revealed (list) (awning-search-actions))))
 
 (define (office-scene)
-  (scene
+  (location
     :title "账房"
     :desc (if office_revealed
       "假背板已经被拆开，里面空了。你已经拿到了想要的东西。"
@@ -111,7 +111,7 @@
     :actions (if office_revealed (list) (office-search-actions))))
 
 (define (truck-scene)
-  (scene
+  (location
     :title "巷尾车厢"
     :desc
       (if truck_eliminated
@@ -123,7 +123,7 @@
     :actions (if (or truck_eliminated truck_revealed) (list) (truck-search-actions))))
 
 (define (recovery)
-  (scene
+  (location
     :title "仓库后巷 · 取回神秘物品"
     :desc
       (if police_knows_true_info

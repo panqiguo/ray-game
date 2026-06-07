@@ -15,10 +15,10 @@ from sincity.content_lang.runtime_core import (
     build_check as _build_check,
     eval_react_condition as _eval_react_condition,
     eval_effect_list as _eval_effect_list,
-    flatten_scene as _flatten_scene,
+    flatten_location as _flatten_location,
     host_values as _host_values,
     keyword_args as _keyword_args,
-    render_scene as _render_scene,
+    render_location as _render_location,
     runtime_value as _runtime_value,
     unwrap as _unwrap,
     validate_action_template as _validate_action_template,
@@ -26,10 +26,10 @@ from sincity.content_lang.runtime_core import (
     validate_reaction_table as _validate_reaction_table,
     validate_react_template as _validate_react_template,
     validate_schema_forms as _validate_schema_forms_generic,
-    validate_scene_template as _validate_scene_template,
+    validate_location_template as _validate_location_template,
     validate_template as _validate_template,
 )
-from sincity.model.defs import ActionDef, AddFieldPayload, Effect, LocationNode, ProgressClockSpec, SetFieldPayload, ShiftClockPayload
+from sincity.model.defs import ActionDef, AddFieldPayload, Effect, LocationDef, ProgressClockSpec, SetFieldPayload, ShiftClockPayload
 
 from .defs import (
     ActionHandle,
@@ -38,6 +38,7 @@ from .defs import (
     EncounterMeta,
     EncounterSchemaError,
     EncounterSchemeError,
+    LocationTemplate,
     ModuleState,
     ObjectValue,
     ReactRule,
@@ -45,7 +46,6 @@ from .defs import (
     ReactTemplate,
     RenderedEncounter,
     RuntimeClockValue,
-    SceneTemplate,
     StateBindingValue,
     StoreFieldSpec,
 )
@@ -172,18 +172,18 @@ def initial_store_from_specs(store_specs: dict[str, StoreFieldSpec]) -> dict[str
 
 def render_encounter(program: CompiledEncounterProgram, store: dict[str, Any]) -> RenderedEncounter:
     env = _runtime_env(definitions=program.definitions, store=store, store_specs=program.store_specs)
-    scene = evaluate(program.view_expr, env)
-    assert isinstance(scene, SceneTemplate), f"Encounter view must resolve to a scene: {program.id}"
-    rendered = _render_scene(program, scene, scene_path=())
-    locations_by_id: dict[str, LocationNode] = {}
+    location = evaluate(program.view_expr, env)
+    assert isinstance(location, LocationTemplate), f"Encounter view must resolve to a location: {program.id}"
+    rendered = _render_location(program, location, location_path=())
+    locations_by_id: dict[str, LocationDef] = {}
     parent_by_id: dict[str, str | None] = {}
     actions_by_id: dict[str, ActionDef] = {}
     actions_by_location: dict[str, tuple[str, ...]] = {}
     action_handles_by_id: dict[str, ActionHandle] = {}
-    shown_clock_ids_by_scene: dict[str, tuple[str, ...]] = {}
-    shown_clocks_by_scene: dict[str, tuple[Any, ...]] = {}
+    shown_clock_ids_by_location: dict[str, tuple[str, ...]] = {}
+    shown_clocks_by_location: dict[str, tuple[Any, ...]] = {}
     nested_clocks_by_id: dict[str, Any] = {}
-    _flatten_scene(
+    _flatten_location(
         rendered,
         parent_id=None,
         locations_by_id=locations_by_id,
@@ -191,8 +191,8 @@ def render_encounter(program: CompiledEncounterProgram, store: dict[str, Any]) -
         actions_by_id=actions_by_id,
         actions_by_location=actions_by_location,
         action_handles_by_id=action_handles_by_id,
-        shown_clock_ids_by_scene=shown_clock_ids_by_scene,
-        shown_clocks_by_scene=shown_clocks_by_scene,
+        shown_clock_ids_by_location=shown_clock_ids_by_location,
+        shown_clocks_by_location=shown_clocks_by_location,
         nested_clocks_by_id=nested_clocks_by_id,
     )
     return RenderedEncounter(
@@ -204,8 +204,8 @@ def render_encounter(program: CompiledEncounterProgram, store: dict[str, Any]) -
         actions_by_id=actions_by_id,
         actions_by_location=actions_by_location,
         action_handles_by_id=action_handles_by_id,
-        shown_clock_ids_by_scene=shown_clock_ids_by_scene,
-        shown_clocks_by_scene=shown_clocks_by_scene,
+        shown_clock_ids_by_location=shown_clock_ids_by_location,
+        shown_clocks_by_location=shown_clocks_by_location,
         nested_clocks_by_id=nested_clocks_by_id,
     )
 
@@ -290,7 +290,7 @@ def validate_encounter_program(program: CompiledEncounterProgram) -> None:
         except Exception as exc:
             raise EncounterSchemaError(f"{program.id}: definition `{name}` is invalid: {exc}") from exc
     snapshot = render_encounter(program, initial_store(program))
-    assert snapshot.root_location.title, f"{program.id}: root scene missing title."
+    assert snapshot.root_location.title, f"{program.id}: root location missing title."
     for action in snapshot.actions_by_id.values():
         _assert_effects_allowed(action.effects, allowed=ENCOUNTER_ACTION_EFFECTS, context=f"{program.id}: action `{action.title}`")
         if action.check is not None:
@@ -320,7 +320,7 @@ def validate_encounter_program(program: CompiledEncounterProgram) -> None:
 
 
 def _validate_all_schema_forms(program: CompiledEncounterProgram, env: Environment) -> None:
-    _validate_schema_forms(program.view_expr, env, context=f"{program.id}: root scene")
+    _validate_schema_forms(program.view_expr, env, context=f"{program.id}: root location")
     if program.reaction_die_expr is not None:
         _validate_schema_forms(program.reaction_die_expr, env, context=f"{program.id}: reaction-die")
     for rule in program.react_rules:
@@ -334,7 +334,7 @@ def _validate_all_effect_target_symbols(program: CompiledEncounterProgram, env: 
     for name, value in program.definitions.items():
         if isinstance(value, Procedure):
             _validate_effect_target_symbols_generic(value.body, env, context=f"{program.id}: definition `{name}`", local_symbols=frozenset(value.params))
-    _validate_effect_target_symbols_generic(program.view_expr, env, context=f"{program.id}: root scene")
+    _validate_effect_target_symbols_generic(program.view_expr, env, context=f"{program.id}: root location")
     if program.reaction_die_expr is not None:
         _validate_effect_target_symbols_generic(program.reaction_die_expr, env, context=f"{program.id}: reaction-die")
     if program.cycle_start_effects_expr is not None:

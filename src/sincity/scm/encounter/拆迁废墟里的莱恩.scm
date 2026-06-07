@@ -71,7 +71,7 @@
       (var 'ryan_break (clock :title "莱恩开口" :desc "让莱恩从动手转向说出首演、拆迁和旧码头游行之间的关系。" :initial 0 :max 5))
       (var 'police_arrival (clock :title "警察逼近" :desc "便衣和封锁线保安正在靠近。填满后莱恩逃走，你被带去警局。" :initial 0 :max 4))))
   :root
-  (scene
+  (location
     :title "拆迁废墟"
     :desc "旧五金店后墙塌了一半。莱恩站在碎砖、雨水和拆迁木桩之间，眼睛红得像整晚都没睡。"
     :show-clocks (list ryan_break police_arrival)

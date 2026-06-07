@@ -2,7 +2,7 @@
 ;; IMPORT exploitation-incident-action FROM 富人飞地 scene
 
 (define (老街)
-  (node
+  (location
     :title "老街"
     :desc "旧铺面、窄楼梯、晾衣绳和熟人的眼神。老街没有明确入口，但你总能从这里找到一点活路。"
     :position '(450 520)

@@ -13,7 +13,7 @@ Encounter / World SCM 速查
   :reacts reacts-expr
   :on-success (list effect...)
   :on-fail (list effect...)
-  :root node-expr)
+  :root location-expr)
 ```
 
 ### define 语义（city 和 encounter 统一）
@@ -28,7 +28,7 @@ define-fragment  = 内容片段构造器，语法糖，等价于零参数函数
 - `(define (make-action title desc) (action ...))` → 函数，每次调用时构造。
 - `(define-fragment loan-action (when active? (action ...)))` → 等价于 `(define (loan-action) (when active? (action ...)))`，使用时显式调用 `(loan-action)`。
 
-> ⚠️ **不要**把动态 node/action/desc/title 写成 top-level value define：
+> ⚠️ **不要**把动态 location/action/desc/title 写成 top-level value define：
 >
 > ```scheme
 > ;; 错误：这个 define 只求值一次，不会随状态变化
@@ -47,6 +47,7 @@ define-fragment  = 内容片段构造器，语法糖，等价于零参数函数
 > :actions (list (loan-action))
 > ```
 
+- 城市和外出任务统一使用 `(location ...)`，不再有 `(node ...)` 或 `(scene ...)`。将 scene 术语统一为 location。
 - ⚠️ **函数闭包重新绑定**：顶层 `define` / `define-fragment` 声明的函数在每次渲染时会重新绑定到当前环境，因此其自由变量（如 `security_online`）在每次调用时从当前状态查找。嵌套 lambda（函数内创建的闭包）仍然使用标准词法作用域。
 - 如果只是静态常量、文本、helper lambda，用普通 `define`。
 
@@ -83,17 +84,17 @@ define-fragment  = 内容片段构造器，语法糖，等价于零参数函数
 - 未导入的世界字段用 quoted key：`(effect 'add 'money 80)`
 - Cycle 统一：`advance-cycle` 是唯一周期推进 effect，替代旧的 `advance-day` + `reset-hand`；`:on-cycle-start` 统一替代 `:on-day-start`（world）和 `:on-cycle`（encounter）
 
-`node` / `scene`：
+`location`：
 
 ```scheme
-(node
+(location
   :title "标题"
   :desc "描述"
   :position '(120 80)
   :show-clocks (list clock-a clock-b)
   :conditions (list condition...)
   :actions (list action-a action-b)
-  :children (list node-a node-b))
+  :children (list location-a location-b))
 ```
 
 - 必填：`:title`

@@ -58,7 +58,7 @@
       (var 'distance (clock :title "追上递信人" :initial 0 :max 4))
       (var 'panic (clock :title "信件脱手风险" :initial 0 :max 4))))
   :root
-  (scene
+  (location
     :title "雨里追信"
     :desc (if nightingale_second_letter_harder
       "你来得稍晚了半步。递信人已经离剧院更近，雨水和人群都在替他遮掩。"

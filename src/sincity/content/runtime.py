@@ -10,21 +10,21 @@ from sincity.content_lang.module_runtime import (
     schema_definition_values as _schema_definition_values,
 )
 from sincity.content_lang.runtime_core import (
-    flatten_scene as _flatten_scene,
+    flatten_location as _flatten_location,
     eval_react_condition as _eval_react_condition,
     eval_effect_list as _eval_effect_list,
     host_values as _host_values,
     keyword_args as _keyword_args,
-    render_scene as _render_scene,
+    render_location as _render_location,
     validate_action_template as _validate_action_template,
     validate_effect_target_symbols as _validate_effect_target_symbols_generic,
     validate_react_template as _validate_react_template,
     validate_schema_forms as _validate_schema_forms_generic,
-    validate_scene_template as _validate_scene_template,
+    validate_location_template as _validate_location_template,
 )
-from sincity.encounters.defs import ActionTemplate, ClockTemplate, EncounterMeta, EncounterSchemaError, EncounterSchemeError, ReactRule, ReactTemplate, SceneTemplate, StateBindingValue, StoreFieldSpec, TaskStepTemplate, TaskTemplate
+from sincity.encounters.defs import ActionTemplate, ClockTemplate, EncounterMeta, EncounterSchemaError, EncounterSchemeError, LocationTemplate, ReactRule, ReactTemplate, StateBindingValue, StoreFieldSpec, TaskStepTemplate, TaskTemplate
 from sincity.encounters.lispy import Environment, Procedure, _MISSING, base_environment, desugar_define_form, evaluate, expand_includes, truthy
-from sincity.model.defs import CompiledScenario, Effect, LocationNode, ProgressClockSpec
+from sincity.model.defs import CompiledScenario, Effect, LocationDef, ProgressClockSpec
 from sincity.model.enums import ScreenName
 from sincity.model.state import GameState, ProgressClockState
 
@@ -148,16 +148,16 @@ def compile_world_program(
 
 def render_world(program: CompiledWorldProgram, state: GameState) -> CompiledScenario:
     env = _world_env(program, state)
-    scene = evaluate(program.view_expr, env)
-    assert isinstance(scene, SceneTemplate), f"World root must resolve to a node: {program.id}"
-    rendered = _render_scene(program, scene, scene_path=())
-    locations_by_id: dict[str, LocationNode] = {}
+    location = evaluate(program.view_expr, env)
+    assert isinstance(location, LocationTemplate), f"World root must resolve to a location: {program.id}"
+    rendered = _render_location(program, location, location_path=())
+    locations_by_id: dict[str, LocationDef] = {}
     parent_by_id: dict[str, str | None] = {}
     actions_by_id = {}
     actions_by_location = {}
     action_handles_by_id = {}
-    shown_clock_ids_by_scene: dict[str, tuple[str, ...]] = {}
-    _flatten_scene(
+    shown_clock_ids_by_location: dict[str, tuple[str, ...]] = {}
+    _flatten_location(
         rendered,
         parent_id=None,
         locations_by_id=locations_by_id,
@@ -165,7 +165,7 @@ def render_world(program: CompiledWorldProgram, state: GameState) -> CompiledSce
         actions_by_id=actions_by_id,
         actions_by_location=actions_by_location,
         action_handles_by_id=action_handles_by_id,
-        shown_clock_ids_by_scene=shown_clock_ids_by_scene,
+        shown_clock_ids_by_location=shown_clock_ids_by_location,
     )
     return CompiledScenario(
         id=program.id,
@@ -179,7 +179,7 @@ def render_world(program: CompiledWorldProgram, state: GameState) -> CompiledSce
         actions_by_location=actions_by_location,
         clocks_by_id=dict(program.clocks_by_id),
         global_clock_ids=rendered.shown_clock_ids,
-        location_clock_ids=dict(shown_clock_ids_by_scene),
+        location_clock_ids=dict(shown_clock_ids_by_location),
         initial_health=program.initial_health,
         initial_energy=program.initial_energy,
         initial_money=program.initial_money,
@@ -249,8 +249,8 @@ def validate_world_program(program: CompiledWorldProgram) -> None:
         if isinstance(value, Procedure):
             _validate_effect_target_symbols_generic(value.body, env, context=f"{program.id}: definition `{name}`", local_symbols=frozenset(value.params))
         try:
-            if isinstance(value, SceneTemplate):
-                _validate_scene_template(value)
+            if isinstance(value, LocationTemplate):
+                _validate_location_template(value)
             elif isinstance(value, ActionTemplate):
                 _validate_action_template(value)
             elif isinstance(value, ReactTemplate):
@@ -270,7 +270,7 @@ def validate_world_program(program: CompiledWorldProgram) -> None:
         _validate_effect_target_symbols_generic(program.cycle_start_effects_expr, env, context=f"{program.id}: on-cycle-start")
         _validate_world_schema_forms(program.cycle_start_effects_expr, env, context=f"{program.id}: on-cycle-start")
     snapshot = render_world(program, dummy_state)
-    assert snapshot.root_child_location_ids, f"{program.id}: world root must expose at least one child node."
+    assert snapshot.root_child_location_ids, f"{program.id}: world root must expose at least one child location."
     for location in snapshot.locations_by_id.values():
         assert location.title, f"{program.id}: location missing title."
     for action in snapshot.actions_by_id.values():

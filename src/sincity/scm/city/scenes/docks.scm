@@ -373,7 +373,7 @@
         :effects (list (effect 'start-encounter '拆迁废墟里的莱恩))))))
 
 (define (拆迁公告墙)
-  (node
+  (location
     :title "拆迁公告墙"
     :desc "几层旧公告叠在一起，最上面写着封锁日期，下面露出更早的搬迁通知。"
     :actions (list
@@ -389,7 +389,7 @@
             :fail (outcome (list (effect 'add pressure 1)) "雨水把纸糊成一团，保安的脚步声先清楚起来。")))))))
 
 (define (改造蓝图棚)
-  (node
+  (location
     :title "改造蓝图棚"
     :desc "临时棚里堆着测绘木桩和卷起的蓝图。这里不像工地，更像一个还没公开的舞台布景。"
     :actions (list
@@ -405,7 +405,7 @@
             :fail (outcome (list (effect 'add pressure 2)) "蓝图被锁在铁夹里，你只换来一身木屑和越来越近的手电光。")))))))
 
 (define (工会临时棚)
-  (node
+  (location
     :title "工会临时棚"
     :desc "油布下面压着标语、传单和几根还没削好的木棍。旧码头的人也在为今晚做准备。"
     :actions (list
@@ -421,7 +421,7 @@
             :fail (outcome (list (effect 'add pressure 1)) "棚里的人把传单收走，只留下一句：外人少管。")))))))
 
 (define (拆迁封锁线)
-  (node
+  (location
     :title "拆迁封锁线"
     :desc (if ryan_found_in_ruins
       "围挡后面的旧街像被提前判了死刑。线索已经足够，莱恩就藏在废墟深处。"
@@ -434,7 +434,7 @@
       (when (and (not ryan_ruins_union_checked) (not ryan_found_in_ruins)) (工会临时棚)))))
 
 (define (码头酒馆)
-  (node
+  (location
     :title "码头酒馆"
     :desc (if ryan_address_found
       "破旧、吵闹、充满敌意。你已经在这里喝出了一点名声，至少现在有人愿意把你当成牌桌和吧台上的客人。"
@@ -448,21 +448,21 @@
       (ryan-tavern-blonde-actions))))
 
 (define (莱恩的老店铺)
-  (node
+  (location
     :title "莱恩的老店铺"
     :desc "门板已经卸了，招牌歪挂在雨棚下。莱恩以前的五金店，现在只剩垃圾和老鼠。"
     :actions (list
       (ryan-old-shop-check-action))))
 
 (define (莱恩的新店)
-  (node
+  (location
     :title "莱恩的新店"
     :desc "更小、更偏僻、更破。一块手写的招牌歪在门框上，窗玻璃裂了一条。"
     :actions (list
       (ryan-confrontation-action))))
 
 (define (旧海员寄宿楼)
-  (node
+  (location
     :title "旧海员寄宿楼"
     :desc "一栋靠近水边的长楼，墙上还挂着退色的船员牌。这里看起来像能藏下很多旧名字。"
     :show-clocks (list (when (and (not helen_seamen_house_checked) (not helen_boarding_unlocked)) helen_seamen_house_progress))
@@ -471,7 +471,7 @@
       (list))))
 
 (define (红砖寄宿公寓)
-  (node
+  (location
     :title "红砖寄宿公寓"
     :desc (if helen_boarding_unlocked
       "红砖墙被雨泡得发黑。老海伦就住在这里三层楼道尽头——莱恩的老朋友，旧码头的活记忆。"
@@ -484,7 +484,7 @@
       (when helen_boarding_unlocked (海伦的房间)))))
 
 (define (东栈房出租屋)
-  (node
+  (location
     :title "东栈房出租屋"
     :desc "旧仓库隔出来的出租屋，一排门后住着临时工、欠租的人和不愿登记的人。这里可能有海伦，也可能只有另一个同名的人。"
     :show-clocks (list (when (and (not helen_east_warehouse_checked) (not helen_boarding_unlocked)) helen_east_warehouse_progress))
@@ -493,7 +493,7 @@
       (list))))
 
 (define (海伦的房间)
-  (node
+  (location
     :title "海伦的房间"
     :desc (cond
       (helen_photo_found "旧照片已经在你口袋里。老海伦还在睡，像整间房都不愿意醒。")
@@ -505,7 +505,7 @@
     :actions (helen-talk-actions)))
 
 (define (旧码头)
-  (node
+  (location
     :title "旧码头"
     :desc "旧码头不大，但足够藏下不愿被找到的人。莱恩就是其中之一。"
     :position '(900 280)

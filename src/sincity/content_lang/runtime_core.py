@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 from dataclasses import replace
 from typing import Any
 
@@ -19,9 +18,9 @@ from sincity.encounters.defs import (
     ReactTemplate,
     RenderedAction,
     RenderedClock,
-    RenderedScene,
+    RenderedLocation,
     RuntimeClockValue,
-    SceneTemplate,
+    LocationTemplate,
     StateBindingValue,
     StoreFieldSpec,
     TaskStepTemplate,
@@ -40,7 +39,7 @@ from sincity.model.defs import (
     Effect,
     FieldRef,
     InputRequirement,
-    LocationNode,
+    LocationDef,
     OutcomeDef,
     SetFieldPayload,
     ShiftClockPayload,
@@ -82,18 +81,18 @@ def validate_template(value: Any) -> None:
     if isinstance(value, ReactTemplate):
         validate_react_template(value)
         return
-    if isinstance(value, SceneTemplate):
-        validate_scene_template(value)
+    if isinstance(value, LocationTemplate):
+        validate_location_template(value)
         return
 
 
-def validate_scene_template(scene: SceneTemplate) -> None:
-    for condition in scene.conditions:
-        assert isinstance(condition, Condition), f"scene contains non-condition value: {condition!r}"
-    for action in scene.actions:
+def validate_location_template(location: LocationTemplate) -> None:
+    for condition in location.conditions:
+        assert isinstance(condition, Condition), f"location contains non-condition value: {condition!r}"
+    for action in location.actions:
         validate_action_template(action)
-    for child in scene.children:
-        validate_scene_template(child)
+    for child in location.children:
+        validate_location_template(child)
 
 
 _MODAL_EFFECTS = frozenset({"start_dialogue", "start_quick_dialogue", "start_encounter"})
@@ -160,12 +159,12 @@ def validate_schema_forms(
     try:
         if head_name in ({"quote", "lambda"} | skip_heads):
             return
-        if head_name in {"scene", "node"}:
+        if head_name == "location":
             value = evaluate(expr, env)
             if allow_nil_templates and value is None:
                 return
-            assert isinstance(value, SceneTemplate), f"node form did not produce scene template: {value!r}"
-            validate_scene_template(value)
+            assert isinstance(value, LocationTemplate), f"location form did not produce location template: {value!r}"
+            validate_location_template(value)
         elif head_name == "action":
             value = evaluate(expr, env)
             if allow_nil_templates and value is None:
@@ -290,26 +289,45 @@ def _validate_effect_target_expr(expr: Any, env: Environment, *, local_symbols: 
     )
 
 
-def render_scene(program: Any, scene: SceneTemplate, *, scene_path: tuple[str, ...], source_index: int = 0) -> RenderedScene:
-    scene_key = _hash_key(scene.title, (*scene_path, f"slot:{source_index}"), "scene")
-    path = (*scene_path, scene_key)
-    shown_clock_ids, shown_clocks, nested_clocks = _rendered_scene_clocks(program, scene.shown_clock_ids, scene_key)
+def render_location(program: Any, location: LocationTemplate, *, location_path: tuple[str, ...] = ()) -> RenderedLocation:
+    assert location.title, "location :title must not be empty"
+    assert "/" not in location.title, f"location :title must not contain '/': {location.title}"
+    location_key = location.title
+    location_id = "/".join(location_path + (location_key,))
+
+    action_keys: set[str] = set()
+    for action in location.actions:
+        assert action.title, "action :title must not be empty"
+        assert "/" not in action.title, f"action :title must not contain '/': {action.title}"
+        assert action.title not in action_keys, f"Duplicate action title under {location_id}: {action.title}"
+        action_keys.add(action.title)
+
+    child_keys: set[str] = set()
+    for child in location.children:
+        assert child.title, "child location :title must not be empty"
+        assert "/" not in child.title, f"child location :title must not contain '/': {child.title}"
+        assert child.title not in action_keys, f"Location title conflicts with action title under {location_id}: {child.title}"
+        assert child.title not in child_keys, f"Duplicate child location title under {location_id}: {child.title}"
+        child_keys.add(child.title)
+
+    path = (*location_path, location_key)
+    shown_clock_ids, shown_clocks, nested_clocks = _rendered_location_clocks(program, location.shown_clock_ids, location_id)
     rendered_actions: list[RenderedAction] = []
-    for source_index, action in enumerate(scene.actions):
-        rendered_actions.append(_render_action(program, action, scene_path=path, source_index=source_index))
-    rendered_children = tuple(render_scene(program, child, scene_path=path, source_index=index) for index, child in enumerate(scene.children))
-    root = LocationNode(
-        id=scene_key,
-        title=scene.title,
-        description=scene.description,
-        position=scene.position,
+    for source_index, action in enumerate(location.actions):
+        rendered_actions.append(_render_action(program, action, location_path=path, source_index=source_index))
+    rendered_children = tuple(render_location(program, child, location_path=path) for child in location.children)
+    root = LocationDef(
+        id=location_id,
+        title=location.title,
+        description=location.description,
+        position=location.position,
         show_clock_ids=shown_clock_ids,
         actions=tuple(item.action for item in rendered_actions),
         children=tuple(child.root for child in rendered_children),
-        conditions=tuple(scene.conditions),
+        conditions=tuple(location.conditions),
     )
-    return RenderedScene(
-        scene_id=scene_key,
+    return RenderedLocation(
+        location_id=location_id,
         root=root,
         shown_clock_ids=shown_clock_ids,
         shown_clocks=shown_clocks,
@@ -319,27 +337,27 @@ def render_scene(program: Any, scene: SceneTemplate, *, scene_path: tuple[str, .
     )
 
 
-def flatten_scene(
-    rendered: RenderedScene,
+def flatten_location(
+    rendered: RenderedLocation,
     *,
     parent_id: str | None,
-    locations_by_id: dict[str, LocationNode],
+    locations_by_id: dict[str, LocationDef],
     parent_by_id: dict[str, str | None],
     actions_by_id: dict[str, ActionDef],
     actions_by_location: dict[str, tuple[str, ...]],
     action_handles_by_id: dict[str, ActionHandle],
-    shown_clock_ids_by_scene: dict[str, tuple[str, ...]],
-    shown_clocks_by_scene: dict[str, tuple[RenderedClock, ...]] | None = None,
+    shown_clock_ids_by_location: dict[str, tuple[str, ...]],
+    shown_clocks_by_location: dict[str, tuple[RenderedClock, ...]] | None = None,
     nested_clocks_by_id: dict[str, RuntimeClockValue] | None = None,
 ) -> None:
     root = rendered.root
-    assert root.id not in locations_by_id, f"Duplicate rendered scene id: {root.id}"
+    assert root.id not in locations_by_id, f"Duplicate location title/id: {root.id}"
     locations_by_id[root.id] = root
     parent_by_id[root.id] = parent_id
     actions_by_location[root.id] = tuple(item.action.id for item in rendered.actions)
-    shown_clock_ids_by_scene[root.id] = rendered.shown_clock_ids
-    if shown_clocks_by_scene is not None:
-        shown_clocks_by_scene[root.id] = rendered.shown_clocks
+    shown_clock_ids_by_location[root.id] = rendered.shown_clock_ids
+    if shown_clocks_by_location is not None:
+        shown_clocks_by_location[root.id] = rendered.shown_clocks
     if nested_clocks_by_id is not None:
         nested_clocks_by_id.update(rendered.nested_clocks)
     for item in rendered.actions:
@@ -347,7 +365,7 @@ def flatten_scene(
         actions_by_id[item.action.id] = item.action
         action_handles_by_id[item.action.id] = item.handle
     for child in rendered.children:
-        flatten_scene(
+        flatten_location(
             child,
             parent_id=root.id,
             locations_by_id=locations_by_id,
@@ -355,20 +373,20 @@ def flatten_scene(
             actions_by_id=actions_by_id,
             actions_by_location=actions_by_location,
             action_handles_by_id=action_handles_by_id,
-            shown_clock_ids_by_scene=shown_clock_ids_by_scene,
-            shown_clocks_by_scene=shown_clocks_by_scene,
+            shown_clock_ids_by_location=shown_clock_ids_by_location,
+            shown_clocks_by_location=shown_clocks_by_location,
             nested_clocks_by_id=nested_clocks_by_id,
         )
 
 
-def _rendered_scene_clocks(program: Any, items: tuple[Any, ...], scene_key: str) -> tuple[tuple[str, ...], tuple[RenderedClock, ...], dict[str, RuntimeClockValue]]:
+def _rendered_location_clocks(program: Any, items: tuple[Any, ...], location_id: str) -> tuple[tuple[str, ...], tuple[RenderedClock, ...], dict[str, RuntimeClockValue]]:
     clock_ids: list[str] = []
     clocks: list[RenderedClock] = []
     nested: dict[str, RuntimeClockValue] = {}
     nested_index = 0
     for item in items:
         if isinstance(item, RuntimeClockValue):
-            clock_id = f"{scene_key}:nested-clock:{nested_index}"
+            clock_id = f"{location_id}:nested-clock:{nested_index}"
             nested_index += 1
             clock_ids.append(clock_id)
             nested[clock_id] = item
@@ -414,8 +432,7 @@ def host_values(*, store_specs: dict[str, StoreFieldSpec], store: dict[str, Any]
         "import-world-item": lambda key, initial=0: [binding_name(key), builtin_world_item(key, initial)],
         "task": SpecialFormProcedure(builtin_task),
         "step": SpecialFormProcedure(builtin_task_step),
-        "node": lambda *args: builtin_scene(args),
-        "scene": lambda *args: builtin_scene(args),
+        "location": lambda *args: builtin_location(args),
         "action": lambda *args: builtin_action(args),
         "reveal": lambda *args: builtin_reveal(args),
         "check": lambda *args: builtin_check(args),
@@ -505,9 +522,9 @@ def builtin_world_item(key: Any, initial: Any = 0) -> StateBindingValue:
     )
 
 
-def builtin_scene(args: tuple[Any, ...]) -> SceneTemplate:
+def builtin_location(args: tuple[Any, ...]) -> LocationTemplate:
     kwargs = keyword_args(list(args), allowed={":title", ":desc", ":position", ":show-clocks", ":conditions", ":actions", ":children"})
-    return SceneTemplate(
+    return LocationTemplate(
         title=keyword_string(kwargs, ":title"),
         description=keyword_string(kwargs, ":desc", default=""),
         position=position_tuple(kwargs.get(":position")),
@@ -1014,9 +1031,11 @@ def keyword_string(kwargs: dict[str, Any], key: str, *, allow_symbol: bool = Fal
     return value
 
 
-def _render_action(program: Any, action: ActionTemplate, *, scene_path: tuple[str, ...], source_index: int) -> RenderedAction:
-    action_key = _hash_key(action.title, scene_path, "action")
-    action_id = f"{program.id}:{'/'.join(scene_path)}:{source_index}:{action_key}"
+def _render_action(program: Any, action: ActionTemplate, *, location_path: tuple[str, ...], source_index: int) -> RenderedAction:
+    assert action.title, "action :title must not be empty"
+    assert "/" not in action.title, f"action :title must not contain '/': {action.title}"
+    action_key = action.title
+    action_id = "/".join(location_path + (action_key,))
     action_def = ActionDef(
         id=action_id,
         title=action.title,
@@ -1030,9 +1049,7 @@ def _render_action(program: Any, action: ActionTemplate, *, scene_path: tuple[st
         reveal=action.reveal,
         button_label=action.button_label,
     )
-    handle = ActionHandle(action_id=action_id, scene_path=scene_path, slot_index=source_index, action_key=action_key)
+    handle = ActionHandle(action_id=action_id, location_path=location_path, slot_index=source_index, action_key=action_key)
     return RenderedAction(handle=handle, action=replace(action_def, id=action_id))
 
 
-def _hash_key(title: str, scene_path: tuple[str, ...], kind: str) -> str:
-    return f"{kind}:{hashlib.sha1((title + '|' + '/'.join(scene_path)).encode('utf-8')).hexdigest()[:10]}"

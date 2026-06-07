@@ -22,7 +22,7 @@
     world-health-vars
     world-energy-vars)
   :root
-  (scene
+  (location
     :title "剧院后巷"
     :desc "（以后这里会播放一段追逐动画：雨水、灯箱、被撞开的侧门。你追上他，手指勾住面具边缘。下一秒，背后传来脚步。）"
     :actions (list

@@ -7,7 +7,7 @@ from typing import Any
 from sincity.encounters.lispy import desugar_define_form, expand_includes, parse_program
 
 _DANGEROUS_HEADS = frozenset({
-    "action", "node", "scene",
+    "action", "location",
     "when", "if", "cond",
     "clock-value", "clock-filled?",
     "world-attr", "world-value", "world-item",

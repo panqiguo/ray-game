@@ -27,7 +27,7 @@
       (factor -1 :when (>= (clock-value yard_guards) 4) :label "4名守卫"))))
 
 (define (hall-scene)
-  (scene
+  (location
     :title "大厅"
     :desc "桌账、茶资和客人落下的钱都在这里。搜刮完成后会推进总完成进度。"
     :position '(260 250)
@@ -58,7 +58,7 @@
           :fail (outcome (list (effect 'clock+ alert 1)) "有人抬头看了你一眼，你只好把手收回来。"))))))
 
 (define (warehouse-scene)
-  (scene
+  (location
     :title "仓库"
     :desc "破茶箱、旧铜管和能卖钱的废料堆在角落。搜刮完成后会推进总完成进度。"
     :position '(560 250)
@@ -89,7 +89,7 @@
           :fail (outcome (list (effect 'clock+ alert 1)) "铁片在箱底刮响，外面有人咳了一声。"))))))
 
 (define (yard-scene)
-  (scene
+  (location
     :title "后院"
     :desc "目标物藏在后院杂物和晾衣绳之间。搜刮完成后会推进总完成进度。"
     :position '(860 250)
@@ -120,7 +120,7 @@
           :fail (outcome (list (effect 'clock+ alert 1)) "后门轴响了一下，你不得不停住。"))))))
 
 (define (teahouse-root)
-  (scene
+  (location
     :title "茶楼三处搜刮"
     :desc "每区 2 名守卫。制造干扰可吸引其他区域的守卫，降低目标区域搜刮难度。"
     :show-clocks (list alert completion)

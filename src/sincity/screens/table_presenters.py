@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sincity.model.defs import ActionDef, InputRequirement, LocationNode
+from sincity.model.defs import ActionDef, InputRequirement, LocationDef
 from sincity.model.enums import ResultType, RISK_LABELS, SUIT_LABELS
 from sincity.model.state import GameState, PendingResolutionState
 from sincity.rules import (
@@ -31,7 +31,7 @@ from .ui_tags import action_corner_labels, location_status_labels
 @dataclass(frozen=True)
 class PresentedLocationCard:
     location_id: str
-    location: LocationNode
+    location: LocationDef
     card: TableCardModel
     position: tuple[int, int] | None = None
 
@@ -115,7 +115,7 @@ def present_location_cards(
 def present_action_cards_for_location(
     state: GameState,
     content,
-    location: LocationNode,
+    location: LocationDef,
 ) -> tuple[PresentedActionCard, ...]:
     return tuple(
         present_action_card(state, content.actions_by_id[action_id])

@@ -21,7 +21,7 @@
 ;;   connect here through chapter vars.
 
 (define (舞台)
-  (node
+  (location
     :title "舞台"
     :desc "排练灯还亮着，空座位像一排排沉默的证人。夜莺站在光里，声音刚刚停下。"
     :show-clocks (list
@@ -37,7 +37,7 @@
             (effect 'start-quick-dialogue nightingale-manager-text)))))))
 
 (define (化妆间)
-  (node
+  (location
     :title "化妆间"
     :desc "镜灯把每一张脸照得太清楚，也把不想承认的疲惫照得无处可藏。"
     :show-clocks (list
@@ -53,7 +53,7 @@
             (effect 'start-quick-dialogue nightingale-letter-room-text)))))))
 
 (define (后台通道)
-  (node
+  (location
     :title "后台通道"
     :desc "道具箱、布景板和不停来回的人。这里的秘密通常被称作流程。"
     :show-clocks (list
@@ -83,7 +83,7 @@
             (effect 'start-quick-dialogue nightingale-stagehand-text)))))))
 
 (define (剧院后巷)
-  (node
+  (location
     :title "剧院后巷"
     :desc "后门外的雨棚还在滴水。第一次追逐留下的痕迹淡了，但送信路线还会回到这里。"
     :actions (list
@@ -99,7 +99,7 @@
             (effect 'start-encounter '拦截第二封威胁信)))))))
 
 (define (坠落灯架)
-  (node
+  (location
     :title "坠落灯架"
     :desc "绳索、灯架和碎木还没被清走。每多待一会儿，剧院的人就越急着把现场恢复成一场可以解释的意外。"
     :show-clocks (list
@@ -127,7 +127,7 @@
             :fail (outcome (list (effect 'add health -1) (effect 'add pressure 1)) "灯架突然下沉半寸，你只能先抽手，血顺着指节往下滴。")))))))
 
 (define (后台道具间)
-  (node
+  (location
     :title "后台道具间"
     :desc "道具箱翻倒，急救箱半开，备用工具散在地上。这里不一定有真相，但有今晚可能用得上的东西。"
     :show-clocks (list
@@ -159,7 +159,7 @@
             :fail (outcome (list (effect 'add pressure 2)) "剧院经理看见你打开工具箱，立刻把事故和盗窃两个词放进同一句话里。")))))))
 
 (define (夜莺)
-  (node
+  (location
     :title "夜莺"
     :desc "剧院的台柱。她站在聚光灯下的时间太久，已经不习惯被人绕开说话。"
     :show-clocks (list
@@ -174,7 +174,7 @@
             (effect 'start-quick-dialogue nightingale-stage-text)))))))
 
 (define (剧院外围)
-  (node
+  (location
     :title "剧院外围 · 警力布防"
     :desc "剧场外的警力多得不正常。带队警官不认识你——不是你叫来的人，有人提前帮他安排好了今晚的位置。"
     :actions (list
@@ -186,7 +186,7 @@
           (effect 'start-quick-dialogue "# 剧院外围\n\n# speaker: 科尔\n封锁线拉得比首演安保标准远了一整条街。便衣散在人群里，位置选得不像在保护入场口，更像在等某个方向的人跑出来。\n\n# speaker: 科尔\n带队警官看了我的证件，没多问。他没说谁安排的布防，但他看我的眼神像在确认我已经到场。\n\n# speaker: 科尔\n他知道我是谁。也知道我今晚在这里。"))))))
 
 (define (贵宾休息室)
-  (node
+  (location
     :title "贵宾休息室"
     :desc "香槟杯在灯下叠成一座透明的小塔。今晚的人不全是为了听歌来的——旧码头改造的剪彩路线图被叠成节目单大小，塞在每个人的口袋里。"
     :actions (list
@@ -198,7 +198,7 @@
           (effect 'start-quick-dialogue "# 贵宾休息室\n\n# speaker: 科尔\n香槟和西装的气味让这里听起来更像一场提前举行的庆功宴。有人在谈论旧码头改造后的房价，有人在确认剪彩名单，没有人提到夜莺的名字。\n\n# speaker: 科尔\n我在角落里看见一个人——他比演出时间提前了整整四十分钟离开休息室。不是去洗手间的方向。\n\n# speaker: 科尔\n我记住他的脸。后来在屋顶上，我又想起这张脸。"))))))
 
 (define (后台·夜莺化妆间)
-  (node
+  (location
     :title "后台 · 夜莺化妆间"
     :desc "夜莺已经换好演出服。镜灯亮着，她在梳妆台前安静得像一张已经拍好的照片。"
     :actions (list
@@ -210,7 +210,7 @@
           (effect 'start-quick-dialogue "# 夜莺的化妆间\n\n# speaker: 科尔\n她没回头，从镜子里看见我进来。\n\n# speaker: 夜莺\n“外面怎么样？”\n\n# speaker: 科尔\n“警察多了一倍。休息室里的人在聊拆迁。有人提前走了。”\n\n# speaker: 科尔\n她把一枚袖扣摘下来，放在桌上。\n\n# speaker: 夜莺\n“那就别太相信第一眼看到的事。”\n\n# speaker: 科尔\n她没解释这句话。她把袖扣推向我。\n\n# speaker: 科尔\n我收下了。后来我才知道，这是她能给出的最接近信任的东西。"))))))
 
 (define (剧院)
-  (node
+  (location
     :title "剧院"
     :desc "城里最像样的剧院。红绒幕布后面站着夜莺，也站着那些想把她和旧码头一起写进海报的人。"
     :position '(860 500)

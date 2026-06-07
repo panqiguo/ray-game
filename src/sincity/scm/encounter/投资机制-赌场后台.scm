@@ -3,7 +3,7 @@
 (include "../common_world_bindings.scm")
 
 (define (bartender-scene)
-  (scene
+  (location
     :title "酒保"
     :desc "酒保知道后台谁在抽水，也知道什么话不能在牌桌边说。"
     :show-clocks (list bartender)
@@ -21,7 +21,7 @@
             :fail (outcome (list (effect 'clock+ presence 1)) "你问得太直，目标人物抬头看了一眼。")))))))
 
 (define (backstage-scene)
-  (scene
+  (location
     :title "后台"
     :desc "有人把输掉的公道藏在账本背面，也有人把筹码藏在袖口里。"
     :show-clocks (list backstage)
@@ -39,7 +39,7 @@
             :fail (outcome (list (effect 'clock+ presence 2)) "后台有人咳了一声，你只能先把手收回来。")))))))
 
 (define (rule-scene)
-  (scene
+  (location
     :title "赌局规则"
     :desc "这张桌子不是公平的，但不公平也有规则。看懂规则，才能反过来用它。"
     :show-clocks (list rule)
@@ -57,7 +57,7 @@
             :fail (outcome (list (effect 'clock+ presence 1)) "庄家的手势换了，你刚建立的判断又散掉。")))))))
 
 (define (table-scene)
-  (scene
+  (location
     :title "赌桌"
     :desc "目标人物还在场。你有多少准备，就能把多少运气从桌上抢回来。"
     :show-clocks (list tokens presence)
@@ -83,7 +83,7 @@
             :fail (outcome (list (effect 'clock- tokens 1)) "你判断错了暗号，但至少知道错在哪里。")))))))
 
 (define (casino-root)
-  (scene
+  (location
     :title "赌场后台 · 替人讨回公道"
     :desc "有人在这张桌上被做掉了最后一笔救命钱。你要把代币赢回 8 枚，在目标人物离场前。"
     :show-clocks (list tokens presence)

@@ -92,7 +92,7 @@
 
 (define enemy-scene
   (lambda (enemy)
-    (scene
+    (location
       :title (enemy-title enemy)
       :desc (enemy-desc enemy)
       :show-clocks (list (enemy-life enemy) (enemy-attack enemy))
@@ -117,7 +117,7 @@
             :fail (outcome (list (effect 'add energy -1)) "你扑空了，他的反击立刻追上来。")))))))
 
 (define (exit-scene)
-  (scene
+  (location
     :title "被堵塞的出口"
     :desc (if (some enemies (lambda (enemy) (= (enemy-kind enemy) 'gun)))
       "枪手压住了出口。你可以硬推，但风险会变得难看。"
@@ -135,7 +135,7 @@
           :fail (outcome (list (effect 'add energy -1)) "你被压回仓库深处。"))))))
 
 (define (warehouse-root)
-  (scene
+  (location
     :title "仓库撤退"
     :desc "敌人会一波波涌进来。你不可能把所有人都处理干净，关键是判断什么时候该忍伤推进。"
     :show-clocks (list spawn exit)

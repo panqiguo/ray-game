@@ -100,7 +100,7 @@
         (effect-reset-clock office_performance_rank2)))))
 
 (define (大厦)
-  (node
+  (location
     :title "大厦"
     :desc (office-desc)
     :position '(1270 280)

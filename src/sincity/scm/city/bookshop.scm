@@ -53,7 +53,7 @@
         (effect 'start-quick-dialogue book-force-text)))))
 
 (define (书店)
-  (node
+  (location
     :title "书店"
     :desc "书店很小，座位更少。老板不喜欢闲逛的人，但喜欢付过钱后安静的人。"
     :position '(860 280)

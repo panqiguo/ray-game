@@ -3,7 +3,7 @@
 (include "../common_world_bindings.scm")
 
 (define (chaos-scene)
-  (scene
+  (location
     :title "混乱"
     :desc
       (if (= guard_state "checking")
@@ -23,7 +23,7 @@
           :fail (outcome (list) "你没找到机会。再等等。"))))))
 
 (define (ledger-scene)
-  (scene
+  (location
     :title "账本"
     :desc
       (cond
@@ -54,7 +54,7 @@
           :fail (outcome (list (effect 'clock+ exposure 1)) "你刚翻开账本，就听见有人往回走。"))))))
 
 (define (law-root)
-  (scene
+  (location
     :title "律师事务所 · 混乱与暴露"
     :desc "守门人的注意力就是你的资源。制造混乱引开他，趁窗口期翻账本。"
     :show-clocks (list exposure ledger (when (= guard_state "checking") guard_check))

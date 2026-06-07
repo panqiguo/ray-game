@@ -139,22 +139,22 @@
       (var 'clue_wire false)))
   :root (cond
     ((= chase_phase 'side_stage)
-      (scene
+      (location
         :title "舞台侧幕"
         :desc "枪响的余震还在耳膜里。舞台灯灭了，应急灯把幕布照成惨白。一个黑影蹲在舞台边缘——看见你就窜了出去。"
         :actions (list (side-stage-a) (side-stage-b))))
     ((= chase_phase 'backstage)
-      (scene
+      (location
         :title "后台走廊"
         :desc "应急灯把走廊切成一段一段的。那个人的影子在尽头一闪。你追到拐角——他不见了，但下一扇门的把手还在晃。"
         :actions (list (backstage-a) (backstage-b))))
     ((= chase_phase 'storage)
-      (scene
+      (location
         :title "道具仓库"
         :desc "货架之间堆着废弃布景和旧道具。他终于停下来了，在翻找什么。灯光从高窗漏进来，把他的影子切成很多块。"
         :actions (list (storage-a) (storage-b))))
     ((= chase_phase 'roof)
-      (scene
+      (location
         :title "天台边缘"
         :desc "夜风很大。他就站在栏杆边，背对着你。楼下警车灯光旋转，把整条街照成白昼。他已经无路可走了。"
         :actions (list (roof-a) (roof-b))))))

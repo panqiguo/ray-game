@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TypeAlias
 
-from sincity.model.defs import ActionDef, CheckDef, CheckFactorDef, Effect, InputRequirement, LocationNode, OutcomeDef, ProgressClockSpec
+from sincity.model.defs import ActionDef, CheckDef, CheckFactorDef, Effect, InputRequirement, LocationDef, OutcomeDef, ProgressClockSpec
 
 
 @dataclass(frozen=True)
@@ -111,7 +111,7 @@ class CompiledEncounterProgram:
 @dataclass(frozen=True)
 class ActionHandle:
     action_id: str
-    scene_path: tuple[str, ...]
+    location_path: tuple[str, ...]
     slot_index: int
     action_key: str
 
@@ -132,36 +132,36 @@ class RenderedClock:
 
 
 @dataclass(frozen=True)
-class RenderedScene:
-    scene_id: str
-    root: LocationNode
+class RenderedLocation:
+    location_id: str
+    root: LocationDef
     shown_clock_ids: tuple[str, ...]
     shown_clocks: tuple[RenderedClock, ...]
     nested_clocks: dict[str, RuntimeClockValue]
     actions: tuple[RenderedAction, ...]
-    children: tuple["RenderedScene", ...]
+    children: tuple["RenderedLocation", ...]
 
 
 @dataclass(frozen=True)
 class RenderedEncounter:
     title: str
     description: str
-    root: RenderedScene
-    locations_by_id: dict[str, LocationNode]
+    root: RenderedLocation
+    locations_by_id: dict[str, LocationDef]
     parent_by_id: dict[str, str | None]
     actions_by_id: dict[str, ActionDef]
     actions_by_location: dict[str, tuple[str, ...]]
     action_handles_by_id: dict[str, ActionHandle]
-    shown_clock_ids_by_scene: dict[str, tuple[str, ...]]
-    shown_clocks_by_scene: dict[str, tuple[RenderedClock, ...]]
+    shown_clock_ids_by_location: dict[str, tuple[str, ...]]
+    shown_clocks_by_location: dict[str, tuple[RenderedClock, ...]]
     nested_clocks_by_id: dict[str, RuntimeClockValue]
 
     @property
     def root_location_id(self) -> str:
-        return self.root.root.id
+        return self.root.location_id
 
     @property
-    def root_location(self) -> LocationNode:
+    def root_location(self) -> LocationDef:
         return self.root.root
 
     @property
@@ -215,14 +215,14 @@ class ActionTemplate:
 
 
 @dataclass(frozen=True)
-class SceneTemplate:
+class LocationTemplate:
     title: str
     description: str
     position: tuple[int, int] | None = None
     shown_clock_ids: tuple[Any, ...] = ()
     conditions: tuple[Any, ...] = ()
     actions: tuple[ActionTemplate, ...] = ()
-    children: tuple["SceneTemplate", ...] = ()
+    children: tuple["LocationTemplate", ...] = ()
 
 
 @dataclass(frozen=True)

@@ -113,6 +113,9 @@ def _validate_effect(item: Effect, *, context: str) -> None:
 def _validate_input(item: InputRequirement) -> None:
     assert item.kind in {"card", "item"}, f"Unknown input kind: {item.kind}"
     assert item.amount >= 1, f"Input amount must be >= 1: {item}"
+    if item.kind == "item":
+        from sincity.model.items import ITEMS
+        assert item.key in ITEMS, f"Unknown item key in input: {item.key}"
 
 
 def _validate_action(action: ActionDef, *, context: str) -> None:

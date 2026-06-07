@@ -6,7 +6,7 @@ from pyray import *  # type: ignore
 
 from sincity.constants import MAX_LOG_LINES
 from sincity.content import ACTOR_STATUS_DEFS, CARD_DEFS, GROWTH_DEFS
-from sincity.labels import ITEM_LABELS
+from sincity.model.items import ITEMS
 from sincity.model.defs import ActionDef, InputRequirement
 from sincity.model.enums import ResultType, SUIT_LABELS, ScreenName
 from sincity.model.state import GameState
@@ -562,7 +562,8 @@ def _inventory_slots(state: GameState) -> list[tuple[str, str, str, int]]:
     slots: list[tuple[str, str, str, int]] = []
     for key in sorted(state.world.seen_items):
         amount = state.world.inventory.get(key, 0)
-        label = ITEM_LABELS.get(key, key)
+        item = ITEMS.get(key)
+        label = item.name if item else key
         slots.append(("item", key, label, amount))
     return slots
 

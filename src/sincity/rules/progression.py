@@ -2042,12 +2042,6 @@ def _describe_effects(effects: tuple[Effect, ...], action_id: str, state: GameSt
     return tuple(deduped[:4])
 
 
-def _item_label(item_id: str) -> str:
-    from sincity.labels import ITEM_LABELS
-
-    return ITEM_LABELS.get(item_id, item_id)
-
-
 def _field_label(field_id: str) -> str:
     if field_id == "health":
         return "生命"
@@ -2069,7 +2063,9 @@ def _field_label(field_id: str) -> str:
         return "知识"
     if field_id == "sense":
         return "敏锐"
-    return _item_label(field_id)
+    from sincity.model.items import ITEMS
+    item = ITEMS.get(field_id)
+    return item.name if item else field_id
 
 
 def claim_growth(state: GameState, growth_id: str) -> None:

@@ -60,6 +60,14 @@ class InputRequirement:
 
 
 @dataclass(frozen=True)
+class ItemDef:
+    key: str
+    name: str
+    type: str
+    description: str = ""
+
+
+@dataclass(frozen=True)
 class CardDef:
     id: str
     title: str

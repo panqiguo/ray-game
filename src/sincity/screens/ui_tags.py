@@ -4,7 +4,7 @@ import math
 
 from pyray import *  # type: ignore
 
-from sincity.labels import ITEM_LABELS
+from sincity.model.items import ITEMS
 from sincity.model.defs import ActionDef, InputRequirement
 from sincity.model.state import GameState
 from sincity.rendering import draw_text
@@ -183,11 +183,13 @@ def condition_labels(conditions, state: GameState | None = None) -> tuple[str, .
         if item.kind == "has_item" and isinstance(item.value, str):
             key, _, raw_amount = item.value.partition(":")
             amount = int(raw_amount) if raw_amount else 1
-            title = ITEM_LABELS.get(key, key)
+            found = ITEMS.get(key)
+            title = found.name if found else key
             labels.append(f"需要 {title}" if amount == 1 else f"需要 {title} x{amount}")
         elif item.kind == "field_at_least" and isinstance(item.value, str):
             key, raw = item.value.split(":", 1)
-            title = ITEM_LABELS.get(key, key)
+            found = ITEMS.get(key)
+            title = found.name if found else key
             labels.append(f"需要 {title} {raw}")
     return tuple(labels)
 
@@ -196,7 +198,9 @@ def requirement_labels(requirements: tuple[InputRequirement, ...]) -> tuple[str,
     labels: list[str] = []
     for requirement in requirements:
         if requirement.kind == "item" and not requirement.consume:
-            labels.append(f"需要 {requirement.label or ITEM_LABELS.get(requirement.key, requirement.key)}")
+            found = ITEMS.get(requirement.key)
+            label = requirement.label or (found.name if found else requirement.key)
+            labels.append(f"需要 {label}")
     return tuple(labels)
 
 

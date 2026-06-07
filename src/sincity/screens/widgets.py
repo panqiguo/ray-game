@@ -51,7 +51,7 @@ from .ui_panels import (
     draw_selected_card_curve_overlay,
 )
 from .ui_tags import (
-    ITEM_LABELS,
+    ITEMS,
     action_corner_labels,
     condition_labels,
     draw_action_corner_clocks,
@@ -67,7 +67,7 @@ from .ui_tags import (
 __all__ = [
     "ACTION_CARD",
     "InputRegion",
-    "ITEM_LABELS",
+    "ITEMS",
     "StageLayout",
     "TABLE_CARD",
     "TableCardStyle",

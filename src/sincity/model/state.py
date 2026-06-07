@@ -123,7 +123,7 @@ class PendingResolutionState:
     completion_kind: str = ""
     reveal_title: str = ""
     reveal_text: str = ""
-    reveal_duration: float = 4.0
+    reveal_duration: float = 0.0
     progress: float = 0.0
     settled: bool = False
 
@@ -185,7 +185,7 @@ class ActiveActionRevealState:
     title: str
     text: str
     elapsed: float = 0.0
-    duration: float = 4.0
+    duration: float = 0.0
 
 
 @dataclass

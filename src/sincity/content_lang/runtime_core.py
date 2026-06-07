@@ -558,10 +558,10 @@ def builtin_location(args: tuple[Any, ...]) -> LocationTemplate:
 def builtin_reveal(args: tuple[Any, ...]) -> ActionRevealDef:
     kwargs = keyword_args(list(args), allowed={":text", ":duration", ":title"})
     text = keyword_string(kwargs, ":text")
-    duration = float(unwrap(kwargs.get(":duration", 3.0)))
+    duration = float(unwrap(kwargs.get(":duration", 0.0)))
     title = keyword_string(kwargs, ":title", default="")
     assert text.strip(), ":reveal :text must not be empty"
-    assert duration > 0, ":reveal :duration must be positive"
+    assert duration >= 0, ":reveal :duration must be non-negative"
     return ActionRevealDef(text=text, duration=duration, title=title)
 
 
@@ -1103,4 +1103,3 @@ def _render_action(program: Any, action: ActionTemplate, *, location_path: tuple
     )
     handle = ActionHandle(action_id=action_id, location_path=location_path, slot_index=source_index, action_key=action_key)
     return RenderedAction(handle=handle, action=replace(action_def, id=action_id))
-

@@ -7,6 +7,7 @@ from sincity.model.state import ActiveActionRevealState, GameState, PendingResol
 from sincity.rendering import draw_text
 from sincity.rules.judgment import RESULT_TABLE, clamp_action_value
 from sincity.rules import (
+    clear_action_reveal,
     clear_assembly,
     clear_selected_input,
     focus_action,
@@ -239,6 +240,12 @@ def draw_action_card(font: Font | None, state: GameState, presented: PresentedAc
             register_input_region("action_retract_button", retract_rect, z=button_z)
             register_input_region("action_execute_button", execute_rect, z=button_z, interactive=presented.attachment.can_execute)
             button_rects = (retract_rect, execute_rect)
+    elif is_revealing:
+        btn_w = 78.0 * scale
+        btn_h = 22.0 * scale
+        reveal_close_rect = Rectangle(rect.x + (rect.width - btn_w) * 0.5, rect.y + rect.height - 32.0 * scale, btn_w, btn_h)
+        register_input_region("action_reveal_close_button", reveal_close_rect, z=button_z)
+        button_rects = (reveal_close_rect,)
 
     metadata_rows = max(0, len(presented.card.metadata) - 1)
     slot_y = rect.y + (124.0 + metadata_rows * 18.0) * scale
@@ -258,9 +265,15 @@ def draw_action_card(font: Font | None, state: GameState, presented: PresentedAc
 
     if presented.attachment is not None:
         if is_revealing:
-            reveal_attachment_h = 14.0 * scale
-            preview_rect = Rectangle(rect.x + 2.0 * scale, rect.y + rect.height - reveal_attachment_h, rect.width - 4.0 * scale, reveal_attachment_h)
-            draw_reveal_progress_bar(font, preview_rect, state.action_reveal, scale=scale)
+            assert button_rects is not None
+            reveal_close_rect = button_rects[0]
+            if pill(font, reveal_close_rect, "收起", False, scale=scale, z=button_z):
+                    clear_action_reveal(state)
+                    return
+            reveal_attachment_h = 14.0 * scale if state.action_reveal is not None and state.action_reveal.duration > 0 else 0.0
+            if reveal_attachment_h > 0:
+                preview_rect = Rectangle(rect.x + 2.0 * scale, rect.y + rect.height - reveal_attachment_h, rect.width - 4.0 * scale, reveal_attachment_h)
+                draw_reveal_progress_bar(font, preview_rect, state.action_reveal, scale=scale)
         elif is_direct:
             execute_rect = button_rects[0]
             default_label = "查看" if action.reveal is not None else "执行"

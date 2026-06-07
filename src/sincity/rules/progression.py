@@ -1205,6 +1205,8 @@ def advance_action_reveal(state: GameState, dt: float) -> None:
     reveal = state.action_reveal
     if reveal is None:
         return
+    if reveal.duration <= 0:
+        return
     reveal.elapsed += dt
     if reveal.elapsed >= reveal.duration:
         clear_action_reveal(state)

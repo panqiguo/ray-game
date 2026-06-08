@@ -7,7 +7,7 @@ from sincity.model.defs import AddFieldPayload, DynamicValue, Effect, FieldRef, 
 from sincity.model.enums import ScreenName
 from sincity.model.state import GameState
 from sincity.model.items import ITEMS
-from sincity.rules.rng import RandomSource
+from sincity.game.rng import RandomSource
 
 from sincity.game.fields import field_value
 

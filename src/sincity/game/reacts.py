@@ -5,7 +5,7 @@ from sincity.content.runtime import evaluate_world_react_effects, next_react_rul
 from sincity.encounters import MAX_REACT_STEPS, evaluate_react_rules, evaluate_reaction_die, next_react_rule, react_rule_matches
 from sincity.model.enums import ScreenName
 from sincity.model.state import GameState
-from sincity.rules.rng import RandomSource
+from sincity.game.rng import RandomSource
 
 from sincity.game.effects import apply_effects
 
@@ -17,7 +17,7 @@ def _push_log(state: GameState, text: str) -> None:
 
 
 def _push_notification(state: GameState, kind: str, title: str, body: str) -> None:
-    from sincity.rules.notifications import push_notification
+    from sincity.game.notifications import push_notification
     push_notification(state, kind, title, body)
 
 

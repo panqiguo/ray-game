@@ -11,8 +11,8 @@ from sincity.model.defs import ActionDef, InputRequirement
 from sincity.model.enums import ResultType, SUIT_LABELS, ScreenName
 from sincity.model.state import GameState
 from sincity.rendering import draw_text
-from sincity.rules.deck import list_all_spirit_slots
-from sincity.rules.rng import RandomSource
+from sincity.game.deck import list_all_spirit_slots
+from sincity.game.rng import RandomSource
 
 from sincity.game.fields import pressure_recovery_threshold
 from sincity.game.notifications import push_notification

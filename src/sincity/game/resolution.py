@@ -5,7 +5,7 @@ from sincity.model.enums import ScreenName
 from sincity.model.state import ActionResolution
 from sincity.model.enums import ResultType
 from sincity.model.state import GameState, PendingResolutionState, ActiveActionRevealState
-from sincity.rules.rng import RandomSource
+from sincity.game.rng import RandomSource
 
 from sincity.game.actions import clear_action_reveal, clear_assembly, clear_selected_input, current_action, action_ready_to_execute, action_requires_energy_slot
 from sincity.game.effects import apply_effects, describe_effects

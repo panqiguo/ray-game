@@ -7,7 +7,7 @@ import pickle
 from sincity.model.state import GameState, RenderCacheState
 from sincity.game.fields import _mark_content_dirty
 from sincity.game.queries import sync_world_progress_clocks
-from sincity.rules.rng import RandomSource
+from sincity.game.rng import RandomSource
 
 SLOT_NAMES: dict[int, str] = {
     1: "quick_save.pkl",

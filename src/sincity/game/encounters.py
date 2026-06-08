@@ -4,7 +4,7 @@ from sincity.encounters import evaluate_fail_effects, evaluate_success_effects, 
 from sincity.encounters.defs import CompiledEncounterProgram
 from sincity.model.enums import ScreenName
 from sincity.model.state import ActiveEncounterState, GameState
-from sincity.rules.rng import RandomSource
+from sincity.game.rng import RandomSource
 
 from sincity.game.actions import clear_assembly, clear_selected_input
 from sincity.game.effects import apply_effects
@@ -18,7 +18,7 @@ def _push_log(state: GameState, text: str) -> None:
 
 
 def _push_notification(state: GameState, kind: str, title: str, body: str) -> None:
-    from sincity.rules.notifications import push_notification
+    from sincity.game.notifications import push_notification
     push_notification(state, kind, title, body)
 
 

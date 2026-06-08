@@ -15,7 +15,7 @@ from sincity.model.state import (
 from sincity.game.queries import get_action_for_state
 from sincity.model.defs import CheckValuePart, CheckValueBreakdown
 
-from sincity.rules.deck import list_spirit_slots
+from sincity.game.deck import list_spirit_slots
 
 
 # ── Internal helpers needed by other game modules ─────────────────

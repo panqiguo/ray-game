@@ -10,8 +10,8 @@ from sincity.constants import HAND_SIZE
 from sincity.content import ACTOR_STATUS_DEFS, INITIAL_COMPANION_ID, PARTY_ACTOR_DEFS, PLAYER_ACTOR_ID, SCENARIO, build_initial_party
 from sincity.model.enums import ScreenName
 from sincity.model.state import AttributeState, GameState, ProgressClockState, WorldState
-from sincity.rules.deck import make_starting_deck, start_city_day
-from sincity.rules.rng import RandomSource
+from sincity.game.deck import make_starting_deck, start_city_day
+from sincity.game.rng import RandomSource
 
 
 def start_new_run(seed: int) -> tuple[GameState, RandomSource]:
@@ -80,7 +80,7 @@ def _reset_action_cycle_from_deck(state: GameState) -> None:
 
 def _refresh_cards_after_party_change(state: GameState, rng: RandomSource | None = None) -> None:
     if rng is None:
-        from sincity.rules.rng import RandomSource as _RS
+        from sincity.game.rng import RandomSource as _RS
         rng = _RS(state.seed)
     from sincity.game.actions import clear_assembly, clear_selected_input
     from sincity.game.clocks import reset_hand

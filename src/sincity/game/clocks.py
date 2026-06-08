@@ -5,7 +5,7 @@ from sincity.content.runtime import evaluate_world_cycle_start_effects
 from sincity.encounters import evaluate_cycle_start_effects
 from sincity.model.enums import ScreenName
 from sincity.model.state import GameState
-from sincity.rules.rng import RandomSource
+from sincity.game.rng import RandomSource
 
 from sincity.game.actions import clear_assembly, clear_selected_input
 from sincity.game.effects import apply_effects
@@ -13,7 +13,7 @@ from sincity.game.fields import _mark_content_dirty, _push_log, change_actor_pre
 
 
 def advance_clock(state: GameState, clock_id: str, amount: int = 1, extra_lines: list[str] | None = None) -> None:
-    from sincity.rules.rng import RandomSource
+    from sincity.game.rng import RandomSource
     spec = SCENARIO.clocks_by_id[clock_id]
     clock_state = state.world.progress_clocks[clock_id]
     before = clock_state.value
@@ -56,7 +56,7 @@ def shift_clock(state: GameState, clock_id: str, amount: int, extra_lines: list[
 
 def reset_hand(state: GameState, rng: RandomSource) -> None:
     from sincity.content import ACTOR_STATUS_DEFS
-    from sincity.rules.deck import refresh_spirit_slots
+    from sincity.game.deck import refresh_spirit_slots
     from sincity.game.session import _active_card_actors, _reset_action_cycle_from_deck
     refresh_spirit_slots(state.deck, rng, actors=_active_card_actors(state), screen=state.screen, status_defs=ACTOR_STATUS_DEFS)
     _reset_action_cycle_from_deck(state)

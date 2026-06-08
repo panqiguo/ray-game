@@ -6,7 +6,7 @@ import traceback
 from sincity.content.city_1 import SCENARIO, build_city_1, replace_city_1
 from sincity.content.validate import validate_content
 from sincity.encounters import get_encounter, initial_store
-from sincity.rules.notifications import push_notification
+from sincity.game.notifications import push_notification
 from sincity.encounters.defs import EncounterCompileError
 from sincity.encounters.registry import ENCOUNTERS_BY_ID, load_encounters, replace_encounters
 from sincity.encounters.lispy import module_dependency_paths

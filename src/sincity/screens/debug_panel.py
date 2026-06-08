@@ -7,9 +7,9 @@ from pyray import *  # type: ignore
 
 from sincity.model.state import GameState
 from sincity.rendering import draw_text
-from sincity.rules.debug_save import debug_load, debug_save, slot_path
-from sincity.rules.progression import add_next_companion_for_debug, remove_companions_for_debug
-from sincity.rules.rng import RandomSource
+from sincity.game.debug_save import debug_load, debug_save, slot_path
+from sincity.game.session import add_next_companion_for_debug, remove_companions_for_debug
+from sincity.game.rng import RandomSource
 
 from sincity.game.fields import change_energy, change_health
 from sincity.game.notifications import push_notification

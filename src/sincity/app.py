@@ -14,6 +14,16 @@ from sincity.content.hot_reload import HOT_RELOADER
 from sincity.dialogue_compile import compile_dialogues
 from sincity.content.validate import validate_content
 from sincity.rendering import configure_gui_theme, draw_text, load_ui_font, unload_ui_font
+from sincity.game.events import (
+    ActionStarted,
+    DialogueFastForwarded,
+    DialogueStarted,
+    EncounterStarted,
+    GameEnded,
+    GameEvent,
+    ResolutionSettled,
+    drain_pending_events,
+)
 from sincity.game.notifications import advance_notifications
 from sincity.game.session import start_new_run
 from sincity.game.resolution import advance_action_reveal, advance_pending_resolution
@@ -34,6 +44,7 @@ class GameApp:
         self.rng = None
         self.ui_font = None
         self.should_exit = False
+        self.last_frame_events: list[GameEvent] = []
 
     def start(self) -> None:
         configure_gui_theme()
@@ -64,6 +75,26 @@ class GameApp:
         advance_pending_resolution(self.state, self.rng, get_frame_time())
         advance_action_reveal(self.state, get_frame_time())
         advance_notifications(self.state, get_frame_time())
+        self._consume_pending_events()
+
+    def _consume_pending_events(self) -> None:
+        events = drain_pending_events(self.state)
+        self.last_frame_events = events
+        for event in events:
+            match event:
+                case ActionStarted():
+                    pass
+                case ResolutionSettled():
+                    pass
+                case DialogueStarted():
+                    pass
+                case EncounterStarted():
+                    pass
+                case GameEnded():
+                    pass
+                case DialogueFastForwarded():
+                    # 通常由 screen 在同帧输入处理中即时 consume；这里兜底消费残留事件。
+                    pass
 
     def restart_process(self) -> None:
         os.execv(sys.executable, [sys.executable, *sys.argv])

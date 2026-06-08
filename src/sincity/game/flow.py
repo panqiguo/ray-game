@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sincity.model.enums import ScreenName
 from sincity.model.state import GameState
-from sincity.rules.rng import RandomSource
+from sincity.game.rng import RandomSource
 
 from sincity.game.commands import (
     AdvanceCycle,
@@ -29,7 +29,6 @@ from sincity.game.events import (
     DialogueStarted,
     EncounterStarted,
     GameEnded,
-    GameEvent,
 )
 from sincity.game.actions import open_action, select_card_input, close_modal
 from sincity.game.dialogues import (
@@ -45,11 +44,9 @@ from sincity.game.clocks import advance_cycle
 from sincity.game.encounters import endure_pressure_during_encounter
 
 
-def dispatch(state: GameState, command: GameCommand, rng: RandomSource | None = None) -> tuple[GameEvent, ...]:
+def dispatch(state: GameState, command: GameCommand, rng: RandomSource | None = None) -> None:
     if rng is None:
         rng = RandomSource(state.seed)
-
-    events: list[GameEvent] = []
 
     screen_before = state.screen
     encounter_before = state.active_encounter
@@ -66,7 +63,7 @@ def dispatch(state: GameState, command: GameCommand, rng: RandomSource | None = 
             perform_current_action(state, rng)
             pending = state.pending_resolution
             if pending is not None:
-                events.append(ActionStarted(
+                state.pending_events.append(ActionStarted(
                     action_id=pending.resolution.action_id,
                     result=pending.resolution.result,
                 ))
@@ -82,11 +79,11 @@ def dispatch(state: GameState, command: GameCommand, rng: RandomSource | None = 
 
         case StartDialogue(dialogue_id):
             start_dialogue(state, dialogue_id)
-            events.append(DialogueStarted(dialogue_id))
+            state.pending_events.append(DialogueStarted(dialogue_id))
 
         case StartQuickDialogue(dialogue_id):
             start_quick_dialogue(state, dialogue_id)
-            events.append(DialogueStarted(dialogue_id))
+            state.pending_events.append(DialogueStarted(dialogue_id))
 
         case SelectCardInput(slot_id, slot_index):
             select_card_input(state, slot_id, slot_index)
@@ -115,7 +112,7 @@ def dispatch(state: GameState, command: GameCommand, rng: RandomSource | None = 
 
         case FastForwardDialogue():
             if fast_forward_dialogue(state):
-                events.append(DialogueFastForwarded())
+                state.pending_events.append(DialogueFastForwarded())
 
         case AdvanceCycle():
             advance_cycle(state, rng)
@@ -123,10 +120,7 @@ def dispatch(state: GameState, command: GameCommand, rng: RandomSource | None = 
         case EndurePressure():
             endure_pressure_during_encounter(state, rng)
 
-    # 检测状态转换以构造事件
     if state.active_encounter is not None and encounter_before is None:
-        events.append(EncounterStarted(state.active_encounter.encounter_id))
+        state.pending_events.append(EncounterStarted(state.active_encounter.encounter_id))
     if state.screen == ScreenName.ENDING and screen_before != ScreenName.ENDING:
-        events.append(GameEnded(state.ending_id))
-
-    return tuple(events)
+        state.pending_events.append(GameEnded(state.ending_id))

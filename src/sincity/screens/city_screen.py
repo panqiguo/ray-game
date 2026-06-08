@@ -6,7 +6,7 @@ from sincity.content import GROWTH_DEFS
 from sincity.model.state import GameState
 from sincity.game.flow import dispatch
 from sincity.game.commands import CloseModal, DismissPendingResolution, FastForwardDialogue
-from sincity.game.events import DialogueFastForwarded
+from sincity.game.events import DialogueFastForwarded, consume_event
 from sincity.game.actions import current_action
 from sincity.game.queries import current_world_snapshot
 from sincity.game.conditions import location_is_visible
@@ -46,8 +46,8 @@ def draw_city_screen(font: Font | None, state: GameState, rng) -> None:
         dispatch(state, DismissPendingResolution(), rng)
     resolving = state.pending_resolution is not None and not state.pending_resolution.settled
     if is_key_pressed(KEY_ESCAPE) and not resolving:
-        events = dispatch(state, FastForwardDialogue(), rng)
-        if not any(isinstance(e, DialogueFastForwarded) for e in events):
+        dispatch(state, FastForwardDialogue(), rng)
+        if not consume_event(state, DialogueFastForwarded):
             dispatch(state, CloseModal(), rng)
     page = layout()
     table_rect, message_rect = split_desktop_area(page.stage)

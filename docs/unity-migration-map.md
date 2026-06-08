@@ -1,97 +1,102 @@
-# Python 到 Unity 的迁移对照
+# Unity Migration Map
 
-## 目标
+本文基于当前**已经完成重构后的 Python 结构**，说明未来迁移到 Unity 时，每一层应如何对应。
 
-这份文档描述当前 Python 工程中每一层未来在 Unity/C# 中的对应位置。
-
-迁移时不要把 Python 目录机械翻译成 C# 目录，而应该按职责迁移。
+重点不是逐文件机械翻译，而是保持语义边界：
 
 ```text
-Python 当前结构       -> Unity 目标结构
-------------------------------------------
-model                -> Core/Model
-content + encounters -> Content/Runtime
-rules                -> Core/Rules
-screens presenters   -> Presentation/ViewModels
-screens widgets      -> Presentation/UI
-app                  -> Application
-scm / ink            -> GameContent
+内容是内容。
+状态是状态。
+规则是规则。
+表现是表现。
 ```
 
-## 总体映射
+---
+
+## 1. 迁移总原则
+
+当前 Python 工程已经具备清晰边界：
+
+```text
+model/          权威数据
+content/        内容运行时
+game/           游戏核心逻辑
+presentation/   ViewModel / presenter
+screens/        Raylib UI
+app.py          应用入口
+```
+
+Unity 迁移时应保持同样的层次：
+
+```text
+Python                  -> Unity
+---------------------------------------------
+model/                  -> Core/Model
+content/ + content_lang -> Content/Runtime
+encounters/             -> Content/EncounterRuntime
+dialogues/              -> Content/DialogueRuntime
+game/                   -> Core/Rules + Application
+presentation/           -> Presentation/ViewModels
+screens/                -> Presentation/UI + Scene logic
+app.py                  -> Application/GameController
+scm + ink assets        -> GameContent
+```
+
+不要再以 `rules/progression.py` 作为迁移中心。  
+那个过渡层已经删除，未来 Unity 应以 `game/` 作为直接参考对象。
+
+---
+
+## 2. 总体映射图
 
 ```text
 Python
-┌──────────────────────────────────────────┐
-│ app.py                                   │
-├──────────────────────────────────────────┤
-│ screens/                                 │
-├──────────────────────────────────────────┤
-│ screens/*presenters.py                   │
-├──────────────────────────────────────────┤
-│ rules/                                   │
-├──────────────────────────────────────────┤
-│ content/ + content_lang/ + encounters/   │
-├──────────────────────────────────────────┤
-│ model/                                   │
-├──────────────────────────────────────────┤
-│ scm/ + dialogues/assets/                 │
-└──────────────────────────────────────────┘
+┌────────────────────────────────────────────┐
+│ app.py                                     │
+├────────────────────────────────────────────┤
+│ screens/                                   │
+├────────────────────────────────────────────┤
+│ presentation/                              │
+├────────────────────────────────────────────┤
+│ game/                                      │
+├────────────────────────────────────────────┤
+│ content/ + content_lang/ + encounters/     │
+│ + dialogues/                               │
+├────────────────────────────────────────────┤
+│ model/                                     │
+├────────────────────────────────────────────┤
+│ scm/ + dialogues/assets/                   │
+└────────────────────────────────────────────┘
 
 Unity
-┌──────────────────────────────────────────┐
-│ Application/                             │
-├──────────────────────────────────────────┤
-│ Presentation/UI + Scene + Sequences      │
-├──────────────────────────────────────────┤
-│ Presentation/ViewModels                  │
-├──────────────────────────────────────────┤
-│ Core/Rules                               │
-├──────────────────────────────────────────┤
-│ Content/Runtime                          │
-├──────────────────────────────────────────┤
-│ Core/Model                               │
-├──────────────────────────────────────────┤
-│ GameContent/Scm + Dialogues + Assets     │
-└──────────────────────────────────────────┘
+┌────────────────────────────────────────────┐
+│ Application/                               │
+├────────────────────────────────────────────┤
+│ Presentation/UI + Scene + Sequences        │
+├────────────────────────────────────────────┤
+│ Presentation/ViewModels                    │
+├────────────────────────────────────────────┤
+│ Core/Rules                                 │
+├────────────────────────────────────────────┤
+│ Content/Runtime                            │
+├────────────────────────────────────────────┤
+│ Core/Model                                 │
+├────────────────────────────────────────────┤
+│ GameContent/Scm + Dialogues + Assets       │
+└────────────────────────────────────────────┘
 ```
 
-## GameContent
+---
 
-来自 Python：
+## 3. `model/` -> `Core/Model`
 
-```text
-src/sincity/scm/
-src/sincity/dialogues/assets/
-src/sincity/assets/
-```
-
-Unity 目标：
+Python：
 
 ```text
-Assets/GameContent/
-├── Scm/
-├── Dialogues/
-├── Portraits/
-└── Localization/
-```
-
-迁移策略：
-
-- SCM 继续作为核心内容脚本。
-- Ink 继续负责长对话。
-- 图片、头像和视频资产交给 Unity 管理。
-- SCM 不直接引用 Unity 路径，使用稳定 key 或 presentation cue。
-
-## Core/Model
-
-来自 Python：
-
-```text
-src/sincity/model/state.py
-src/sincity/model/defs.py
-src/sincity/model/enums.py
-src/sincity/model/items.py
+src/sincity/model/
+├── state.py
+├── defs.py
+└── enums.py
 ```
 
 Unity 目标：
@@ -106,34 +111,34 @@ Assets/Game/Core/Model/
 ├── ActionDef.cs
 ├── Effect.cs
 ├── Condition.cs
-├── ProgressClock.cs
+├── ProgressClockSpec.cs
 └── Enums.cs
 ```
 
-迁移重点：
+迁移原则：
 
-- 先迁移数据形状，不急着迁移行为。
-- 区分权威状态、派生快照、UI 状态。
-- `GameState` 应可以独立序列化。
-- `LocationDef` / `ActionDef` 不应包含 Unity 对象引用。
+- 先迁移**数据形状**
+- 不要把 Unity 对象引用塞进数据定义
+- `GameState` 应保持可序列化、可保存、可独立测试
 
-建议边界：
+尤其要保留这几个概念区分：
 
 ```text
-Core/Model 只包含普通 C# 数据。
-不能依赖 UnityEngine、Timeline、Cinemachine、MonoBehaviour。
+GameState        权威状态
+LocationDef      内容定义
+ActionDef        内容定义
+pending_events   运行时事件队列
 ```
 
-## Content/Runtime
+---
 
-来自 Python：
+## 4. `content/` + `content_lang/` -> `Content/Runtime`
+
+Python：
 
 ```text
 src/sincity/content/
 src/sincity/content_lang/
-src/sincity/encounters/
-src/sincity/dialogues/
-src/sincity/scm_lint.py
 ```
 
 Unity 目标：
@@ -148,104 +153,234 @@ Assets/Game/Content/
 │
 ├── Runtime/
 │   ├── WorldContentRuntime.cs
-│   ├── EncounterContentRuntime.cs
-│   ├── ContentDatabase.cs
-│   └── SnapshotCache.cs
-│
-├── Dialogue/
-│   ├── DialogueRegistry.cs
-│   └── DialogueRuntime.cs
-│
-└── Validation/
-    ├── ContentValidator.cs
-    └── SceneBindingValidator.cs
+│   ├── SnapshotCache.cs
+│   └── ContentValidator.cs
 ```
 
-迁移重点：
-
-- C# 中实现 SCM 子集或加载 Python 编辑期导出的 AST。
-- `render_world` 和 `render_encounter` 的语义要保持。
-- 城市和交锋都输出地点、动作、clock、react。
-- 内容 runtime 只生成定义和快照，不播放 Unity 表现。
-
-关键边界：
+当前 Python 里的关键语义边界是：
 
 ```text
-Content Runtime
-   输入: GameState / Encounter store
-   输出: WorldSnapshot / EncounterSnapshot
+输入：GameState
+输出：LocationDef / ActionDef / Clock / React / Task
 ```
 
-不要让 Content Runtime 直接控制 Unity 场景。
+Unity 中也应保持：
 
-## Core/Rules
+- 内容 runtime 只生成世界内容
+- 不播放动画
+- 不控制 Timeline
+- 不操作场景 GameObject
 
-来自 Python：
+---
+
+## 5. `encounters/` -> `Content/EncounterRuntime`
+
+Python：
 
 ```text
-src/sincity/rules/progression.py
-src/sincity/rules/deck.py
-src/sincity/rules/judgment.py
-src/sincity/rules/rng.py
-src/sincity/rules/notifications.py
+src/sincity/encounters/
 ```
 
 Unity 目标：
 
 ```text
+Assets/Game/Content/EncounterRuntime/
+├── EncounterRegistry.cs
+├── EncounterRuntime.cs
+├── EncounterDefs.cs
+└── LispyRuntime.cs
+```
+
+要点：
+
+- `encounters/` 是交锋内容解释层
+- `game/encounters.py` 是交锋生命周期规则层
+- Unity 里也要保持这个分工
+
+不要把交锋 DSL 内容和交锋状态推进混在一个大类里。
+
+---
+
+## 6. `dialogues/` -> `Content/DialogueRuntime`
+
+Python：
+
+```text
+src/sincity/dialogues/
+```
+
+Unity 目标：
+
+```text
+Assets/Game/Content/DialogueRuntime/
+├── DialogueRegistry.cs
+├── DialogueRuntime.cs
+└── DialogueExternalBridge.cs
+```
+
+当前 Python 的原则是：
+
+- Ink 负责对话内容推进
+- 对话中的状态变更仍通过 `game/` 层完成
+
+Unity 中也应保持：
+
+- 不让 Ink 直接修改 Unity Scene
+- 外部函数最终落到规则层/状态层
+
+---
+
+## 7. `game/` -> `Core/Rules` + `Application`
+
+Python：
+
+```text
+src/sincity/game/
+├── session.py
+├── flow.py
+├── commands.py
+├── events.py
+├── queries.py
+├── fields.py
+├── conditions.py
+├── actions.py
+├── resolution.py
+├── effects.py
+├── reacts.py
+├── clocks.py
+├── encounters.py
+├── dialogues.py
+├── judgment.py
+├── notifications.py
+├── rng.py
+├── deck.py
+└── debug_save.py
+```
+
+Unity 目标建议：
+
+```text
 Assets/Game/Core/Rules/
-├── GameSession.cs
-├── ContentQueries.cs
-├── FieldAccessor.cs
-├── ConditionEvaluator.cs
-├── ActionAssembler.cs
-├── ActionResolver.cs
-├── PendingResolutionRunner.cs
-├── EffectExecutor.cs
-├── ReactResolver.cs
-├── ClockResolver.cs
-├── EncounterResolver.cs
-├── DialogueResolver.cs
-├── DeckService.cs
-├── JudgmentResolver.cs
-├── ActorResourceService.cs
-└── EndingResolver.cs
+├── Session/
+│   └── GameSession.cs
+├── Flow/
+│   ├── GameCommand.cs
+│   ├── GameEvent.cs
+│   └── GameFlow.cs
+├── Queries/
+│   └── ContentQueries.cs
+├── Fields/
+│   └── FieldAccessor.cs
+├── Conditions/
+│   └── ConditionEvaluator.cs
+├── Actions/
+│   └── ActionAssembler.cs
+├── Resolution/
+│   ├── ActionResolver.cs
+│   └── PendingResolutionRunner.cs
+├── Effects/
+│   └── EffectExecutor.cs
+├── Reacts/
+│   └── ReactResolver.cs
+├── Clocks/
+│   └── ClockResolver.cs
+├── Encounters/
+│   └── EncounterResolver.cs
+├── Dialogues/
+│   └── DialogueResolver.cs
+├── Deck/
+│   └── DeckService.cs
+├── Judgment/
+│   └── JudgmentResolver.cs
+└── Notifications/
+    └── NotificationService.cs
 ```
 
-迁移重点：
+### 7.1 `commands.py` / `flow.py`
 
-- 不要创建一个巨大的 `Progression.cs`。
-- 先把 Python `progression.py` 按职责拆清楚，再逐块移植。
-- 所有权威状态修改最终都应该进入规则层。
-- Timeline、UI、视频不能直接修改 `GameState`。
-
-核心流程：
+当前 Python：
 
 ```text
-ExecuteActionCommand
-   │
-   ▼
-ActionResolver
-   │
-   ├── ConditionEvaluator
-   ├── JudgmentResolver
-   ├── EffectExecutor
-   ├── ReactResolver
-   └── ClockResolver
-   │
-   ▼
-GameEvent[]
+UI -> dispatch(state, command, rng)
 ```
 
-## Presentation/ViewModels
-
-来自 Python：
+Unity 中建议：
 
 ```text
-src/sincity/screens/city_presenters.py
-src/sincity/screens/encounter_presenters.py
-src/sincity/screens/table_presenters.py
-src/sincity/screens/ui_tags.py
+UI / Scene / Timeline trigger
+    │
+    ▼
+GameFlow.Dispatch(command)
+    │
+    ▼
+修改 GameState
+append GameEvent
+```
+
+### 7.2 `events.py`
+
+当前 Python 已经完成单通道事件系统：
+
+```text
+state.pending_events
+```
+
+Unity 中建议直接保留这个思想：
+
+```text
+GameState.PendingEvents
+```
+
+或：
+
+```text
+GameEventBuffer
+```
+
+然后：
+
+- 表现层消费事件
+- 规则层只生产事件
+
+### 7.3 `fields.py` / `effects.py`
+
+这两个模块是 Unity 重写时最关键的部分。
+
+原则：
+
+- 所有权威状态写入都应有明确入口
+- 对话、Timeline、UI 都不要绕过它直接改 `GameState`
+
+### 7.4 `resolution.py`
+
+当前 Python 有：
+
+- `ActionStarted`
+- `ResolutionSettled`
+- `pending_resolution`
+
+Unity 中这个模型很有价值，因为它天然适配：
+
+- Timeline
+- 延迟结算
+- 动画后落地 effect
+
+建议不要把“点击动作立即修改状态”写死在 Unity 里，保留 pending-resolution 语义。
+
+---
+
+## 8. `presentation/` -> `Presentation/ViewModels`
+
+Python：
+
+```text
+src/sincity/presentation/
+├── city_presenters.py
+├── encounter_presenters.py
+├── table_presenters.py
+├── tags.py
+├── card_model.py
+└── typography.py
 ```
 
 Unity 目标：
@@ -260,123 +395,67 @@ Assets/Game/Presentation/ViewModels/
 └── TagViewModel.cs
 ```
 
-迁移重点：
+这一层的意义是：
 
-- ViewModel 可以读 `GameState` 和 snapshot。
-- ViewModel 不应该执行规则。
-- Unity UI 组件只绑定 ViewModel，不直接理解复杂规则。
+- Unity UI 不直接读复杂 `GameState`
+- UI 只读整理好的显示模型
 
-数据流：
+这在未来切换 UI 样式时会很重要。
 
-```text
-WorldSnapshot + GameState
-          │
-          ▼
-LocationViewModel / ActionViewModel
-          │
-          ▼
-Unity UI
-```
+---
 
-## Presentation/UI
+## 9. `screens/` -> Unity `Presentation/UI`
 
-来自 Python：
+Python：
 
 ```text
 src/sincity/screens/
-src/sincity/rendering.py
-src/sincity/labels.py
 ```
 
-Unity 目标：
+Unity 中不应“迁移实现”，而应“迁移交互职责”。
+
+建议拆成：
 
 ```text
 Assets/Game/Presentation/
-├── Screens/
-├── HUD/
-├── Locations/
-├── Actions/
-├── Hand/
-├── Dialogue/
-├── Tasks/
-├── Notifications/
-└── Debug/
-```
-
-迁移重点：
-
-- Raylib 绘制代码不需要逐行迁移。
-- 需要迁移的是功能结构：
-  - 城市层
-  - 交锋层
-  - 结局层
-  - 手卡
-  - 动作面板
-  - 对话框
-  - 任务面板
-  - 通知
-  - 调试面板
-
-UI 只发命令：
-
-```text
-Button Click
-   │
-   ▼
-ExecuteActionCommand / OpenLocationCommand
-   │
-   ▼
-Application Controller
-```
-
-UI 不直接改 `GameState`。
-
-## Presentation/Scene And Sequences
-
-这是 Unity 新增的表现层，Python 中没有完全对应模块。
-
-建议结构：
-
-```text
-Assets/Game/Presentation/
-├── Locations/
+├── UI/
+│   ├── CityScreenController.cs
+│   ├── EncounterScreenController.cs
+│   ├── DialoguePanelController.cs
+│   ├── HandPanelController.cs
+│   └── NotificationController.cs
+├── Scene/
 │   ├── LocationAnchor.cs
-│   ├── LocationRegistry.cs
-│   └── LocationPresenter.cs
-│
-├── Camera/
-│   ├── CameraFocusController.cs
-│   └── CameraPresetBinding.cs
-│
+│   ├── SceneLocationBinder.cs
+│   └── SequenceBinding.cs
 └── Sequences/
-    ├── SequenceBinding.cs
-    ├── SequenceDirector.cs
-    └── SequenceRequest.cs
+    └── SequenceDirector.cs
 ```
 
-职责：
+要点：
 
-- Unity 场景放置地点锚点。
-- Timeline、视频、动画通过 presentation cue 绑定。
-- 表现层消费规则层事件，但不决定规则结果。
+- `screens/` 的 Raylib 绘制不直接迁移
+- 迁移的是：
+  - 地点层
+  - 动作层
+  - 手牌层
+  - 对话层
+  - 交锋层
+  - 结算层
 
-绑定方式：
+---
 
-```text
-SCM
-  action :presentation 'theater.catch_shadow
+## 10. `app.py` -> `Application/GameController`
 
-Unity Scene
-  SequenceBinding.cueKey = theater.catch_shadow.success
-```
-
-## Application
-
-来自 Python：
+Python：
 
 ```text
-src/sincity/app.py
-src/sincity/main.py
+GameApp.update()
+├── hot reload
+├── advance_pending_resolution
+├── advance_action_reveal
+├── advance_notifications
+└── consume remaining pending_events
 ```
 
 Unity 目标：
@@ -385,134 +464,123 @@ Unity 目标：
 Assets/Game/Application/
 ├── GameBootstrap.cs
 ├── GameController.cs
-├── GameSessionRunner.cs
-├── CommandDispatcher.cs
-├── GameEventDispatcher.cs
-└── SaveLoadController.cs
+└── EventBridge.cs
 ```
 
-职责：
+Unity 中这个层的职责应是：
 
-- 创建和持有当前 session。
-- 调用 Content Runtime 生成 snapshot。
-- 接收 UI command。
-- 调用 Core/Rules。
-- 分发 GameEvent 给 UI 和 SequenceDirector。
-- 处理存档、读档、新游戏。
+- 驱动一帧内规则推进
+- 驱动事件消费
+- 协调 UI / Scene / Timeline
 
-典型流程：
+不要把这些逻辑塞回 UI Controller。
+
+---
+
+## 11. `:key` / `:presentation` 如何用于 Unity
+
+当前 Python 已支持：
+
+- 可选 `:key`
+- 可选 `:presentation`
+- 不写时保留旧 ID 生成逻辑
+
+Unity 中建议这样使用：
+
+### `:key`
+
+用于稳定外部绑定：
+
+- `LocationAnchor`
+- 特定 action lookup
+- 存档中稳定引用
+
+### `:presentation`
+
+用于语义化表现绑定：
 
 ```text
-UI Command
-   │
-   ▼
-GameController
-   │
-   ├── Core/Rules 修改 GameState
-   ├── Content/Runtime 重新生成 Snapshot
-   ├── Presentation/ViewModels 刷新
-   └── Presentation/Sequences 播放表现
+theater.catch-shadow
+theater.catch-shadow.success
+theater.catch-shadow.fail
 ```
 
-## Authoring / Validation
-
-来自 Python：
+Unity 中由：
 
 ```text
-src/sincity/content/validate.py
-src/sincity/scm_lint.py
-scripts/check_parens.py
+SequenceBinding
 ```
 
-Unity 目标：
+把这个 cue 映射到：
 
-```text
-Assets/Game/Authoring/
-├── ContentValidator.cs
-├── SceneBindingValidator.cs
-├── ScmDebugWindow.cs
-├── SnapshotPreviewWindow.cs
-└── MigrationTestRunner.cs
-```
+- Timeline
+- Camera shot
+- Video clip
+- 特殊动画
 
-职责：
+而不是让 SCM 直接引用 Unity 资源路径。
 
-- 检查 SCM 语法和结构。
-- 检查 action/effect/clock/react/task 合法性。
-- 检查 Unity 场景中是否存在对应地点锚点。
-- 检查 presentation cue 是否有绑定。
-- 在编辑器中预览当前 snapshot。
+---
 
-## 建议迁移顺序
+## 12. 不该迁移的东西
 
-```text
-1. Python 内先拆清 progression.py 职责。
-2. 给 SCM 的 node/action 补稳定 key。
-3. 定义 C# Core/Model DTO。
-4. 建 Content Runtime 最小链路。
-5. 用一个城市地点跑通 snapshot。
-6. 接 Unity LocationAnchor。
-7. 接 ActionResolver 和 EffectExecutor。
-8. 接一个 Timeline presentation cue。
-9. 迁移 Encounter。
-10. 迁移 Dialogue。
-11. 迁移存档和编辑器校验。
-```
+这些不应该直接带进 Unity：
 
-## 每块迁移时的判定标准
+- Raylib 绘制细节
+- IMGUI 布局代码
+- 过于 Python 风格的 facade 思路
+- 调试用临时文案/表格输出
 
-```text
-Model
-  能否独立序列化？
-  是否不依赖 UnityEngine？
+要迁移的是：
 
-Content Runtime
-  同一 GameState 下是否生成和 Python 相同的 snapshot？
+- 数据定义
+- 规则语义
+- 内容求值语义
+- 事件流
+- 交互层级
 
-Rules
-  同一动作输入下是否得到和 Python 相同的 GameState 变化？
+---
 
-Presentation
-  是否只消费 snapshot / event？
-  是否没有直接改 GameState？
+## 13. 推荐迁移顺序
 
-Sequences
-  是否只由 presentation cue 驱动？
-  是否不拥有剧情分支逻辑？
+### Step 1
 
-Application
-  是否是唯一调度命令、规则、刷新和表现的地方？
-```
+迁移 `Core/Model`
 
-## 最小垂直切片
+### Step 2
 
-第一条 Unity 验证链路建议选择：
+迁移 `game/fields.py`、`effects.py`、`conditions.py`
 
-```text
-城市地点: 剧院
-动作: 追上那个戴面具的人
-表现: theater.catch_shadow
-结果: end_encounter / set world value
-```
+### Step 3
 
-目标：
+迁移 `queries.py`、`content runtime`
 
-```text
-SCM 生成地点和动作
-   │
-   ▼
-Unity 场景找到 LocationAnchor
-   │
-   ▼
-Action UI 显示动作
-   │
-   ▼
-Core/Rules 执行动作
-   │
-   ▼
-GameEvent 触发 Timeline
-   │
-   ▼
-刷新 snapshot
-```
+### Step 4
+
+迁移 `resolution.py`、`clocks.py`、`reacts.py`
+
+### Step 5
+
+迁移 `encounters.py`、`dialogues.py`
+
+### Step 6
+
+实现 Unity `Presentation/ViewModels`
+
+### Step 7
+
+实现 Unity UI / Scene / Timeline 绑定
+
+---
+
+## 14. 结论
+
+当前 Python 工程已经不再需要先“继续拆清楚”才能迁移。  
+它已经具备了清晰的迁移基线。
+
+未来 Unity 迁移的重点不是再改 Python 架构，而是：
+
+1. 保持 `game/` 语义不变
+2. 保持 SCM / Ink 内容资产可复用
+3. 在 Unity 中重建表现层和场景层
 

@@ -302,7 +302,7 @@ def upgrade_spirit_value(state: GameState, spirit: str, amount: int, extra_lines
 
 
 def add_spirit_slot(state: GameState, spirit: str, extra_lines: list[str] | None = None) -> None:
-    from sincity.rules.deck import refresh_spirit_slots
+    from sincity.game.deck import refresh_spirit_slots
     from sincity.game.session import _active_card_actors
     state.deck.extra_slots[spirit] = state.deck.extra_slots.get(spirit, 0) + 1
     refresh_spirit_slots(state.deck, rng=None, actors=_active_card_actors(state), screen=state.screen)

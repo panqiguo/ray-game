@@ -11,23 +11,23 @@ from sincity.model.defs import ActionDef, InputRequirement
 from sincity.model.enums import ResultType, SUIT_LABELS, ScreenName
 from sincity.model.state import GameState
 from sincity.rendering import draw_text
-from sincity.rules.progression import pressure_recovery_threshold
-from sincity.rules.deck import list_all_spirit_slots, list_spirit_slots
+from sincity.rules.deck import list_all_spirit_slots
 from sincity.rules.rng import RandomSource
-from sincity.rules import (
+
+from sincity.game.fields import pressure_recovery_threshold
+from sincity.game.notifications import push_notification
+
+from sincity.game.flow import dispatch
+from sincity.game.commands import AdvanceCycle, CloseModal, EndurePressure, OpenLocation, SelectCardInput
+from sincity.game.actions import (
     card_hint_flash_active,
-    can_endure_pressure_during_encounter,
     card_matches_action_check,
     claim_growth,
+    clear_selected_input,
     close_modal,
     count_spirit_cards,
-    current_world_snapshot,
-    encounter_action_cards,
-    endure_pressure_during_encounter,
-    advance_cycle,
     open_modal,
     requirement_is_slotted,
-    clear_selected_input,
     select_card_input,
     select_item_input,
     slot_current_value,
@@ -36,10 +36,10 @@ from sincity.rules import (
     slot_is_exhausted,
     slot_is_locked,
     slot_trauma_count,
-    party_actor,
 )
-
-from sincity.rules.notifications import push_notification
+from sincity.game.queries import current_world_snapshot
+from sincity.game.encounters import can_endure_pressure_during_encounter, encounter_action_cards
+from sincity.game.fields import party_actor
 
 from .dialogue_view import draw_dialogue_overlay
 from .input_regions import profile_panel_rect
@@ -122,10 +122,10 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
         action_locked = state.active_dialogue is not None or state.pending_resolution is not None
         pressure_disabled = action_locked or not can_endure_pressure_during_encounter(state)
         if text_button(font, pressure_rect, "承压", ui_text_size("body"), disabled=pressure_disabled):
-            endure_pressure_during_encounter(state, rng if rng is not None else RandomSource(state.seed))
+            dispatch(state, EndurePressure(), rng)
         rest_disabled = action_locked
         if text_button(font, rest_rect, "休整", ui_text_size("body"), disabled=rest_disabled):
-            advance_cycle(state, rng if rng is not None else RandomSource(state.seed))
+            dispatch(state, AdvanceCycle(), rng)
     else:
         subtitle = "灰掉表示今天已经使用。行动卡本身无属性，点数受健康影响。"
         draw_text(font, subtitle, int(hand.x) + 166, int(hand.y) + 17, subtitle_style.size, subtitle_style.color)
@@ -134,7 +134,7 @@ def draw_hand(font: Font | None, state: GameState, action: ActionDef | None = No
             snapshot = current_world_snapshot(state)
             for loc_id, loc in snapshot.locations_by_id.items():
                 if loc.title == "办公室":
-                    open_modal(state, "location", loc_id)
+                    dispatch(state, OpenLocation(loc_id), rng)
                     break
     x = int(hand.x) + 18
     y = int(hand.y) + 50
@@ -757,8 +757,8 @@ def draw_card_pile_modal(font: Font | None, state: GameState) -> None:
     del font, state
 
 
-def draw_dialogue_modal(font: Font | None, state: GameState) -> None:
-    draw_dialogue_overlay(font, state)
+def draw_dialogue_modal(font: Font | None, state: GameState, rng=None) -> None:
+    draw_dialogue_overlay(font, state, rng=rng)
 
 
 def _hud_block(font: Font | None, rect: Rectangle, label: str, value: str, color: Color) -> None:

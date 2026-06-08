@@ -5,7 +5,8 @@ import os
 import pickle
 
 from sincity.model.state import GameState, RenderCacheState
-from sincity.rules.progression import _mark_content_dirty, sync_world_progress_clocks
+from sincity.game.fields import _mark_content_dirty
+from sincity.game.queries import sync_world_progress_clocks
 from sincity.rules.rng import RandomSource
 
 SLOT_NAMES: dict[int, str] = {

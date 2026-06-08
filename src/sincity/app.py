@@ -14,8 +14,9 @@ from sincity.content.hot_reload import HOT_RELOADER
 from sincity.dialogue_compile import compile_dialogues
 from sincity.content.validate import validate_content
 from sincity.rendering import configure_gui_theme, draw_text, load_ui_font, unload_ui_font
-from sincity.rules.notifications import advance_notifications
-from sincity.rules.progression import advance_action_reveal, advance_pending_resolution, start_new_run
+from sincity.game.notifications import advance_notifications
+from sincity.game.session import start_new_run
+from sincity.game.resolution import advance_action_reveal, advance_pending_resolution
 from sincity.screens import draw_current_screen
 from sincity.screens.debug_panel import draw_debug_panel
 from sincity.screens.input_regions import register_screen_input_regions

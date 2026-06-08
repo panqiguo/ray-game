@@ -116,14 +116,16 @@ class ActionDef:
     title: str
     description: str
     screen: ScreenName
-    position: tuple[int, int] | None = None
+    key: str = ""
+    presentation: str = ""
+    position: tuple[int, int] | None = None  # layout metadata
     check: CheckDef | None = None
     inputs: tuple[InputRequirement, ...] = ()
     effects: tuple[Effect, ...] = ()
     conditions: tuple[Condition, ...] = ()
     linked_clock_ids: tuple[str, ...] = ()
-    reveal: ActionRevealDef | None = None
-    button_label: str = ""
+    reveal: ActionRevealDef | None = None  # presentation metadata
+    button_label: str = ""  # presentation metadata
 
 
 @dataclass(frozen=True)
@@ -131,8 +133,10 @@ class LocationDef:
     id: str
     title: str
     description: str
-    position: tuple[int, int] | None = None
-    show_clock_ids: tuple[str, ...] = ()
+    key: str = ""
+    presentation: str = ""
+    position: tuple[int, int] | None = None  # layout metadata
+    show_clock_ids: tuple[str, ...] = ()  # presentation metadata
     actions: tuple[ActionDef, ...] = ()
     children: tuple["LocationDef", ...] = ()
     conditions: tuple[Condition, ...] = ()
@@ -145,7 +149,7 @@ class ClockThreshold:
 
 
 @dataclass(frozen=True)
-class ProgressClockDisplay:
+class ProgressClockDisplay:  # UI state container
     scope: str = "auto"
     anchor_id: str | None = None
 
@@ -159,8 +163,8 @@ class ProgressClockSpec:
     initial: int = 0
     thresholds: tuple[ClockThreshold, ...] = ()
     tags: tuple[str, ...] = ()
-    hidden: bool = False
-    display: ProgressClockDisplay = field(default_factory=ProgressClockDisplay)
+    hidden: bool = False  # UI state
+    display: ProgressClockDisplay = field(default_factory=ProgressClockDisplay)  # UI state
 
 
 @dataclass(frozen=True)
@@ -179,6 +183,22 @@ class EndingDef:
     body: str
     priority: int
     conditions: tuple[Condition, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class CheckValuePart:
+    label: str
+    value: int
+    source: str = "environment"
+    actor_id: str | None = None
+
+
+@dataclass(frozen=True)
+class CheckValueBreakdown:
+    base: int
+    actor_part: CheckValuePart | None
+    environment_parts: tuple[CheckValuePart, ...]
+    total: int
 
 
 @dataclass(frozen=True)

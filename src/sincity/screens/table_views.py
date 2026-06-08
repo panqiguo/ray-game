@@ -5,19 +5,16 @@ from pyray import *  # type: ignore
 from sincity.model.defs import ActionDef
 from sincity.model.state import ActiveActionRevealState, GameState, PendingResolutionState
 from sincity.rendering import draw_text
-from sincity.rules.judgment import RESULT_TABLE, clamp_action_value
-from sincity.rules import (
+from sincity.game.judgment import RESULT_TABLE, clamp_action_value
+from sincity.game.flow import dispatch
+from sincity.game.commands import ExecuteAction, OpenAction, ToggleEnergySlot, ToggleRequirementSlot
+from sincity.game.actions import (
     clear_action_reveal,
     clear_assembly,
     clear_selected_input,
     focus_action,
     open_modal,
     open_overlay,
-    perform_current_action,
-    perform_instant_action,
-    perform_reveal_action,
-    toggle_action_energy_slot,
-    toggle_action_requirement_slot,
 )
 
 from .city_presenters import PresentedWorldObject
@@ -279,10 +276,9 @@ def draw_action_card(font: Font | None, state: GameState, presented: PresentedAc
             default_label = "查看" if action.reveal is not None else "执行"
             label = action.button_label or default_label
             if pill(font, execute_rect, label, False, disabled=not presented.attachment.can_execute, scale=scale, z=button_z):
-                if mode == "reveal_ready":
-                    perform_reveal_action(state, action, rng)
-                else:
-                    perform_instant_action(state, action, rng)
+                if state.assembly.action_id != action.id:
+                    focus_action(state, action.id)
+                dispatch(state, ExecuteAction(), rng)
         else:
             preview_rect = Rectangle(rect.x + 14.0 * scale, rect.y + rect.height - 90.0 * scale, rect.width - 28.0 * scale, 68.0 * scale)
             assert button_rects is not None
@@ -377,7 +373,9 @@ def draw_action_attachment(
     if pill(font, retract_rect, "收回", False, scale=scale, z=button_z):
         clear_assembly(state)
     if pill(font, execute_rect, "执行", False, disabled=not presented.attachment.can_execute, scale=scale, z=button_z):
-        perform_current_action(state, rng)
+        if state.assembly.action_id != action.id:
+            focus_action(state, action.id)
+        dispatch(state, ExecuteAction(), rng)
 
 
 def draw_pending_attachment(font: Font | None, state: GameState, rect: Rectangle, button_rects: tuple[Rectangle, Rectangle], pending: PendingResolutionState, scale: float = 1.0, button_z: int | None = None) -> None:
@@ -440,16 +438,13 @@ def draw_reveal_progress_bar(font: Font | None, rect: Rectangle, reveal: ActiveA
 
 def toggle_presented_slot(state: GameState, action: ActionDef, slot: ActionSlotModel) -> None:
     if slot.slot_kind == "energy":
-        toggle_action_energy_slot(state, action)
+        dispatch(state, ToggleEnergySlot(action.id))
         return
     if slot.slot_kind == "requirement":
         assert slot.requirement is not None
-        toggle_action_requirement_slot(state, action, slot.requirement)
+        dispatch(state, ToggleRequirementSlot(action.id, slot.requirement.key))
         return
-    if state.assembly.action_id == action.id:
-        clear_assembly(state)
-    else:
-        focus_action(state, action.id)
+    dispatch(state, OpenAction(action.id))
 
 
 def draw_inline_resolution_strip(font: Font | None, rect: Rectangle, pending: PendingResolutionState, scale: float = 1.0) -> None:

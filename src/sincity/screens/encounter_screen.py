@@ -5,7 +5,12 @@ from pyray import *  # type: ignore
 from sincity.model.defs import AddFieldPayload, DynamicValue, FieldRef, SetFieldPayload, ShiftClockPayload
 from sincity.model.state import GameState
 from sincity.rendering import draw_text
-from sincity.rules import close_modal, current_action, current_encounter_reaction_table, dismiss_pending_resolution, fast_forward_dialogue, get_clock_spec_for_state, location_is_visible
+from sincity.game.flow import dispatch
+from sincity.game.commands import CloseModal, DismissPendingResolution, FastForwardDialogue
+from sincity.game.events import DialogueFastForwarded
+from sincity.game.actions import current_action
+from sincity.game.queries import current_encounter_reaction_table, get_clock_spec_for_state
+from sincity.game.conditions import location_is_visible
 from sincity.screens.encounter_presenters import (
     current_encounter_clocks,
     current_encounter_root,
@@ -37,11 +42,12 @@ from .ui_text import ui_text_size, ui_text_style
 
 def draw_encounter_screen(font: Font | None, state: GameState, rng) -> None:
     if state.pending_resolution is not None and state.pending_resolution.settled and any_input_pressed():
-        dismiss_pending_resolution(state)
+        dispatch(state, DismissPendingResolution(), rng)
     resolving = state.pending_resolution is not None and not state.pending_resolution.settled
     if is_key_pressed(KEY_ESCAPE) and not resolving:
-        if not fast_forward_dialogue(state):
-            close_modal(state)
+        events = dispatch(state, FastForwardDialogue(), rng)
+        if not any(isinstance(e, DialogueFastForwarded) for e in events):
+            dispatch(state, CloseModal(), rng)
     page = layout()
     table_rect, message_rect = split_desktop_area(page.stage)
     begin_layer("encounter_root", z=Z_WORLD)
@@ -219,7 +225,7 @@ def _draw_encounter_location_table(font: Font | None, state: GameState, rng, *, 
     assert lid is not None
     target = next((child for child in _all_locations(root) if child.id == lid), None)
     if target is None:
-        close_modal(state)
+        dispatch(state, CloseModal(), rng)
         return
     resolving = state.pending_resolution is not None and not state.pending_resolution.settled
     offset = depth * 15
@@ -237,7 +243,7 @@ def _draw_encounter_location_table(font: Font | None, state: GameState, rng, *, 
         close_label="关闭" if is_top else None,
     )
     if closed and not resolving and is_top:
-        close_modal(state)
+        dispatch(state, CloseModal(), rng)
         return
     if not is_top:
         return

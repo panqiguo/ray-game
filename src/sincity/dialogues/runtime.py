@@ -180,20 +180,17 @@ def _change_money(state: GameState, amount: int) -> None:
 
 
 def _change_health(state: GameState, amount: int) -> None:
-    from sincity.rules.progression import change_health
-
-    change_health(state, amount, [])
+    from sincity.game.fields import add_field
+    add_field(state, "health", amount, [])
 
 
 def _change_energy(state: GameState, amount: int) -> None:
-    from sincity.rules.progression import change_energy
-
-    change_energy(state, amount, [])
+    from sincity.game.fields import add_field
+    add_field(state, "energy", amount, [])
 
 
 def _set_value(state: GameState, key: str, value: Any) -> None:
-    from sincity.rules.progression import _set_field
-
+    from sincity.game.fields import set_field
     if isinstance(value, str):
         raw = value.strip()
         if raw == "true":
@@ -209,22 +206,19 @@ def _set_value(state: GameState, key: str, value: Any) -> None:
         parsed = value
     else:
         parsed = int(value)
-    _set_field(state, key, parsed, [])
+    set_field(state, key, parsed, [])
 
 
 def _add_value(state: GameState, key: str, amount: int) -> None:
-    from sincity.rules.progression import _add_field
-
-    _add_field(state, key, amount, [])
+    from sincity.game.fields import add_field
+    add_field(state, key, amount, [])
 
 
 def _start_encounter(state: GameState, encounter_id: str) -> None:
-    from sincity.rules.progression import start_encounter_from_dialogue
-
+    from sincity.game.encounters import start_encounter_from_dialogue
     start_encounter_from_dialogue(state, encounter_id)
 
 
 def _finish_encounter(state: GameState, outcome: str) -> None:
-    from sincity.rules.progression import finish_encounter_from_dialogue
-
+    from sincity.game.encounters import finish_encounter_from_dialogue
     finish_encounter_from_dialogue(state, outcome)

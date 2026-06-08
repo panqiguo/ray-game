@@ -1205,8 +1205,9 @@ location/action id 可能与标题、路径、顺序相关。
 1. DSL 先支持可选 :key。
 2. 没写 :key 时继续使用旧生成逻辑。
 3. validate 检查同一父级 key 是否重复。
-4. 逐步给重要地点和特殊动作补 key。
+4. 只给需要稳定外部绑定的地点和特殊动作补 key，不把全量迁移当目标。
 5. presentation cue 只作为语义字符串，不绑定引擎资源。
+6. 旧内容不因为缺少 :key 而被视为未完成。
 ```
 
 验收标准：
@@ -1215,6 +1216,7 @@ location/action id 可能与标题、路径、顺序相关。
 1. 旧 SCM 不需要一次性全改。
 2. 新 key 稳定且可校验。
 3. Unity 可根据 key 绑定 LocationAnchor / SequenceBinding。
+4. :key 是可选稳定标识，不是所有 SCM 内容的强制字段。
 ```
 
 ## 每阶段通用验收

@@ -211,6 +211,8 @@ class CheckTemplate:
 class ActionTemplate:
     title: str
     description: str
+    key: str = ""
+    presentation: str = ""
     position: tuple[int, int] | None = None
     inputs: tuple[InputRequirement, ...] = ()
     before: tuple[Effect, ...] = ()
@@ -225,6 +227,8 @@ class ActionTemplate:
 class LocationTemplate:
     title: str
     description: str
+    key: str = ""
+    presentation: str = ""
     position: tuple[int, int] | None = None
     shown_clock_ids: tuple[Any, ...] = ()
     conditions: tuple[Any, ...] = ()

@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class DeckState:
+class DeckState:  # runtime state
     extra_slots: dict[str, int] = field(default_factory=dict)
     action_card_values: dict[str, int] = field(default_factory=dict)
     action_card_bonuses: dict[str, int] = field(default_factory=dict)
@@ -27,7 +27,7 @@ class DeckState:
 
 
 @dataclass
-class AttributeState:
+class AttributeState:  # runtime state
     health: int = 10
     max_health: int = 10
     energy: int = 5
@@ -35,13 +35,13 @@ class AttributeState:
 
 
 @dataclass
-class ActorStatusState:
+class ActorStatusState:  # runtime state
     id: str
     cycles: int
 
 
 @dataclass
-class PartyActorState:
+class PartyActorState:  # runtime state
     id: str
     name: str
     health: int
@@ -69,14 +69,14 @@ class PartyActorState:
 
 
 @dataclass
-class ProgressClockState:
+class ProgressClockState:  # runtime state
     value: int = 0
-    visible: bool = False
+    visible: bool = False  # UI state
     disabled: bool = False
 
 
 @dataclass
-class WorldState:
+class WorldState:  # runtime state
     fresh_locations: set[str] = field(default_factory=set)
     progress_clocks: dict[str, ProgressClockState] = field(default_factory=dict)
     inventory: dict[str, int] = field(default_factory=dict)
@@ -88,7 +88,7 @@ class WorldState:
 
 
 @dataclass
-class ActionAssemblyState:
+class ActionAssemblyState:  # UI state container
     action_id: str | None = None
     slotted_card_id: str | None = None
     slotted_card_index: int | None = None
@@ -96,14 +96,14 @@ class ActionAssemblyState:
 
 
 @dataclass
-class SelectedInputState:
+class SelectedInputState:  # UI state container
     kind: str = ""
     key: str = ""
     index: int | None = None
 
 
 @dataclass
-class ActionResolution:
+class ActionResolution:  # UI state (result display)
     action_id: str
     card_id: str | None
     result: ResultType | None
@@ -114,7 +114,7 @@ class ActionResolution:
 
 
 @dataclass
-class PendingResolutionState:
+class PendingResolutionState:  # transitional (holds pending effects)
     resolution: ActionResolution
     effects: tuple[Effect, ...]
     log_text: str
@@ -129,13 +129,13 @@ class PendingResolutionState:
 
 
 @dataclass
-class ModalFrame:
+class ModalFrame:  # UI state container
     kind: str
     primary_id: str | None = None
 
 
 @dataclass
-class ModalState:
+class ModalState:  # UI state container
     kind: str = ""
     primary_id: str | None = None
     return_kind: str = ""
@@ -144,19 +144,19 @@ class ModalState:
 
 
 @dataclass
-class ActiveEncounterState:
+class ActiveEncounterState:  # runtime state
     encounter_id: str
     store: dict[str, int | bool | str] = field(default_factory=dict)
 
 
 @dataclass
-class DialogueLine:
+class DialogueLine:  # runtime state
     text: str
     speaker: str = ""
 
 
 @dataclass
-class ActiveDialogueState:
+class ActiveDialogueState:  # runtime state (fields marked # UI state are UI-only)
     dialogue_id: str
     title: str
     runtime: Any | None = None
@@ -164,13 +164,13 @@ class ActiveDialogueState:
     choices: list[str] = field(default_factory=list)
     can_continue: bool = False
     finished: bool = False
-    auto_close_on_finish: bool = True
-    history_scroll: int = 0
-    error: str = ""
+    auto_close_on_finish: bool = True  # UI state
+    history_scroll: int = 0  # UI state
+    error: str = ""  # UI state
 
 
 @dataclass
-class RenderCacheState:
+class RenderCacheState:  # UI state container
     revision: int = 0
     world_revision: int = -1
     world_snapshot: Any | None = None
@@ -180,7 +180,7 @@ class RenderCacheState:
 
 
 @dataclass
-class ActiveActionRevealState:
+class ActiveActionRevealState:  # UI state container
     action_id: str
     title: str
     text: str
@@ -189,7 +189,7 @@ class ActiveActionRevealState:
 
 
 @dataclass
-class NotificationState:
+class NotificationState:  # UI state container
     id: int
     kind: str
     title: str
@@ -199,13 +199,13 @@ class NotificationState:
 
 
 @dataclass
-class CardHintFlashState:
+class CardHintFlashState:  # UI state container
     action_id: str = ""
     until_monotonic: float = 0.0
 
 
 @dataclass
-class GameState:
+class GameState:  # runtime state + UI state containers
     deck: DeckState
     attributes: AttributeState = field(default_factory=AttributeState)
     party: dict[str, PartyActorState] = field(default_factory=dict)
@@ -214,33 +214,34 @@ class GameState:
     world: WorldState = field(default_factory=WorldState)
     screen: ScreenName = ScreenName.CITY
     day: int = 1
-    assembly: ActionAssemblyState = field(default_factory=ActionAssemblyState)
-    selected_input: SelectedInputState = field(default_factory=SelectedInputState)
+    assembly: ActionAssemblyState = field(default_factory=ActionAssemblyState)  # UI state
+    selected_input: SelectedInputState = field(default_factory=SelectedInputState)  # UI state
     pending_growth_choices: list[str] = field(default_factory=list)
     growth_points: int = 0
     unlocked_growths: set[str] = field(default_factory=set)
-    modal: ModalState = field(default_factory=ModalState)
+    modal: ModalState = field(default_factory=ModalState)  # UI state
     active_encounter: ActiveEncounterState | None = None
     active_dialogue: ActiveDialogueState | None = None
     dialogue_queue: list[ActiveDialogueState] = field(default_factory=list)
-    last_resolution: ActionResolution | None = None
-    pending_resolution: PendingResolutionState | None = None
-    action_reveal: ActiveActionRevealState | None = None
-    action_log: list[str] = field(default_factory=list)
+    last_resolution: ActionResolution | None = None  # UI state
+    pending_resolution: PendingResolutionState | None = None  # transitional
+    action_reveal: ActiveActionRevealState | None = None  # UI state
+    action_log: list[str] = field(default_factory=list)  # UI state
     ending_id: str | None = None
-    ending_title: str = ""
-    ending_body: str = ""
+    ending_title: str = ""  # UI state
+    ending_body: str = ""  # UI state
     pending_game_over: bool = False
-    pending_game_over_title: str = ""
-    pending_game_over_body: str = ""
-    debug_open: bool = False
+    pending_game_over_title: str = ""  # UI state
+    pending_game_over_body: str = ""  # UI state
+    debug_open: bool = False  # UI state
     pending_restart: bool = False
     seed: int = 0
-    render_cache: RenderCacheState = field(default_factory=RenderCacheState)
-    card_hint_flash: CardHintFlashState = field(default_factory=CardHintFlashState)
+    render_cache: RenderCacheState = field(default_factory=RenderCacheState)  # UI state
+    card_hint_flash: CardHintFlashState = field(default_factory=CardHintFlashState)  # UI state
     acting_actor_id: str = ""
     encounter_pressure_used: bool = False
     encounter_resource_root_id: str = ""
-    task_panel_scroll: float = 0.0
-    notifications: list[NotificationState] = field(default_factory=list)
-    next_notification_id: int = 1
+    task_panel_scroll: float = 0.0  # UI state
+    notifications: list[NotificationState] = field(default_factory=list)  # UI state
+    next_notification_id: int = 1  # UI state
+    pending_events: list["GameEvent"] = field(default_factory=list)  # transient: ResolutionSettled etc from game.resolution

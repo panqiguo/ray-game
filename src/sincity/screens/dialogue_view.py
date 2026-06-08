@@ -4,14 +4,15 @@ from pyray import *  # type: ignore
 
 from sincity.model.state import DialogueLine, GameState
 from sincity.rendering import draw_text
-from sincity.rules import choose_dialogue_option, continue_dialogue, finish_dialogue
+from sincity.game.flow import dispatch
+from sincity.game.commands import ChooseDialogueOption, ContinueDialogue, FinishDialogue
 
 from .dialogue_portraits import portrait_for_speaker
 from .ui_core import Z_DIALOGUE_MODAL, begin_layer, clickable, draw_frame, end_layer, layout, mouse_point, scroll_available, text_button, wrap_text_lines_any
 from .ui_text import ui_text_size, ui_text_style
 
 
-def draw_dialogue_overlay(font: Font | None, state: GameState) -> None:
+def draw_dialogue_overlay(font: Font | None, state: GameState, rng=None) -> None:
     if state.active_dialogue is None:
         return
     begin_layer("dialogue_modal", z=Z_DIALOGUE_MODAL)
@@ -22,7 +23,7 @@ def draw_dialogue_overlay(font: Font | None, state: GameState) -> None:
     if portrait is not None:
         _draw_portrait(stage, portrait)
     panel = _dialogue_panel_rect(stage, has_portrait=portrait is not None)
-    _draw_dialogue_panel(font, state, panel)
+    _draw_dialogue_panel(font, state, panel, rng=rng)
     end_layer("dialogue_modal")
 
 
@@ -61,7 +62,7 @@ def _draw_portrait(stage: Rectangle, portrait: Texture2D) -> None:
     draw_texture_pro(portrait, source, dest, Vector2(0, 0), 0.0, Color(255, 255, 255, 235))
 
 
-def _draw_dialogue_panel(font: Font | None, state: GameState, rect: Rectangle) -> None:
+def _draw_dialogue_panel(font: Font | None, state: GameState, rect: Rectangle, *, rng=None) -> None:
     assert state.active_dialogue is not None
     draw_frame(rect, Color(13, 16, 22, 236), Color(186, 148, 82, 210))
     title_style = ui_text_style("body_sm", "accent")
@@ -69,7 +70,7 @@ def _draw_dialogue_panel(font: Font | None, state: GameState, rect: Rectangle) -
     hint_style = ui_text_style("caption", "subtle")
     draw_text(font, state.active_dialogue.title, int(rect.x) + 22, int(rect.y) + 17, title_style.size, title_style.color)
     if text_button(font, Rectangle(rect.x + rect.width - 88, rect.y + 14, 66, 26), "关闭", ui_text_size("body_sm")):
-        finish_dialogue(state)
+        dispatch(state, FinishDialogue(), rng)
         return
     choices_height = _choices_height(state)
     footer_height = 64 if choices_height == 0 else choices_height + 28
@@ -77,7 +78,7 @@ def _draw_dialogue_panel(font: Font | None, state: GameState, rect: Rectangle) -
     _draw_history(font, state, history_rect, body_style.line_height)
     if state.active_dialogue.history_scroll > 0:
         draw_text(font, "滚轮向下回到最新对白", int(history_rect.x), int(history_rect.y + history_rect.height + 8), hint_style.size, hint_style.color)
-    _draw_controls(font, state, rect, footer_height)
+    _draw_controls(font, state, rect, footer_height, rng=rng)
 
 
 def _draw_history(font: Font | None, state: GameState, rect: Rectangle, line_height: int) -> None:
@@ -119,26 +120,26 @@ def _rendered_history(font: Font | None, history: list[DialogueLine], width: flo
     return lines
 
 
-def _draw_controls(font: Font | None, state: GameState, rect: Rectangle, footer_height: float) -> None:
+def _draw_controls(font: Font | None, state: GameState, rect: Rectangle, footer_height: float, *, rng=None) -> None:
     assert state.active_dialogue is not None
     if not state.active_dialogue.choices and not state.active_dialogue.finished and clickable(rect):
-        continue_dialogue(state)
+        dispatch(state, ContinueDialogue(), rng)
         return
     button_y = rect.y + rect.height - footer_height + 14
     if state.active_dialogue.choices:
         for index, choice in enumerate(state.active_dialogue.choices):
             button = Rectangle(rect.x + 24, button_y, rect.width - 48, 36)
             if text_button(font, button, choice, ui_text_size("body")):
-                choose_dialogue_option(state, index)
+                dispatch(state, ChooseDialogueOption(index), rng)
                 return
             button_y += 42
     elif state.active_dialogue.finished:
         if text_button(font, Rectangle(rect.x + rect.width - 120, rect.y + rect.height - 46, 96, 30), "结束", ui_text_size("body")):
-            finish_dialogue(state)
+            dispatch(state, FinishDialogue(), rng)
             return
     else:
         if text_button(font, Rectangle(rect.x + rect.width - 120, rect.y + rect.height - 46, 96, 30), "继续", ui_text_size("body")):
-            continue_dialogue(state)
+            dispatch(state, ContinueDialogue(), rng)
             return
 
 

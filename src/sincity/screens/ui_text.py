@@ -5,15 +5,10 @@ from typing import Literal
 
 from pyray import *  # type: ignore
 
+from sincity.presentation.typography import TextLevel, TextLevelSpec, _LEVEL_SPECS, ui_text_size as _base_text_size
 
-TextLevel = Literal["title", "subtitle", "body", "body_sm", "caption"]
+
 TextTone = Literal["default", "muted", "subtle", "accent", "danger", "warning", "disabled"]
-
-
-@dataclass(frozen=True)
-class TextLevelSpec:
-    size: int
-    line_height: int
 
 
 @dataclass(frozen=True)
@@ -22,14 +17,6 @@ class UiTextStyle:
     line_height: int
     color: Color
 
-
-_LEVEL_SPECS: dict[TextLevel, TextLevelSpec] = {
-    "title": TextLevelSpec(size=30, line_height=36),
-    "subtitle": TextLevelSpec(size=24, line_height=30),
-    "body": TextLevelSpec(size=16, line_height=22),
-    "body_sm": TextLevelSpec(size=14, line_height=18),
-    "caption": TextLevelSpec(size=12, line_height=16),
-}
 
 _TONE_COLORS: dict[TextTone, Color] = {
     "default": Color(245, 245, 245, 255),
@@ -57,8 +44,7 @@ def ui_text_style(
 
 
 def ui_text_size(level: TextLevel, *, scale: float = 1.0, minimum_size: int | None = None) -> int:
-    spec = _LEVEL_SPECS[level]
-    size = max(1, int(round(spec.size * scale)))
+    size = max(1, int(round(_base_text_size(level) * scale)))
     if minimum_size is not None:
         size = max(size, minimum_size)
     return size

@@ -7,35 +7,17 @@ from pyray import *  # type: ignore
 from sincity.model.state import GameState
 from sincity.rendering import draw_text
 
+from sincity.presentation.card_model import (
+    ACTION_CARD,
+    TABLE_CARD,
+    WORLD_CARD,
+    TableCardModel,
+    TableCardStyle,
+)
+
 from .ui_core import clickable, draw_frame, measure_text_width, wrap_text_lines_any
 from .ui_text import ui_text_color, ui_text_size, ui_text_style
 from .ui_tags import draw_action_corner_clocks, draw_clock_badges, draw_corner_labels
-
-
-@dataclass(frozen=True)
-class TableCardStyle:
-    width: float
-    height: float
-    title_size: int
-    body_size: int
-
-
-@dataclass(frozen=True)
-class TableCardModel:
-    title: str
-    body: str
-    labels: tuple[str, ...] = ()
-    clock_ids: tuple[str, ...] = ()
-    metadata: tuple[str, ...] = ()
-    active: bool = False
-    disabled: bool = False
-    interactive: bool = True
-    style: TableCardStyle = field(default_factory=lambda: TABLE_CARD)
-
-
-WORLD_CARD = TableCardStyle(width=188.0, height=96.0, title_size=ui_text_size("subtitle"), body_size=ui_text_size("body"))
-TABLE_CARD = TableCardStyle(width=188.0, height=96.0, title_size=ui_text_size("subtitle"), body_size=ui_text_size("body"))
-ACTION_CARD = TableCardStyle(width=232.0, height=224.0, title_size=ui_text_size("subtitle"), body_size=ui_text_size("body") + 2)
 
 
 def draw_table_card(

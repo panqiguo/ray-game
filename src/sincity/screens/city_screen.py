@@ -4,7 +4,12 @@ from pyray import *  # type: ignore
 
 from sincity.content import GROWTH_DEFS
 from sincity.model.state import GameState
-from sincity.rules import close_modal, current_action, current_world_snapshot, dismiss_pending_resolution, fast_forward_dialogue, location_is_visible
+from sincity.game.flow import dispatch
+from sincity.game.commands import CloseModal, DismissPendingResolution, FastForwardDialogue
+from sincity.game.events import DialogueFastForwarded
+from sincity.game.actions import current_action
+from sincity.game.queries import current_world_snapshot
+from sincity.game.conditions import location_is_visible
 from sincity.screens.city_presenters import (
     current_world_titles,
     present_action_cards,
@@ -38,11 +43,12 @@ from .ui_core import Z_HAND, Z_HUD, Z_LOCATION_MODAL, Z_MESSAGE, Z_WORLD
 
 def draw_city_screen(font: Font | None, state: GameState, rng) -> None:
     if state.pending_resolution is not None and state.pending_resolution.settled and any_input_pressed():
-        dismiss_pending_resolution(state)
+        dispatch(state, DismissPendingResolution(), rng)
     resolving = state.pending_resolution is not None and not state.pending_resolution.settled
     if is_key_pressed(KEY_ESCAPE) and not resolving:
-        if not fast_forward_dialogue(state):
-            close_modal(state)
+        events = dispatch(state, FastForwardDialogue(), rng)
+        if not any(isinstance(e, DialogueFastForwarded) for e in events):
+            dispatch(state, CloseModal(), rng)
     page = layout()
     table_rect, message_rect = split_desktop_area(page.stage)
     begin_layer("world", z=Z_WORLD)
@@ -65,7 +71,7 @@ def draw_city_screen(font: Font | None, state: GameState, rng) -> None:
         _draw_location_table(font, state, rng, depth=len(state.modal.stacked_frames))
         end_layer("location_table_top")
     draw_profile_modal(font, state, GROWTH_DEFS)
-    draw_dialogue_modal(font, state)
+    draw_dialogue_modal(font, state, rng)
     draw_selected_card_curve_overlay(state)
 
 
@@ -90,7 +96,7 @@ def _draw_location_table(font: Font | None, state: GameState, rng, *, depth: int
     snapshot = current_world_snapshot(state)
     if lid not in snapshot.locations_by_id:
         if location_id is None:
-            close_modal(state)
+            dispatch(state, CloseModal(), rng)
         return
     location = snapshot.locations_by_id[lid]
     resolving = state.pending_resolution is not None and not state.pending_resolution.settled
@@ -109,7 +115,7 @@ def _draw_location_table(font: Font | None, state: GameState, rng, *, depth: int
         close_label="关闭" if is_top else None,
     )
     if closed and not resolving and is_top:
-        close_modal(state)
+        dispatch(state, CloseModal(), rng)
         return
     if not is_top:
         return

@@ -303,7 +303,8 @@ def render_location(
 ) -> RenderedLocation:
     assert location.title, "location :title must not be empty"
     assert "/" not in location.title, f"location :title must not contain '/': {location.title}"
-    location_key = location.title
+    location_key = location.key or location.title
+    assert "/" not in location_key, f"location :key must not contain '/': {location_key}"
     location_id = "/".join(location_path + (location_key,))
 
     if mounted_locations or mounted_actions:
@@ -315,17 +316,19 @@ def render_location(
     action_keys: set[str] = set()
     for action in location.actions:
         assert action.title, "action :title must not be empty"
-        assert "/" not in action.title, f"action :title must not contain '/': {action.title}"
-        assert action.title not in action_keys, f"Duplicate action title under {location_id}: {action.title}"
-        action_keys.add(action.title)
+        akey = action.key or action.title
+        assert "/" not in akey, f"action :key must not contain '/': {akey}"
+        assert akey not in action_keys, f"Duplicate action{' :key' if action.key else ' title'} under {location_id}: {akey}"
+        action_keys.add(akey)
 
     child_keys: set[str] = set()
     for child in location.children:
         assert child.title, "child location :title must not be empty"
-        assert "/" not in child.title, f"child location :title must not contain '/': {child.title}"
-        assert child.title not in action_keys, f"Location title conflicts with action title under {location_id}: {child.title}"
-        assert child.title not in child_keys, f"Duplicate child location title under {location_id}: {child.title}"
-        child_keys.add(child.title)
+        ckey = child.key or child.title
+        assert "/" not in ckey, f"child location :key must not contain '/': {ckey}"
+        assert ckey not in action_keys, f"Location :key{' ' + child.key if child.key else ' title'} conflicts with action under {location_id}: {ckey}"
+        assert ckey not in child_keys, f"Duplicate child location{' :key' if child.key else ' title'} under {location_id}: {ckey}"
+        child_keys.add(ckey)
 
     path = (*location_path, location_key)
     shown_clock_ids, shown_clocks, nested_clocks = _rendered_location_clocks(program, location.shown_clock_ids, location_id)
@@ -338,6 +341,8 @@ def render_location(
     )
     root = LocationDef(
         id=location_id,
+        key=location.key,
+        presentation=location.presentation,
         title=location.title,
         description=location.description,
         position=location.position,
@@ -543,8 +548,10 @@ def builtin_world_item(key: Any, initial: Any = 0) -> StateBindingValue:
 
 
 def builtin_location(args: tuple[Any, ...]) -> LocationTemplate:
-    kwargs = keyword_args(list(args), allowed={":title", ":desc", ":position", ":show-clocks", ":conditions", ":actions", ":children"})
+    kwargs = keyword_args(list(args), allowed={":key", ":title", ":desc", ":position", ":show-clocks", ":conditions", ":actions", ":children", ":presentation"})
     return LocationTemplate(
+        key=keyword_string(kwargs, ":key", allow_symbol=True, default=""),
+        presentation=keyword_string(kwargs, ":presentation", allow_symbol=True, default=""),
         title=keyword_string(kwargs, ":title"),
         description=keyword_string(kwargs, ":desc", default=""),
         position=position_tuple(kwargs.get(":position")),
@@ -566,7 +573,7 @@ def builtin_reveal(args: tuple[Any, ...]) -> ActionRevealDef:
 
 
 def builtin_action(args: tuple[Any, ...]) -> ActionTemplate:
-    kwargs = keyword_args(list(args), allowed={":title", ":desc", ":position", ":conditions", ":inputs", ":always", ":effects", ":check", ":reveal", ":button"})
+    kwargs = keyword_args(list(args), allowed={":key", ":title", ":desc", ":position", ":conditions", ":inputs", ":always", ":effects", ":check", ":reveal", ":button", ":presentation"})
     check = kwargs.get(":check")
     effects = as_effect_tuple(kwargs.get(":effects"))
     before = as_effect_tuple(kwargs.get(":always"))
@@ -578,13 +585,15 @@ def builtin_action(args: tuple[Any, ...]) -> ActionTemplate:
     if button:
         assert button.strip(), ":button must not be empty"
     return ActionTemplate(
+        key=keyword_string(kwargs, ":key", allow_symbol=True, default=""),
+        presentation=keyword_string(kwargs, ":presentation", allow_symbol=True, default=""),
         title=keyword_string(kwargs, ":title"),
         description=keyword_string(kwargs, ":desc", default=""),
         position=position_tuple(kwargs.get(":position")),
         inputs=tuple(item for item in as_list(kwargs.get(":inputs")) if item is not None),
         before=before,
         effects=effects,
-        conditions=tuple(item for item in as_list(kwargs.get(":conditions")) if item is not None),
+        conditions=tuple(item for item in as_list_or_single(kwargs.get(":conditions")) if item is not None),
         check=check,
         reveal=reveal,
         button_label=button,
@@ -1085,11 +1094,13 @@ def keyword_string(kwargs: dict[str, Any], key: str, *, allow_symbol: bool = Fal
 
 def _render_action(program: Any, action: ActionTemplate, *, location_path: tuple[str, ...], source_index: int) -> RenderedAction:
     assert action.title, "action :title must not be empty"
-    assert "/" not in action.title, f"action :title must not contain '/': {action.title}"
-    action_key = action.title
+    action_key = action.key or action.title
+    assert "/" not in action_key, f"action :key must not contain '/': {action_key}"
     action_id = "/".join(location_path + (action_key,))
     action_def = ActionDef(
         id=action_id,
+        key=action.key,
+        presentation=action.presentation,
         title=action.title,
         description=action.description,
         screen=getattr(program, "screen", ScreenName.ENCOUNTER),
